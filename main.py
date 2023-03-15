@@ -8,8 +8,13 @@ json_path = "/home/raphael/work/code/dataset_conversion_utils/caltech-pedestrian
 with open(json_path) as jsonFile:
     annot_caltech = json.load(jsonFile)
 
+#img_path = "/home/raphael/work/code/dataset_conversion_utils/caltech-pedestrian-dataset-converter/data/images/set01_V000_1680.png"
 
+
+import numpy as np
 #%% Show results on images / bboxes
+
+"""
 from mmdet.apis import init_detector, inference_detector
 import mmcv
 
@@ -21,14 +26,26 @@ checkpoint_file = "/home/raphael/work/checkpoints/detection/faster_rcnn_r50_fpn_
 # build the model from a config file and a checkpoint file
 model = init_detector(config_file, checkpoint_file, device='cpu')
 
-# test a single image and show the results
+for img_num in range(1660, 1670):
+    img_path = "/home/raphael/work/code/dataset_conversion_utils/caltech-pedestrian-dataset-converter/data/images/set01_V000_{}.png".format(
+        img_num)
 
-img_path = "/home/raphael/work/code/dataset_conversion_utils/caltech-pedestrian-dataset-converter/data/images/set01_V000_1680.png"
-result = inference_detector(model, img_path)
-bboxes_people = result[0]
+    # test a single image and show the results
+    result = inference_detector(model, img_path)
+
+    np.save(f"results_{img_num}.npy", result[0])
+"""
+
+#%%
+
+bboxes_people = np.load("results_1661.npy")
+# bboxes_people = result[0]
 #model.show_result(img_path, result, out_file='result.jpg')
 
 #%% Plot model
+
+img_num = 1661
+img_path = "/home/raphael/work/code/dataset_conversion_utils/caltech-pedestrian-dataset-converter/data/images/set01_V000_{}.png".format(img_num)
 
 import cv2
 import matplotlib.pyplot as plt
@@ -51,11 +68,12 @@ for frame_id, frame in annot_caltech['set01']["V000"]["frames"].items():
     for bbox in frame:
         print(frame_id, bbox["occl"], bbox["lbl"])
 
-img_num = "1680"
-path_img = "/home/raphael/work/code/dataset_conversion_utils/caltech-pedestrian-dataset-converter/data/images/set01_V000_{}.png".format(img_num)
-img = plt.imread(path_img)
+img_num = 1661
+img_path = "/home/raphael/work/code/dataset_conversion_utils/caltech-pedestrian-dataset-converter/data/images/set01_V000_{}.png".format(img_num)
 
-for bbox in annot_caltech['set01']["V000"]["frames"][img_num]:
+img = plt.imread(img_path)
+
+for bbox in annot_caltech['set01']["V000"]["frames"][f"{img_num}"]:
     print(bbox["occl"])
     x, y, w, h = [int(v) for v in bbox["pos"]]
     col = (0, 0, 255)
@@ -103,8 +121,8 @@ preds = [
 target = [
   dict(
     boxes=torch.tensor([(b["pos"][0], b["pos"][1], b["pos"][0] + b["pos"][2], b["pos"][1] + b["pos"][3])
- for b in annot_caltech['set01']["V000"]["frames"][img_num]]),
-    labels=torch.tensor([0]*len(annot_caltech['set01']["V000"]["frames"][img_num])),
+ for b in annot_caltech['set01']["V000"]["frames"][f"{img_num}"]]),
+    labels=torch.tensor([0]*len(annot_caltech['set01']["V000"]["frames"][f"{img_num}"])),
   )
 ]
 
@@ -113,15 +131,48 @@ metric.update(preds, target)
 from pprint import pprint
 pprint(metric.compute())
 
+
+#%% Plot predictions
+
+import matplotlib.pyplot as plt
+img_num = "1680"
+path_img = "/home/raphael/work/code/dataset_conversion_utils/caltech-pedestrian-dataset-converter/data/images/set01_V000_{}.png".format(img_num)
+img = plt.imread(path_img)
+
+bbox = preds[0]["boxes"][0]
+
+x, y, x2, y2 = [int(v) for v in bbox]
+col = (0, 0, 255)
+img = cv2.rectangle(img, (x, y), (x2, y2), col, 1)
+print(w,h)
+
+
+bbox = annot_caltech['set01']["V000"]["frames"][img_num][0]
+print(bbox["occl"])
+x, y, w, h = [int(v) for v in bbox["pos"]]
+col = (0, 255, 0)
+img = cv2.rectangle(img, (x, y), (x + w, y + h), col, 1)
+print(w,h)
+
+
+plt.imshow(img)
+plt.show()
+
+
 #%% Missing Rate and FPPI
 import numpy as np
 import torchvision
-score_sorted = np.argsort(preds[0]["scores"].numpy())
+score_sorted = np.argsort(preds[0]["scores"].numpy())[::-1]
 
 possible_targets = [target_bbox for target_bbox in target[0]["boxes"]]
+possible_targets_ids = list(range(len(target[0]["boxes"])))
 matched_target_list = []
 
 for i in score_sorted:
+
+    if len(possible_targets)==0 or preds[0]["scores"][i]<0.5:
+        break
+
     bbox = preds[0]["boxes"][i]
 
     # Compute all IoU
@@ -130,14 +181,21 @@ for i in score_sorted:
 
     # Match it best with existing boxes
     matched_target = np.argmax(IoUs)
-    matched_target_list.append(matched_target) #todo bug because we removed IDs
+    matched_target_list.append(possible_targets_ids[matched_target])
 
     # Remove
     possible_targets.pop(matched_target)
+    possible_targets_ids.pop(matched_target)
 
-    if len(possible_targets)==0:
-        break
 
+#%% Compute the False Positives
+
+# Number of predictions above threshold - Number of matched targets
+fp_image = max(0, (preds[0]["scores"]>0.5).numpy().sum() - len(matched_target_list))
+
+# False negatives
+fn_image = max(0, len(target[0]["boxes"]) - len(matched_target_list))
+miss_ratio_image = fn_image / len(target[0]["boxes"])
 
 
 
