@@ -1,5 +1,8 @@
 
 
+Code and reasonable !!! https://eurocity-dataset.tudelft.nl/eval/benchmarks/detection
+
+
 TODO
 - Resultats contre intuitifs : il faut check le mAP !!!!! Commencer par la.
   - Sinon c'est que je me suis perdu dans trop de paramètres des datasets ... Reste la méteo ... Et aussi par bbox

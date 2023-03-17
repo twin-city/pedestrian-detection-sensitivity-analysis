@@ -19,6 +19,8 @@ MOTSYNTH_ROOT = "/home/raphael/work/datasets/MOTSynth/"
 GTAV_ROOT = "/media/raphael/Projects/datasets/GTAV"
 MAPILLARY_ROOT = "/media/raphael/Projects/datasets/Mapillary-vistasv2"
 
+ECP_ROOT = "/media/raphael/Projects/datasets/EuroCityPerson/ECP"
+
 # not working yet
 ADE20K_ROOT = "/home/raphael/work/datasets/ADE20K_2021_17_01(nococoyet)"
 ADE20K_challenge_ROOT = "/home/raphael/work/datasets/ADE20k-challenge/ADEChallengeData2016"
