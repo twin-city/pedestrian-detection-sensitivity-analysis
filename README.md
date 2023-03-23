@@ -1,9 +1,51 @@
 
 
+
+
+
+# Objective : show it works same-same in pedestrian detection task
+
+Models to try : 
+
+- Faster RCNN
+  - Cityscapes
+  - Caltech Pedestrian
+  - NightOwls
+- Mask RCNN 
+  - MoTSynth (bonus)
+- SoTA
+  - SSD ?
+
+Datasets 
+
+- ECP
+- MoTSynth
+- (Caltech ?)
+- (Synthia ?)
+
+Parameters to try
+
+- Weather
+- Day / Night
+- BBox size 
+- BBox difficulty
+- Occlusions
+
+
+
+
+
+
+
 Code and reasonable !!! https://eurocity-dataset.tudelft.nl/eval/benchmarks/detection
 
 
+
+
+
+
 TODO
+- Get a forked mmdet with added datasets (+ add the dataset description such as day and night ?)
 - Resultats contre intuitifs : il faut check le mAP !!!!! Commencer par la.
   - Sinon c'est que je me suis perdu dans trop de paramètres des datasets ... Reste la méteo ... Et aussi par bbox
 - Too long for inference with a network : how to speed up ? GPU ? Or Pickle at once ?

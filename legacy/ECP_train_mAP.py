@@ -19,8 +19,8 @@ from mmdet.models import build_detector
 from mmdet.apis import train_detector
 import os.path as osp
 
-config_file = '../mmdetection/configs/faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py'
-config_file = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs/models/faster_rcnn/faster_rcnn_r50_fpn_1x_ECP.py"
+config_file = '../../mmdetection/configs/faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py'
+config_file = "/configs/models/faster_rcnn/faster_rcnn_r50_fpn_1x_ECP.py"
 checkpoint_file = "/home/raphael/work/checkpoints/detection/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth"
 
 
@@ -64,7 +64,7 @@ cfg.log_config.hooks = [
 # %% Dump config file
 cfg.dump(osp.join(cfg.work_dir, "cfg.py"))
 # %%
-cfg.evaluation["save_best"] = "bbox"
+# cfg.evaluation["save_best"] = "bbox"
 
 # %% Launch
 train_detector(model, datasets, cfg, distributed=False, validate=True)

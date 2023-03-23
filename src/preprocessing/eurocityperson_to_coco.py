@@ -26,9 +26,20 @@ import mmcv
 from tqdm import tqdm
 import numpy as np
 
+
+dict_cat = {
+    'pedestrian': 1,
+    'rider': 2,
+    'person-group-far-away': 3,
+    'bicycle-group': 4,
+    'scooter-group': 5,
+    'buggy-group': 6,
+    'rider+vehicle-group-far-away': 7,
+    'motorbike-group': 7,
+}
+
+
 def ecp_to_coco(ecp_root, output_file):
-
-
 
     coco_annotations = {
         'info': {
@@ -47,16 +58,61 @@ def ecp_to_coco(ecp_root, output_file):
                 'id': 1,
                 'name': 'pedestrian',
                 'supercategory': 'person'
-            }
+            },
+            {
+                'id': 2,
+                'name': 'rider',
+                'supercategory': 'person'
+            },
+            {
+                'id': 3,
+                'name': 'person-group-far-away',
+                'supercategory': 'person'
+            },
+            {
+                'id': 4,
+                'name': 'bicycle-group',
+                'supercategory': 'person'
+            },
+            {
+                'id': 5,
+                'name': 'scooter-group',
+                'supercategory': 'person'
+            },
+            {
+                'id': 6,
+                'name': 'buggy-group',
+                'supercategory': 'person'
+            },
+            {
+                'id': 7,
+                'name': 'rider+vehicle-group-far-away',
+                'supercategory': 'person'
+            },
+            {
+                'id': 8,
+                'name': 'motorbike-group',
+                'supercategory': 'person'
+            },
+
         ]
     }
+
+
+    ECP_folder_time = "day"
+    ECP_folder_city = "berlin_small"
+    # ECP_folder_img = f"{ECP_folder_time}/labels/val/{ECP_folder_city}"
+    ECP_folder_labels = f"{ECP_folder_time}/labels/val/{ECP_folder_city}"
 
     #with open(ecp_annotation_file) as f:
     #    ecp_annotations = json.load(f)
     import os.path as osp
-    ecp_annotations = mmcv.scandir("/media/raphael/Projects/datasets/EuroCityPerson/ECP/night/labels/val/budapest")
+    ecp_annotations = mmcv.scandir(f"/media/raphael/Projects/datasets/EuroCityPerson/ECP/{ECP_folder_labels}")
 
     annotation_id = 0
+
+    #classes = []
+
     for i, annot_file in enumerate(tqdm(ecp_annotations)):
         image_name = annot_file.split('.json')[0]
         image_id = i
@@ -66,8 +122,10 @@ def ecp_to_coco(ecp_root, output_file):
 
         import json
         #json_path = "/media/raphael/Projects/datasets/EuroCityPerson/ECP/day/labels/val/berlin_small/berlin_00386.json"
-        with open(osp.join(ecp_root, "night/labels/val/budapest", annot_file)) as jsonFile:
+        with open(osp.join(ecp_root, ECP_folder_labels, annot_file)) as jsonFile:
             annot_ECP = json.load(jsonFile)
+
+        #print(np.unique([ann["identity"] for ann in annot_ECP['children']]))
 
         w, h = annot_ECP["imagewidth"], annot_ECP["imageheight"]
 
@@ -87,11 +145,11 @@ def ecp_to_coco(ecp_root, output_file):
             coco_annotations['annotations'].append({
                 'id': annotation_id,
                 'image_id': image_id,
-                'category_id': 0, #todo
+                'category_id': dict_cat[ann["identity"]],
                 'segmentation': [],
                 'area': w * h,
                 'bbox': [x1, y1, w, h],
-                'iscrowd': 0
+                'iscrowd': 1*("group" in ann["identity"])
             })
             annotation_id += 1
 
