@@ -121,6 +121,11 @@ targets, targets_metadata, frame_id_list, img_path_list = get_ECP_annotations_an
 preds = get_preds_from_files(config_file, checkpoint_file, frame_id_list, img_path_list)
 
 
+#%% GEt that are night
+
+
+
+
 #%%
 
 city = "roma"
