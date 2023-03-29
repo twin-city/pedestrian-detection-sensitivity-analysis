@@ -1,7 +1,15 @@
 
 
+Bug
+- gpu inference does not work mmdet (problem CUDA error, due to conda install ?)
 
 
+TODO motsynth
+#todo assumes idex and frame_id are same same
+#todo : occluded body joints
+#todo city and time in metadata also, then set filters when we want to compare ? But apriori compare on all, no need per city ?
+#todo balance may be needed though ...
+#todo take subset of all the images nto be not too long ?
 
 # Objective : show it works same-same in pedestrian detection task
 
