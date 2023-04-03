@@ -26,7 +26,7 @@ get_motsynth_day_night_video_ids(max_iter=50, force=False)
 
 # Parameters data
 video_ids = ["004", "170","130", "033", "103", "107", "145"]
-max_sample = 200
+max_sample = 50
 
 #todo bug 140, 174
 
@@ -66,14 +66,18 @@ img_path = img_path_list[i]
 
 target_metadata = targets_metadata[frame_id]
 occlusions = [(x-1).mean() for x in target_metadata["keypoints"]]
-occlusions_ids = list(np.where(np.array(occlusions) > 0.5)[0])
+occlusions_ids = list(np.where(np.array(occlusions) > 0.0)[0])
+occlusions_ids = []
 
 # plot
 plot_results_img(img_path, frame_id, preds, targets)
 
 # Compute metrics from image
 pred_bbox, target_bbox = preds[frame_id], targets[frame_id]
-compute_fp_missratio2(pred_bbox, target_bbox, threshold=threshold, excluded_gt=occlusions_ids)
+
+#compute_fp_missratio2(pred_bbox, target_bbox, threshold=threshold, excluded_gt=occlusions_ids)
+
+#%%
 
 # plot metrics
 plot_fp_fn_img(frame_id_list, img_path_list, preds, targets, index_frame=i, threshold=threshold)
@@ -128,7 +132,7 @@ frame_id = frame_id_list[i]
 img_path = img_path_list[i]
 
 # plot
-plot_results_img(img_path, frame_id, preds, targets, subset_gt_indices=[3])
+plot_results_img(img_path, frame_id, preds, targets, excl_gt_indices=[3])
 
 
 #%%

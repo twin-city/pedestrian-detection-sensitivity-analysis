@@ -148,7 +148,7 @@ def compute_ffpi_against_fp(preds, targets, targets_metadata=None, ids=None):
             if targets_metadata is not None:
                 target_metadata = targets_metadata[frame_id]
                 occlusions = [(x - 1).mean() for x in target_metadata["keypoints"]]
-                occlusions_ids = list(np.where(np.array(occlusions) > 0.5)[0])
+                occlusions_ids = list(np.where(np.array(occlusions) < 0.5)[0])
             else:
                 occlusions_ids = []
 
@@ -207,15 +207,21 @@ def add_bboxes_to_img(img, bboxes, c=(0,0,255), s=1):
         img = cv2.rectangle(img, (x1, y1), (x2, y2), c, s)
     return img
 
-def plot_results_img(img_path, frame_id, preds=None, targets=None, subset_gt_indices=None):
+def plot_results_img(img_path, frame_id, preds=None, targets=None, excl_gt_indices=None):
     img = plt.imread(img_path)
+
+    num_gt_bbox = len(targets[frame_id][0]["boxes"])
+
+    incl_gt_indices = np.setdiff1d(list(range(num_gt_bbox)), excl_gt_indices)
+
     if preds is not None:
         img = add_bboxes_to_img(img, preds[frame_id][0]["boxes"], c=(0, 0, 255), s=3)
     if targets is not None:
-        if subset_gt_indices is None:
+        if excl_gt_indices is None:
             img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"], c=(0, 255, 0), s=6)
         else:
-            img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"][subset_gt_indices], c=(0, 255, 0), s=6)
+            img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"][incl_gt_indices], c=(0, 255, 0), s=6)
+            img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"][excl_gt_indices], c=(255, 255, 0), s=6)
     plt.imshow(img)
     plt.show()
 

@@ -177,8 +177,8 @@ ax.scatter(avrg_fp_list_night, avrg_missrate_list_night, c="purple")
 ax.set_xscale('log')
 ax.set_yscale('log')
 
-ax.set_ylim(0,1)
-ax.set_xlim(0.001, 20)
+ax.set_ylim(0.1,1)
+ax.set_xlim(0.1, 20)
 
 plt.legend()
 plt.show()
