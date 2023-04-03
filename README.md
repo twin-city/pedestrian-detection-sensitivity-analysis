@@ -3,6 +3,7 @@
 Bug
 - gpu inference does not work mmdet (problem CUDA error, due to conda install ?)
 
+Attention peut être occludé par lui même avec les keypoints
 
 TODO motsynth
 #todo assumes idex and frame_id are same same
@@ -10,6 +11,8 @@ TODO motsynth
 #todo city and time in metadata also, then set filters when we want to compare ? But apriori compare on all, no need per city ?
 #todo balance may be needed though ...
 #todo take subset of all the images nto be not too long ?
+
+todo : better way to handle datasets
 
 # Objective : show it works same-same in pedestrian detection task
 
@@ -47,7 +50,13 @@ Parameters to try
 
 Code and reasonable !!! https://eurocity-dataset.tudelft.nl/eval/benchmarks/detection
 
+conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
 
+torchmetrics
+tqdm
+
+Can help with bug on machine
+https://discuss.pytorch.org/t/userwarning-cuda-initialization-cuda-unknown-error-this-may-be-due-to-an-incorrectly-set-up-environment-e-g-changing-env-variable-cuda-visible-devices-after-program-start-setting-the-available-devices-to-be-zero/129335/2
 
 
 

@@ -25,17 +25,17 @@ get_motsynth_day_night_video_ids(max_iter=50, force=False)
 #%%
 
 # Parameters data
-video_id = "187"
-max_sample = 20
+video_ids = ["004", "170","130", "033", "103", "107", "145"]
+max_sample = 200
 
-
+#todo bug 140, 174
 
 
 #%% params
 
 # model
 model_name = "cityscapes"
-device = "cpu"
+device = "cuda"
 
 if model_name == "cityscapes":
     checkpoint_root = "/home/raphael/work/checkpoints/detection"
@@ -48,58 +48,120 @@ else:
     raise ValueError(f"Model name {model_name} not known")
 
 
-#%% Compute predictions
-video_id = "004"
-targets_day, targets_metadata, frame_id_list_day, img_path_list_day = get_MoTSynth_annotations_and_imagepaths(video_id=video_id, max_samples=max_sample)
-preds_day = get_preds_from_files(config_file, checkpoint_file, frame_id_list_day, img_path_list_day, device=device)
+#%%
 
-video_id = "170"
-targets_night, targets_metadata_night, frame_id_list_night, img_path_night = get_MoTSynth_annotations_and_imagepaths(video_id=video_id, max_samples=max_sample)
-preds_night = get_preds_from_files(config_file, checkpoint_file, frame_id_list_night, img_path_night, device=device)
+
+targets, targets_metadata, frames_metadata, frame_id_list, img_path_list = get_MoTSynth_annotations_and_imagepaths(video_ids=video_ids, max_samples=max_sample)
+preds = get_preds_from_files(config_file, checkpoint_file, frame_id_list, img_path_list, device=device)
 
 
 #%% Analyze results on an image
 
-threshold = 1
+threshold = 0.6
 
 # choose image
-i = 0
-frame_id = frame_id_list_day[i]
-img_path = img_path_list_day[i]
+i = 3
+frame_id = frame_id_list[i]
+img_path = img_path_list[i]
+
+target_metadata = targets_metadata[frame_id]
+occlusions = [(x-1).mean() for x in target_metadata["keypoints"]]
+occlusions_ids = list(np.where(np.array(occlusions) > 0.5)[0])
 
 # plot
-plot_results_img(img_path, frame_id, preds_day, targets_day)
+plot_results_img(img_path, frame_id, preds, targets)
 
 # Compute metrics from image
-pred_bbox, target_bbox = preds_day[frame_id], targets_day[frame_id]
-compute_fp_missratio2(pred_bbox, target_bbox, threshold=threshold)
+pred_bbox, target_bbox = preds[frame_id], targets[frame_id]
+compute_fp_missratio2(pred_bbox, target_bbox, threshold=threshold, excluded_gt=occlusions_ids)
 
 # plot metrics
-plot_fp_fn_img(frame_id_list_day, img_path_list_day, preds_day, targets_day, index_frame=i, threshold=threshold)
+plot_fp_fn_img(frame_id_list, img_path_list, preds, targets, index_frame=i, threshold=threshold)
 
 #todo accord the i and frame_id
 
 #%% Compute miss ratio
 
+ids_night = [key for key,val in frames_metadata.items() if val["is_night"]]
+ids_day = [key for key,val in frames_metadata.items() if not val["is_night"]]
 
-avrg_fp_list_day, avrg_missrate_list_day = compute_ffpi_against_fp(preds_day, targets_day)
-avrg_fp_list_night, avrg_missrate_list_night = compute_ffpi_against_fp(preds_night, targets_night)
+avrg_fp_list_1, avrg_missrate_list_1 = compute_ffpi_against_fp(preds, targets, targets_metadata, ids_day)
+avrg_fp_list_2, avrg_missrate_list_2 = compute_ffpi_against_fp(preds, targets, targets_metadata, ids_night)
 
 
 #%%
 import matplotlib.pyplot as plt
 fig, ax = plt.subplots()
-ax.plot(avrg_fp_list_day, avrg_missrate_list_day, c="green", label="Day test set")
-ax.scatter(avrg_fp_list_day, avrg_missrate_list_day, c="green")
+ax.plot(avrg_fp_list_1, avrg_missrate_list_1, c="green", label="Day test set")
+ax.scatter(avrg_fp_list_1, avrg_missrate_list_1, c="green")
 
-ax.plot(avrg_fp_list_night, avrg_missrate_list_night, c="purple", label="Night test set")
-ax.scatter(avrg_fp_list_night, avrg_missrate_list_night, c="purple")
+ax.plot(avrg_fp_list_2, avrg_missrate_list_2, c="purple", label="Night test set")
+ax.scatter(avrg_fp_list_2, avrg_missrate_list_2, c="purple")
 
 ax.set_xscale('log')
 ax.set_yscale('log')
 
-ax.set_ylim(0.1,1)
-ax.set_xlim(0.001, 20)
+ax.set_ylim(0.1, 1)
+ax.set_xlim(0.1, 20)
 
 plt.legend()
+plt.show()
+
+
+#%% Add the keypoints
+
+visual_check_motsynth_annotations(video_num="004", img_file_name="0005.jpg", shift=3)
+
+
+#%% Analyze results on an image
+
+target_metadata = targets_metadata[frame_id]
+
+occlusions = [(x-1).mean() for x in target_metadata["keypoints"]]
+
+
+threshold = 0.6
+
+# choose image
+i = 3
+frame_id = frame_id_list[i]
+img_path = img_path_list[i]
+
+# plot
+plot_results_img(img_path, frame_id, preds, targets, subset_gt_indices=[3])
+
+
+#%%
+
+video_num="004"
+img_file_name="0005.jpg"
+shift=3
+
+json_path = f"/home/raphael/work/datasets/MOTSynth/coco annot/{video_num}.json"
+with open(json_path) as jsonFile:
+    annot_motsynth = json.load(jsonFile)
+
+img_id = [(x["id"]) for x in annot_motsynth["images"] if img_file_name in x["file_name"]][0]
+bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == img_id + shift]
+
+img_path = f"/home/raphael/work/datasets/MOTSynth/frames/{video_num}/rgb/{img_file_name}"
+img = plt.imread(img_path)
+img = add_bboxes_to_img(img, bboxes, c=(0, 255, 0), s=6)
+
+ped_id = 16
+
+# keypoints = np.array(annot_motsynth["annotations"][ped_id]["keypoints"]).reshape((22,3))
+
+annots = [x for x in annot_motsynth["annotations"] if x["image_id"] == img_id + shift]
+
+keypoints = [(np.array(x["keypoints"])).reshape((22,3)) for x in annot_motsynth["annotations"] if x["image_id"] == img_id + shift]
+plt.scatter(keypoints[ped_id][:,0], keypoints[ped_id][:,1], c=keypoints[ped_id][:,2])
+
+plt.imshow(img)
+plt.show()
+
+#%%
+img_path = f"/home/raphael/work/datasets/MOTSynth/frames/{video_num}/rgb/{img_file_name}"
+img = plt.imread(img_path)
+plt.imshow(img)
 plt.show()

@@ -17,7 +17,7 @@ def xywh2xyxy(bbox):
     return x, y, x + w, y + h
 
 
-
+"""
 def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5):
     score_sorted = np.argsort(pred_bbox[0]["scores"].numpy())[::-1]
 
@@ -59,17 +59,28 @@ def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5):
     miss_ratio_image = fn_image / len(target_bbox[0]["boxes"])
 
     return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds
+"""
 
-
-def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5):
+def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
 
     score_sorted = np.argsort(pred_bbox[0]["scores"].numpy())[::-1]
 
+    # All target bboxes
     possible_target_bboxs = [target_bbox for target_bbox in target_bbox[0]["boxes"]]
     possible_target_bboxs_ids = list(range(len(target_bbox[0]["boxes"])))
+
+    # Included
+    incl_possible_target_bboxs_ids = np.setdiff1d(possible_target_bboxs_ids, excluded_gt)
+    #incl_possible_target_bboxs = [possible_target_bboxs[i] for i in incl_possible_target_bboxs_ids]
+
+    # Excluded
+    #excl_possible_target_bboxs = [possible_target_bboxs[i] for i in excluded_gt]
+    #excl_possible_target_bboxs_ids = excluded_gt
+
     matched_target_bbox_list = []
     unmatched_preds = []
 
+    # For each pred bbox in decreasing probability score order
     for i in score_sorted:
 
         if len(possible_target_bboxs) == 0 or pred_bbox[0]["scores"][i] < threshold:
@@ -82,13 +93,18 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5):
                 target_bbox in possible_target_bboxs]
         IoUs_index = [i for i,IoU in enumerate(IoUs) if IoU > 0.5]
 
+
         # If no target bbox overlap with IoU>=0.5, set as false positive
         if len(IoUs_index) == 0:
             unmatched_preds.append(i)
-        # If there exist an overlap
+
+        # All matches are to excluded bboxes --> nothing happens
+        elif np.all([x in excluded_gt for x in IoUs_index]):
+            pass
+        # Else there exist at least an overlap with an included bounding box
         else:
-            # Match it best with target boxes still unmatched
-            matched_target_bbox = np.argmax(IoUs)
+            # Match it best with target boxes, included and still unmatched
+            matched_target_bbox = np.intersect1d(np.argsort(IoUs), incl_possible_target_bboxs_ids)[-1]
             matched_target_bbox_list.append(possible_target_bboxs_ids[matched_target_bbox])
 
             # Remove
@@ -99,23 +115,26 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5):
     target_bbox_missed = np.setdiff1d(list(range(len(target_bbox[0]["boxes"]))), matched_target_bbox_list).tolist()
 
     # Number of predictions above threshold - Number of matched target_bboxs
-    #fp_image = max(0, (pred_bbox[0]["scores"] > threshold).numpy().sum() - len(matched_target_bbox_list))
     fp_image = len(unmatched_preds)
 
     # False negatives
-    fn_image = max(0, len(target_bbox[0]["boxes"]) - len(matched_target_bbox_list))
+    # fn_image = max(0, len(target_bbox[0]["boxes"]) - len(matched_target_bbox_list))
+    fn_image = max(0, len(incl_possible_target_bboxs_ids) - len(matched_target_bbox_list))
     miss_ratio_image = fn_image / len(target_bbox[0]["boxes"])
 
     return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds
 
 
-def compute_ffpi_against_fp(preds, targets):
+def compute_ffpi_against_fp(preds, targets, targets_metadata=None, ids=None):
     """
     On preds keys.
     :param preds:
     :param targets:
     :return:
     """
+
+    if ids is None:
+        ids = preds.keys()
 
     thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
 
@@ -124,8 +143,16 @@ def compute_ffpi_against_fp(preds, targets):
 
     for threshold in thresholds:
         results = {}
-        for frame_id in preds.keys():
-            results[frame_id] = compute_fp_missratio2(preds[frame_id], targets[frame_id], threshold=threshold)
+        for frame_id in ids:
+
+            if targets_metadata is not None:
+                target_metadata = targets_metadata[frame_id]
+                occlusions = [(x - 1).mean() for x in target_metadata["keypoints"]]
+                occlusions_ids = list(np.where(np.array(occlusions) > 0.5)[0])
+            else:
+                occlusions_ids = []
+
+            results[frame_id] = compute_fp_missratio2(preds[frame_id], targets[frame_id], threshold=threshold, excluded_gt=occlusions_ids)
         avrg_fp = np.mean([x[0] for x in results.values()])
         avrg_missrate = np.mean([x[1] for x in results.values()])
 
@@ -180,12 +207,15 @@ def add_bboxes_to_img(img, bboxes, c=(0,0,255), s=1):
         img = cv2.rectangle(img, (x1, y1), (x2, y2), c, s)
     return img
 
-def plot_results_img(img_path, frame_id, preds=None, targets=None):
+def plot_results_img(img_path, frame_id, preds=None, targets=None, subset_gt_indices=None):
     img = plt.imread(img_path)
     if preds is not None:
         img = add_bboxes_to_img(img, preds[frame_id][0]["boxes"], c=(0, 0, 255), s=3)
     if targets is not None:
-        img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"], c=(0, 255, 0), s=6)
+        if subset_gt_indices is None:
+            img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"], c=(0, 255, 0), s=6)
+        else:
+            img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"][subset_gt_indices], c=(0, 255, 0), s=6)
     plt.imshow(img)
     plt.show()
 
@@ -197,7 +227,7 @@ def plot_fp_fn_img(frame_id_list, img_path_list, preds, targets, index_frame, th
     img_path = img_path_list[index_frame]
 
     results = {}
-    results[frame_id] = compute_fp_missratio(preds[frame_id], targets[frame_id], threshold=threshold)
+    results[frame_id] = compute_fp_missratio2(preds[frame_id], targets[frame_id], threshold=threshold)
 
     img = plt.imread(img_path)
     # img = add_bboxes_to_img(img, preds[frame_id][0]["boxes"], c=(0, 0, 255))
@@ -223,7 +253,7 @@ def plot_fp_fn_img(frame_id_list, img_path_list, preds, targets, index_frame, th
 
 #%% Utils functions for MoTSynth
 
-def visual_check_motsynth_annotations(video_num="0.04", img_file_name="0200.jpg", shift=3):
+def visual_check_motsynth_annotations(video_num="004", img_file_name="0200.jpg", shift=3):
 
 
     json_path = f"/home/raphael/work/datasets/MOTSynth/coco annot/{video_num}.json"
@@ -291,63 +321,121 @@ def get_motsynth_day_night_video_ids(max_iter=50, force=False):
     return day, night
 
 
-def get_MoTSynth_annotations_and_imagepaths(video_id="004", max_samples=100000):
 
+def get_MoTSynth_annotations_and_imagepaths_video(video_id="004", max_samples=100000, random_sampling=True, delay=3):
+
+    np.random.seed(0)
 
     json_path = f"/home/raphael/work/datasets/MOTSynth/coco annot/{video_id}.json"
 
     with open(json_path) as jsonFile:
         annot_motsynth = json.load(jsonFile)
 
-    targets_metadata = {}
+    frame_metadata = {}
     targets = {}
-    j = 0
-    i = 0
+    img_path_list = []
+    targets_metadata = {}
 
-    # begin at image 3 due to delay
-    delay = 3
-    #for image in annot_motsynth["images"][delay:]:
+    # Set images to process
+    if random_sampling:
+        random_set = np.random.choice(len(annot_motsynth["images"][delay:]), max_samples, replace=False)
+        image_set = [x for i, x in enumerate(annot_motsynth["images"][delay:]) if i in random_set]
+    else:
+        image_set = annot_motsynth["images"][delay:delay+max_samples]
 
-    for image in annot_motsynth["images"][delay:delay+max_samples]:
-
-        #image = annot_motsynth["images"][delay:][i]
-
-
-        if j > max_samples:
-            break
-        j += 1
-
+    for image in image_set:
 
         frame_id = image["id"]
-        bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == frame_id]
+        bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
 
-        """
-        annots_img = []
-        while annot_motsynth["annotations"][i]["image_id"] == image["id"]: #todo bug limit
-            bbox_xywh = annot_motsynth["annotations"][i]["bbox"]
-            x, y, w, h = bbox_xywh
-            bbox_xywh = x, y, x+w, y+h
-            annots_img.append(bbox_xywh)
-            i += 1"""
+        # BBOXES metadata
+        annots = [x for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
+        keypoints = [(np.array(annot["keypoints"])).reshape((22, 3))[:,2] for annot in annots]
+        area = [annot["area"] for annot in annots]
+        is_crowd = [annot["iscrowd"] for annot in annots]
+        is_blurred = [annot["is_blurred"] for annot in annots]
+        attributes = [annot["attributes"] for annot in annots]
 
+        target_metadata = {
+            "keypoints": keypoints,
+            "area": area,
+            "is_crowd": is_crowd,
+            "is_blurred": is_blurred,
+            "attributes": attributes,
+        }
 
+        targets_metadata[frame_id] = target_metadata
+
+        # Target and labels
         target = [
             dict(
                 boxes=torch.tensor(
                     bboxes)
                 )]
-
         target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
 
         # Keep only if at least 1 pedestrian
         if len(target[0]["boxes"]) > 0:
             targets[frame_id] = target
-            targets_metadata[frame_id] = annot_motsynth["info"]
-            # targets_metadata[frame_id] = (annot_ECP["tags"], [ann["tags"] for ann in annot_ECP["children"]])
+            frame_metadata[frame_id] = annot_motsynth["info"]
+
+            img_path_list.append(osp.join("/home/raphael/work/datasets/MOTSynth", image["file_name"]))
+            # frame_metadata[frame_id] = (annot_ECP["tags"], [ann["tags"] for ann in annot_ECP["children"]])
 
     frame_id_list = list(targets.keys())
-    img_path_list = [osp.join("/home/raphael/work/datasets/MOTSynth", image["file_name"]) for image in
-                     annot_motsynth["images"][:len(frame_id_list)]]
 
-    return targets, targets_metadata, frame_id_list, img_path_list
 
+    """ Plot the first image
+    
+    idx = 2
+    frame_id = list(targets.keys())[idx]
+    delay = 3
+    
+        bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
+
+    # Target and labels
+    target = [
+        dict(
+            boxes=torch.tensor(
+                bboxes)
+            )]
+    target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
+    
+    
+
+    #target_boxes = [targets[40185][0]["boxes"]]
+    img_path = img_path_list[idx]
+    plot_results_img(img_path, frame_id, preds=None, targets={frame_id: target})
+    plot_results_img(img_path, frame_id, preds=None, targets=targets)
+
+    
+    """
+
+    return targets, targets_metadata, frame_metadata, frame_id_list, img_path_list
+
+
+
+
+def get_MoTSynth_annotations_and_imagepaths(video_ids=None, max_samples=100000):
+
+    if video_ids is None:
+        folders = os.listdir("/home/raphael/work/datasets/MOTSynth/frames")
+    else:
+        folders = video_ids
+
+    num_folders = len(list(folders))
+    max_num_sample_per_video = int(max_samples/num_folders)
+
+    targets, targets_metadata, frames_metadata, frame_id_list, img_path_list = {}, {}, {}, [], []
+
+    for folder in folders:
+        targets_folder, targets_metadata_folder, frames_metadata_folder, frame_id_list_folder, img_path_list_folder =\
+            get_MoTSynth_annotations_and_imagepaths_video(video_id=folder, max_samples=max_num_sample_per_video)
+
+        targets.update(targets_folder)
+        targets_metadata.update(targets_metadata_folder)
+        frames_metadata.update(frames_metadata_folder)
+        frame_id_list += frame_id_list_folder
+        img_path_list += img_path_list_folder
+
+    return targets, targets_metadata, frames_metadata, frame_id_list, img_path_list
