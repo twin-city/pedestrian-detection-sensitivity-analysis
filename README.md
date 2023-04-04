@@ -1,5 +1,9 @@
 
 
+TODO
+- show dataset characteristics --> so as to identify biases between datasets from their characteristics in advance !!!
+
+
 Bug
 - gpu inference does not work mmdet (problem CUDA error, due to conda install ?)
 

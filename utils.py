@@ -165,7 +165,7 @@ def compute_ffpi_against_fp(preds, targets, targets_metadata=None, ids=None):
 
 
 
-def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filtering={}, frame_ids=[]):
+def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filtering={}, model_name="unknown"):
     """
     On preds keys.
     :param preds:
@@ -173,8 +173,10 @@ def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filterin
     :return:
     """
 
-    if frame_ids is []:
-        frame_ids = preds.keys() #todo all for now
+    df_mr_fppi_list = []
+
+
+    frame_ids = preds.keys() #todo all for now
 
     thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
 
@@ -204,13 +206,26 @@ def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filterin
 
             results[frame_id] = compute_fp_missratio2(preds[frame_id], targets[frame_id],
                                                       threshold=threshold, excluded_gt=excluded_gt)
+
+
+        df_results_threshold = pd.DataFrame({key:val[:2] for key,val in results.items()}).T.rename(columns={0: "MR", 1: "FPPI"})
+        df_results_threshold["threshold"] = threshold
+        df_results_threshold["frame_id"] = frame_id
+        df_mr_fppi_list.append(df_results_threshold)
+
+        # todo output here details for each image as a dataframe ? score threshold x image_id
+
+        """
         avrg_fp = np.mean([x[0] for x in results.values()])
         avrg_missrate = np.mean([x[1] for x in results.values()])
-
         avrg_fp_list.append(avrg_fp)
         avrg_missrate_list.append(avrg_missrate)
+        """
 
-    return avrg_fp_list, avrg_missrate_list
+        df_mr_fppi = pd.concat(df_mr_fppi_list, axis=0)
+        df_mr_fppi["model"] = model_name
+
+    return df_mr_fppi
 
 
 
