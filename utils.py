@@ -10,6 +10,7 @@ import json
 import os.path as osp
 from tqdm import tqdm
 from utils import *
+import pandas as pd
 
 
 def xywh2xyxy(bbox):
@@ -104,7 +105,7 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[])
         # Else there exist at least an overlap with an included bounding box
         else:
             # Match it best with target boxes, included and still unmatched
-            matched_target_bbox = np.intersect1d(np.argsort(IoUs), incl_possible_target_bboxs_ids)[-1]
+            matched_target_bbox = np.intersect1d(torch.stack(IoUs).reshape(-1).numpy().argsort(), incl_possible_target_bboxs_ids)[-1]
             matched_target_bbox_list.append(possible_target_bboxs_ids[matched_target_bbox])
 
             # Remove
@@ -148,7 +149,7 @@ def compute_ffpi_against_fp(preds, targets, targets_metadata=None, ids=None):
             if targets_metadata is not None:
                 target_metadata = targets_metadata[frame_id]
                 occlusions = [(x - 1).mean() for x in target_metadata["keypoints"]]
-                occlusions_ids = list(np.where(np.array(occlusions) < 0.5)[0])
+                occlusions_ids = list(np.where(np.array(occlusions) < 0.1)[0])
             else:
                 occlusions_ids = []
 
@@ -161,6 +162,55 @@ def compute_ffpi_against_fp(preds, targets, targets_metadata=None, ids=None):
 
     return avrg_fp_list, avrg_missrate_list
 
+
+
+
+def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filtering={}, frame_ids=[]):
+    """
+    On preds keys.
+    :param preds:
+    :param targets:
+    :return:
+    """
+
+    if frame_ids is []:
+        frame_ids = preds.keys() #todo all for now
+
+    thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
+
+    avrg_fp_list = []
+    avrg_missrate_list = []
+
+    for threshold in thresholds:
+        results = {}
+        for frame_id in frame_ids:
+
+            df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id+3].reset_index()
+
+            if gtbbox_filtering is not {}:
+
+                # todo use a set
+                excluded = set()
+                for key,val in gtbbox_filtering.items():
+                    if val[1] == "min":
+                        excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] < val[0]].index)
+                    elif val[1] == "max":
+                        excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] > val[0]].index)
+                    else:
+                        raise ValueError("Nor minimal nor maximal filtering proposed.")
+                excluded_gt = list(excluded)
+            else:
+                excluded_gt = []
+
+            results[frame_id] = compute_fp_missratio2(preds[frame_id], targets[frame_id],
+                                                      threshold=threshold, excluded_gt=excluded_gt)
+        avrg_fp = np.mean([x[0] for x in results.values()])
+        avrg_missrate = np.mean([x[1] for x in results.values()])
+
+        avrg_fp_list.append(avrg_fp)
+        avrg_missrate_list.append(avrg_missrate)
+
+    return avrg_fp_list, avrg_missrate_list
 
 
 
@@ -332,6 +382,8 @@ def get_MoTSynth_annotations_and_imagepaths_video(video_id="004", max_samples=10
 
     np.random.seed(0)
 
+    df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()]*3
+
     json_path = f"/home/raphael/work/datasets/MOTSynth/coco annot/{video_id}.json"
 
     with open(json_path) as jsonFile:
@@ -342,7 +394,7 @@ def get_MoTSynth_annotations_and_imagepaths_video(video_id="004", max_samples=10
     img_path_list = []
     targets_metadata = {}
 
-    # Set images to process
+    # Set images to process (subset for ptotyping)
     if random_sampling:
         random_set = np.random.choice(len(annot_motsynth["images"][delay:]), max_samples, replace=False)
         image_set = [x for i, x in enumerate(annot_motsynth["images"][delay:]) if i in random_set]
@@ -350,6 +402,14 @@ def get_MoTSynth_annotations_and_imagepaths_video(video_id="004", max_samples=10
         image_set = annot_motsynth["images"][delay:delay+max_samples]
 
     for image in image_set:
+
+        # todo more info in image
+        for i, name in enumerate(["raw", "pitch", "roll"]):
+            image[name] = image["cam_world_rot"][i]
+        for i, name in enumerate(["x", "y", "z"]):
+            image[name] = image["cam_world_pos"][i]
+        for info_name in ["is_night", "seq_name", "weather", "is_moving", "cam_fov", 'fx', 'fy', 'cx', 'cy']:
+            image[info_name] = annot_motsynth["info"][info_name]
 
         frame_id = image["id"]
         bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
@@ -361,13 +421,19 @@ def get_MoTSynth_annotations_and_imagepaths_video(video_id="004", max_samples=10
         is_crowd = [annot["iscrowd"] for annot in annots]
         is_blurred = [annot["is_blurred"] for annot in annots]
         attributes = [annot["attributes"] for annot in annots]
+        ped_id = [annot["ped_id"] for annot in annots]
+        id = [annot["id"] for annot in annots]
+        image_id = [annot["image_id"] for annot in annots]
 
         target_metadata = {
+            "image_id": image_id,
+            "id": id,
             "keypoints": keypoints,
             "area": area,
             "is_crowd": is_crowd,
             "is_blurred": is_blurred,
             "attributes": attributes,
+            "ped_id": ped_id,
         }
 
         targets_metadata[frame_id] = target_metadata
@@ -384,45 +450,31 @@ def get_MoTSynth_annotations_and_imagepaths_video(video_id="004", max_samples=10
         if len(target[0]["boxes"]) > 0:
             targets[frame_id] = target
             frame_metadata[frame_id] = annot_motsynth["info"]
-
             img_path_list.append(osp.join("/home/raphael/work/datasets/MOTSynth", image["file_name"]))
             # frame_metadata[frame_id] = (annot_ECP["tags"], [ann["tags"] for ann in annot_ECP["children"]])
 
+            # Dataframes
+            df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(target_metadata)], axis=0)
+
+
+
+            frame_metadata_features = ['file_name', 'id', 'frame_n'] + ["is_night", "seq_name", "weather", "is_moving", "cam_fov", 'fx', 'fy', 'cx', 'cy']
+            df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame({key:val for key,val in image.items() if key in frame_metadata_features}, index=[frame_id])], axis=0)
     frame_id_list = list(targets.keys())
 
+    # Metadata at the video level
+    df_sequence_metadata = pd.DataFrame(annot_motsynth["info"], index=[video_id])
 
-    """ Plot the first image
-    
-    idx = 2
-    frame_id = list(targets.keys())[idx]
-    delay = 3
-    
-        bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
+    metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 
-    # Target and labels
-    target = [
-        dict(
-            boxes=torch.tensor(
-                bboxes)
-            )]
-    target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
-    
-    
-
-    #target_boxes = [targets[40185][0]["boxes"]]
-    img_path = img_path_list[idx]
-    plot_results_img(img_path, frame_id, preds=None, targets={frame_id: target})
-    plot_results_img(img_path, frame_id, preds=None, targets=targets)
-
-    
-    """
-
-    return targets, targets_metadata, frame_metadata, frame_id_list, img_path_list
+    return targets, metadatas, frame_id_list, img_path_list
 
 
 
 
 def get_MoTSynth_annotations_and_imagepaths(video_ids=None, max_samples=100000):
+
+    df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()]*3
 
     if video_ids is None:
         folders = os.listdir("/home/raphael/work/datasets/MOTSynth/frames")
@@ -435,13 +487,23 @@ def get_MoTSynth_annotations_and_imagepaths(video_ids=None, max_samples=100000):
     targets, targets_metadata, frames_metadata, frame_id_list, img_path_list = {}, {}, {}, [], []
 
     for folder in folders:
-        targets_folder, targets_metadata_folder, frames_metadata_folder, frame_id_list_folder, img_path_list_folder =\
+        targets_folder, targets_metadatas, frame_id_list_folder, img_path_list_folder =\
             get_MoTSynth_annotations_and_imagepaths_video(video_id=folder, max_samples=max_num_sample_per_video)
 
+        df_gtbbox_metadata_folder, df_frame_metadata_folder, df_sequence_metadata_folder = targets_metadatas
+
         targets.update(targets_folder)
-        targets_metadata.update(targets_metadata_folder)
-        frames_metadata.update(frames_metadata_folder)
+
+        #targets_metadata.update(targets_metadata_folder)
+        #frames_metadata.update(frames_metadata_folder)
+
+        df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(df_gtbbox_metadata_folder)], axis=0)
+        df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame(df_frame_metadata_folder)], axis=0)
+        df_sequence_metadata = pd.concat([df_sequence_metadata, pd.DataFrame(df_sequence_metadata_folder)], axis=0)
+
         frame_id_list += frame_id_list_folder
         img_path_list += img_path_list_folder
 
-    return targets, targets_metadata, frames_metadata, frame_id_list, img_path_list
+    metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+
+    return targets, metadatas, frame_id_list, img_path_list
