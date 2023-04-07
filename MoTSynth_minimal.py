@@ -2,12 +2,9 @@ from utils import *
 import numpy as np
 import os.path as osp
 
-
-#%%
-
 # Parameters data
 video_ids = ["004", "170","130", "033", "103", "107", "145"]
-max_sample = 100
+max_sample = 30
 
 #todo bug 140, 174
 
@@ -63,13 +60,13 @@ i = 1
 frame_id = frame_id_list[i]
 img_path = img_path_list[i]
 
-occlusions_ids = np.where(df_gtbbox_metadata.loc[frame_id+delay, "occlusion_rate"] > 0.8)[0].tolist()
+occlusions_ids = np.where(df_gtbbox_metadata.loc[int(frame_id)+delay, "occlusion_rate"] > 0.8)[0].tolist()
 
 # plot
 plot_results_img(img_path, frame_id, preds, targets, occlusions_ids)
 
 # Compute metrics from image
-pred_bbox, target_bbox = preds[frame_id], targets[frame_id]
+pred_bbox, target_bbox = preds[str(frame_id)], targets[str(frame_id)]
 
 
 #%% Compute depending on a condition
@@ -96,10 +93,14 @@ def get_mr_fppi_curve(df_mr_fppi, frame_ids):
     fppi = metrics["FPPI"]
     return mr, fppi
 
-cofactor = "is_moving"
-value = 1
-thunder_frame_ids = df_frame_metadata[df_frame_metadata[cofactor] == value].index.to_list()
-nothunder_frame_ids = df_frame_metadata[df_frame_metadata[cofactor] != value].index.to_list()
+cofactor = "z"
+value = -592
+
+def listint2liststr(l):
+    return [str(i) for i in l]
+
+thunder_frame_ids = listint2liststr(df_frame_metadata[df_frame_metadata[cofactor] > value].index.to_list())
+nothunder_frame_ids = listint2liststr(df_frame_metadata[df_frame_metadata[cofactor] <= value].index.to_list())
 
 
 
@@ -128,3 +129,67 @@ ax.set_xlim(0.1, 20)
 
 plt.legend()
 plt.show()
+
+
+#%%
+from utils import visual_check_motsynth_annotations
+visual_check_motsynth_annotations(video_num="145", img_file_name="1455.jpg", shift=3)
+
+
+#%% Analysis of p-value of cofactors (and plot it) for both MR and FPPI
+
+import statsmodels.api as sm
+df_frame_metadata[["blizzard", "smog", "thunder"]] = pd.get_dummies(df_frame_metadata["weather"])[['BLIZZARD', 'SMOG', 'THUNDER']]
+
+
+"""
+
+#%% All at once
+cofactors = ["is_night", 'pitch', 'roll', 'x', 'y', 'z','is_moving', "blizzard", "smog", "thunder"]
+X = df_frame_metadata[cofactors]
+Y = df_mr_fppi[df_mr_fppi["threshold"]==0.5]["MR"].loc[listint2liststr(X.index)]
+X = sm.add_constant(X)
+fit = sm.OLS(Y, X).fit()
+for i, cofactor in enumerate(cofactors):
+    print(fit.pvalues[i], cofactor)
+
+
+#%% Separated
+cofactors = ["is_night", 'pitch', 'roll', 'x', 'y', 'z','is_moving', "blizzard", "smog", "thunder"]
+
+for cofactor in cofactors:
+    X = df_frame_metadata[cofactor]
+    Y = df_mr_fppi[df_mr_fppi["threshold"]==0.5]["MR"].loc[listint2liststr(X.index)]
+    X = sm.add_constant(X)
+    fit = sm.OLS(Y, X).fit()
+    for i, cofactor in enumerate([cofactor]):
+        print(fit.pvalues[i], cofactor)
+"""
+
+
+
+"""
+Corriger BOnferroni + DataViz
+
+Matrice de correlation des cofacteurs
+
+Peut-être plutot les performances au niveau de la séquence ??? 
+Par exemple pour weather oui... Car sinon les tests sont non indépendants
+
+"""
+
+"""
+
+#%%
+import pandas as pd
+import seaborn as sns
+
+
+# compute the correlation matrix using the corr method
+correlation_matrix = df_frame_metadata[cofactors].corr()
+
+# plot the correlation matrix using the heatmap function from seaborn
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
+plt.show()
+"""
+

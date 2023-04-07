@@ -187,7 +187,7 @@ def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filterin
         results = {}
         for frame_id in frame_ids:
 
-            df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id+3].reset_index()
+            df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+3].reset_index()
 
             if gtbbox_filtering is not {}:
 
@@ -228,19 +228,46 @@ def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filterin
     return df_mr_fppi
 
 
-
+#todo here bug with 1711 too many
 def get_preds_from_files(config_file, checkpoint_file, frame_id_list, file_list, nms=False, device="cuda"):
 
-    preds = {}
+    #todo problem with int / str id
 
-    model = init_detector(config_file, checkpoint_file, device=device)
+    json_root = f"data/preds/{config_file.split('/')[-1].replace('.py', '')}"
+    os.makedirs(json_root, exist_ok=True)
+    json_file = f"{json_root}/preds.json"
+
+    # If exist load it
+    if os.path.isfile(json_file):
+        with open(json_file) as f:
+            preds = json.load(f)
+
+            # To pytorch for the ones it needs
+            for key in preds.keys():
+                preds[key][0]["boxes"] = torch.tensor(preds[key][0]["boxes"])
+                preds[key][0]["scores"] = torch.tensor(preds[key][0]["scores"])
+                preds[key][0]["labels"] = torch.tensor(preds[key][0]["labels"])
+    else:
+        preds = {}
+
+
+    # How many preds done, how many to do more ?
+    missing_frames = list(set(frame_id_list) - set(preds.keys()))
+    missing_files = []
+    for (file, img_id) in zip(file_list, frame_id_list):
+        if img_id in missing_frames:
+            missing_files.append(file)
+    print(f"{len(preds)} img done already, predicting for {len(missing_frames)} more.")
+
+    if len(missing_frames) > 0:
+        model = init_detector(config_file, checkpoint_file, device=device)
 
     #for frame_id, img_path in zip(frame_id_list, file_list):
 
-    for i in tqdm(range(len(file_list))):
+    for i in tqdm(range(len(missing_files))):
 
-        frame_id = frame_id_list[i]
-        img_path = file_list[i]
+        frame_id = missing_frames[i]
+        img_path = missing_files[i]
 
         # test a single image and show the results
         result = inference_detector(model, img_path)
@@ -258,9 +285,24 @@ def get_preds_from_files(config_file, checkpoint_file, frame_id_list, file_list,
                 boxes=torch.tensor(bboxes_people[:, :4]),
                 scores=torch.tensor(bboxes_people[:, 4]),
                 labels=torch.tensor([0] * len(bboxes_people)),
+                img_path=img_path
             )
         ]
-        preds[frame_id] = pred
+        preds[str(frame_id)] = pred
+
+    # to be able to save it
+    preds_json = {}
+    for key,val in preds.items():
+        preds_json[key] = [{
+            "boxes": val[0]["boxes"].numpy().tolist(),
+            "scores": val[0]["scores"].numpy().tolist(),
+            "labels": val[0]["labels"].numpy().tolist(),
+            "img_path": val[0]["img_path"],
+        }]
+
+    # Save predictions that have been done
+    with open(json_file, 'w') as f:
+        json.dump(preds_json, f)
 
     return preds
 
@@ -275,18 +317,18 @@ def add_bboxes_to_img(img, bboxes, c=(0,0,255), s=1):
 def plot_results_img(img_path, frame_id, preds=None, targets=None, excl_gt_indices=None):
     img = plt.imread(img_path)
 
-    num_gt_bbox = len(targets[frame_id][0]["boxes"])
+    num_gt_bbox = len(targets[(frame_id)][0]["boxes"])
 
     incl_gt_indices = np.setdiff1d(list(range(num_gt_bbox)), excl_gt_indices)
 
     if preds is not None:
-        img = add_bboxes_to_img(img, preds[frame_id][0]["boxes"], c=(0, 0, 255), s=3)
+        img = add_bboxes_to_img(img, preds[(frame_id)][0]["boxes"], c=(0, 0, 255), s=3)
     if targets is not None:
         if excl_gt_indices is None:
-            img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"], c=(0, 255, 0), s=6)
+            img = add_bboxes_to_img(img, targets[(frame_id)][0]["boxes"], c=(0, 255, 0), s=6)
         else:
-            img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"][incl_gt_indices], c=(0, 255, 0), s=6)
-            img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"][excl_gt_indices], c=(255, 255, 0), s=6)
+            img = add_bboxes_to_img(img, targets[(frame_id)][0]["boxes"][incl_gt_indices], c=(0, 255, 0), s=6)
+            img = add_bboxes_to_img(img, targets[(frame_id)][0]["boxes"][excl_gt_indices], c=(255, 255, 0), s=6)
     plt.imshow(img)
     plt.show()
 
@@ -463,7 +505,7 @@ def get_MoTSynth_annotations_and_imagepaths_video(video_id="004", max_samples=10
 
         # Keep only if at least 1 pedestrian
         if len(target[0]["boxes"]) > 0:
-            targets[frame_id] = target
+            targets[str(frame_id)] = target
             frame_metadata[frame_id] = annot_motsynth["info"]
             img_path_list.append(osp.join("/home/raphael/work/datasets/MOTSynth", image["file_name"]))
             # frame_metadata[frame_id] = (annot_ECP["tags"], [ann["tags"] for ann in annot_ECP["children"]])
@@ -473,7 +515,10 @@ def get_MoTSynth_annotations_and_imagepaths_video(video_id="004", max_samples=10
 
 
 
-            frame_metadata_features = ['file_name', 'id', 'frame_n'] + ["is_night", "seq_name", "weather", "is_moving", "cam_fov", 'fx', 'fy', 'cx', 'cy']
+            frame_metadata_features = ['file_name', 'id', 'frame_n'] + \
+                                      ["is_night", "seq_name", "weather"] + \
+                                      [ "is_moving", "cam_fov", 'fx', 'fy', 'cx', 'cy'] + \
+                                      ["x", "y", "z", "yaw", "pitch", "roll"]
             df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame({key:val for key,val in image.items() if key in frame_metadata_features}, index=[frame_id])], axis=0)
     frame_id_list = list(targets.keys())
 
@@ -516,7 +561,7 @@ def get_MoTSynth_annotations_and_imagepaths(video_ids=None, max_samples=100000):
         df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame(df_frame_metadata_folder)], axis=0)
         df_sequence_metadata = pd.concat([df_sequence_metadata, pd.DataFrame(df_sequence_metadata_folder)], axis=0)
 
-        frame_id_list += frame_id_list_folder
+        frame_id_list += [str(i) for i in frame_id_list_folder]
         img_path_list += img_path_list_folder
 
     metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
