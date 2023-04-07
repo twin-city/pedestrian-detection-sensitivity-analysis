@@ -205,26 +205,30 @@ def get_preds_from_files(config_file, checkpoint_file, frame_id_list, file_list,
         frame_id = missing_frames[i]
         img_path = missing_files[i]
 
-        # test a single image and show the results
-        result = inference_detector(model, img_path)
-        bboxes_people = result[0]
 
-        if nms:
-            bboxes_people, _ = nms(
-                bboxes_people[:, :4],
-                bboxes_people[:, 4],
-                0.25,
-                score_threshold=0.25)
+        try:
+            # test a single image and show the results
+            result = inference_detector(model, img_path)
+            bboxes_people = result[0]
 
-        pred = [
-            dict(
-                boxes=torch.tensor(bboxes_people[:, :4]),
-                scores=torch.tensor(bboxes_people[:, 4]),
-                labels=torch.tensor([0] * len(bboxes_people)),
-                img_path=img_path
-            )
-        ]
-        preds[str(frame_id)] = pred
+            if nms:
+                bboxes_people, _ = nms(
+                    bboxes_people[:, :4],
+                    bboxes_people[:, 4],
+                    0.25,
+                    score_threshold=0.25)
+
+            pred = [
+                dict(
+                    boxes=torch.tensor(bboxes_people[:, :4]),
+                    scores=torch.tensor(bboxes_people[:, 4]),
+                    labels=torch.tensor([0] * len(bboxes_people)),
+                    img_path=img_path
+                )
+            ]
+            preds[str(frame_id)] = pred
+        except:
+            print(f"Could not infer {frame_id} {img_path}")
 
     # to be able to save it
     preds_json = {}
@@ -376,6 +380,7 @@ def get_motsynth_day_night_video_ids(max_iter=50, force=False):
 
 def get_MoTSynth_annotations_and_imagepaths_video(video_id="004", max_samples=100000, random_sampling=True, delay=3):
 
+
     np.random.seed(0)
 
     df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()]*3
@@ -486,22 +491,19 @@ def get_MoTSynth_annotations_and_imagepaths(video_ids=None, max_samples=100000):
     targets, targets_metadata, frames_metadata, frame_id_list, img_path_list = {}, {}, {}, [], []
 
     for folder in folders:
-        targets_folder, targets_metadatas, frame_id_list_folder, img_path_list_folder =\
-            get_MoTSynth_annotations_and_imagepaths_video(video_id=folder, max_samples=max_num_sample_per_video)
 
-        df_gtbbox_metadata_folder, df_frame_metadata_folder, df_sequence_metadata_folder = targets_metadatas
-
-        targets.update(targets_folder)
-
-        #targets_metadata.update(targets_metadata_folder)
-        #frames_metadata.update(frames_metadata_folder)
-
-        df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(df_gtbbox_metadata_folder)], axis=0)
-        df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame(df_frame_metadata_folder)], axis=0)
-        df_sequence_metadata = pd.concat([df_sequence_metadata, pd.DataFrame(df_sequence_metadata_folder)], axis=0)
-
-        frame_id_list += [str(i) for i in frame_id_list_folder]
-        img_path_list += img_path_list_folder
+        try:
+            targets_folder, targets_metadatas, frame_id_list_folder, img_path_list_folder =\
+                get_MoTSynth_annotations_and_imagepaths_video(video_id=folder, max_samples=max_num_sample_per_video)
+            df_gtbbox_metadata_folder, df_frame_metadata_folder, df_sequence_metadata_folder = targets_metadatas
+            targets.update(targets_folder)
+            df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(df_gtbbox_metadata_folder)], axis=0)
+            df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame(df_frame_metadata_folder)], axis=0)
+            df_sequence_metadata = pd.concat([df_sequence_metadata, pd.DataFrame(df_sequence_metadata_folder)], axis=0)
+            frame_id_list += [str(i) for i in frame_id_list_folder]
+            img_path_list += img_path_list_folder
+        except:
+            print(f"Could not load data from sequence {folder}")
 
     metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 

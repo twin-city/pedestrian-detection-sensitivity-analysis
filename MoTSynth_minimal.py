@@ -1,12 +1,23 @@
+import setuptools.errors
+
 from utils import *
 import numpy as np
 import os.path as osp
 
 # Parameters data
-video_ids = ["004", "170","130", "033", "103", "107", "145"]
-max_sample = 30
+video_ids = ["004", "170","130", "033", "103", "107", "145"] #todo do a checkup before running all
+video_ids = [f"00{i}" for i in range(10)]
 
-#todo bug 140, 174
+exclude_ids_frames = set(["060","081","026", "132", "136", "102", "099", "174", "140"])
+video_ids_frames = set(np.sort(os.listdir("/home/raphael/work/datasets/MOTSynth/frames")).tolist())
+video_ids_json = set([i.replace(".json", "") for i in os.listdir("/home/raphael/work/datasets/MOTSynth/coco annot/")]) - exclude_ids_frames
+video_ids = list(np.sort(list(set.intersection(video_ids_frames, video_ids_json)))[:200])
+
+
+
+max_sample = 300
+
+#todo bug 140, 174 and whatt appens if less samples than sequences ?????
 
 
 #%% params
@@ -87,14 +98,16 @@ df_mr_fppi = compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox
 #avrg_fp_list_2, avrg_missrate_list_2 = compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filtering, frame_ids_day)
 
 
+#%%
+
 def get_mr_fppi_curve(df_mr_fppi, frame_ids):
     metrics = df_mr_fppi.loc[frame_ids].groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
     mr = metrics["MR"]
     fppi = metrics["FPPI"]
     return mr, fppi
 
-cofactor = "is_night"
-value = 1
+cofactor = "weather"
+value = "RAIN"
 
 def listint2liststr(l):
     return [str(i) for i in l]
