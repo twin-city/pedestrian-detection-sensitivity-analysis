@@ -106,8 +106,15 @@ def get_mr_fppi_curve(df_mr_fppi, frame_ids):
     fppi = metrics["FPPI"]
     return mr, fppi
 
-cofactor = "weather"
-value = "RAIN"
+
+adverse_weather = ['THUNDER', 'SMOG', 'FOGGY', 'BLIZZARD', 'RAIN', 'CLOUDS', 'OVERCAST'] # 'CLEAR' 'EXTRASUNNY',
+
+df_frame_metadata["adverse_weather"] = df_frame_metadata["weather"].apply(lambda x: x in adverse_weather)
+
+#todo combine multiple : weather and night ...
+
+cofactor = "adverse_weather"
+value = 1
 
 def listint2liststr(l):
     return [str(i) for i in l]
