@@ -4,7 +4,7 @@ import os.path as osp
 
 # Parameters data
 video_ids = ["004", "170","130", "033", "103", "107", "145"]
-max_sample = 30
+max_sample = 100
 
 #todo bug 140, 174
 
@@ -72,7 +72,7 @@ pred_bbox, target_bbox = preds[str(frame_id)], targets[str(frame_id)]
 #%% Compute depending on a condition
 
 
-#todo a gt filtering for frames/sequence also ?
+#todo a gt filtering for frames/sequence also ? Also save it to save time
 
 # GT filtering #todo minimal value for now
 gtbbox_filtering = {"occlusion_rate": (0.9, "max"),
@@ -93,26 +93,26 @@ def get_mr_fppi_curve(df_mr_fppi, frame_ids):
     fppi = metrics["FPPI"]
     return mr, fppi
 
-cofactor = "z"
-value = -592
+cofactor = "is_night"
+value = 1
 
 def listint2liststr(l):
     return [str(i) for i in l]
 
-thunder_frame_ids = listint2liststr(df_frame_metadata[df_frame_metadata[cofactor] > value].index.to_list())
-nothunder_frame_ids = listint2liststr(df_frame_metadata[df_frame_metadata[cofactor] <= value].index.to_list())
+cof_frame_ids = listint2liststr(df_frame_metadata[df_frame_metadata[cofactor] == value].index.to_list())
+nocof_frame_ids = listint2liststr(df_frame_metadata[df_frame_metadata[cofactor] != value].index.to_list())
 
 
 
 import matplotlib.pyplot as plt
 fig, ax = plt.subplots()
 
-mr, fppi = get_mr_fppi_curve(df_mr_fppi, thunder_frame_ids)
+mr, fppi = get_mr_fppi_curve(df_mr_fppi, cof_frame_ids)
 ax.plot(mr, fppi, c="green", label=f"has {cofactor}")
 ax.scatter(mr, fppi, c="green")
 
 
-mr, fppi = get_mr_fppi_curve(df_mr_fppi, nothunder_frame_ids)
+mr, fppi = get_mr_fppi_curve(df_mr_fppi, nocof_frame_ids)
 ax.plot(mr, fppi, c="red", label=f"no has {cofactor}")
 ax.scatter(mr, fppi, c="red")
 

@@ -252,11 +252,13 @@ def get_preds_from_files(config_file, checkpoint_file, frame_id_list, file_list,
 
 
     # How many preds done, how many to do more ?
-    missing_frames = list(set(frame_id_list) - set(preds.keys()))
+    missing_frames = []
+    set_missing_frames = list(set(frame_id_list) - set(preds.keys()))
     missing_files = []
     for (file, img_id) in zip(file_list, frame_id_list):
-        if img_id in missing_frames:
+        if img_id in set_missing_frames:
             missing_files.append(file)
+            missing_frames.append(img_id)
     print(f"{len(preds)} img done already, predicting for {len(missing_frames)} more.")
 
     if len(missing_frames) > 0:
@@ -304,7 +306,10 @@ def get_preds_from_files(config_file, checkpoint_file, frame_id_list, file_list,
     with open(json_file, 'w') as f:
         json.dump(preds_json, f)
 
-    return preds
+    # Only keys we want
+    preds_out = {key: preds[key] for key in frame_id_list}
+
+    return preds_out
 
 #%% Plot utils
 
