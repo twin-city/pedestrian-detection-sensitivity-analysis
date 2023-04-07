@@ -18,50 +18,6 @@ def xywh2xyxy(bbox):
     return x, y, x + w, y + h
 
 
-"""
-def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5):
-    score_sorted = np.argsort(pred_bbox[0]["scores"].numpy())[::-1]
-
-    possible_target_bboxs = [target_bbox for target_bbox in target_bbox[0]["boxes"]]
-    possible_target_bboxs_ids = list(range(len(target_bbox[0]["boxes"])))
-    matched_target_bbox_list = []
-    unmatched_preds = []
-
-    for i in score_sorted:
-
-        if len(possible_target_bboxs) == 0 or pred_bbox[0]["scores"][i] < threshold:
-            break
-
-        bbox = pred_bbox[0]["boxes"][i]
-
-        # Compute all IoU
-        IoUs = [torchvision.ops.box_iou(bbox.unsqueeze(0), target_bbox.unsqueeze(0)) for
-                target_bbox in possible_target_bboxs]
-        IoUs_index = [IoU for IoU in IoUs if IoU > 0.5]
-        if len(IoUs_index) == 0:
-            unmatched_preds.append(i)
-        else:
-            # Match it best with existing boxes
-            matched_target_bbox = np.argmax(IoUs)
-            matched_target_bbox_list.append(possible_target_bboxs_ids[matched_target_bbox])
-
-            # Remove
-            possible_target_bboxs.pop(matched_target_bbox)
-            possible_target_bboxs_ids.pop(matched_target_bbox)
-
-    # Compute the False Positives
-    target_bbox_missed = np.setdiff1d(list(range(len(target_bbox[0]["boxes"]))), matched_target_bbox_list).tolist()
-
-    # Number of predictions above threshold - Number of matched target_bboxs
-    fp_image = max(0, (pred_bbox[0]["scores"] > threshold).numpy().sum() - len(matched_target_bbox_list))
-
-    # False negatives
-    fn_image = max(0, len(target_bbox[0]["boxes"]) - len(matched_target_bbox_list))
-    miss_ratio_image = fn_image / len(target_bbox[0]["boxes"])
-
-    return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds
-"""
-
 def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
 
     score_sorted = np.argsort(pred_bbox[0]["scores"].numpy())[::-1]
@@ -126,42 +82,6 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[])
     return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds
 
 
-def compute_ffpi_against_fp(preds, targets, targets_metadata=None, ids=None):
-    """
-    On preds keys.
-    :param preds:
-    :param targets:
-    :return:
-    """
-
-    if ids is None:
-        ids = preds.keys()
-
-    thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
-
-    avrg_fp_list = []
-    avrg_missrate_list = []
-
-    for threshold in thresholds:
-        results = {}
-        for frame_id in ids:
-
-            if targets_metadata is not None:
-                target_metadata = targets_metadata[frame_id]
-                occlusions = [(x - 1).mean() for x in target_metadata["keypoints"]]
-                occlusions_ids = list(np.where(np.array(occlusions) < 0.1)[0])
-            else:
-                occlusions_ids = []
-
-            results[frame_id] = compute_fp_missratio2(preds[frame_id], targets[frame_id], threshold=threshold, excluded_gt=occlusions_ids)
-        avrg_fp = np.mean([x[0] for x in results.values()])
-        avrg_missrate = np.mean([x[1] for x in results.values()])
-
-        avrg_fp_list.append(avrg_fp)
-        avrg_missrate_list.append(avrg_missrate)
-
-    return avrg_fp_list, avrg_missrate_list
-
 
 
 
@@ -173,59 +93,73 @@ def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filterin
     :return:
     """
 
-    df_mr_fppi_list = []
-
-
-    frame_ids = preds.keys() #todo all for now
-
     thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
 
-    avrg_fp_list = []
-    avrg_missrate_list = []
 
-    for threshold in thresholds:
-        results = {}
-        for frame_id in frame_ids:
+    df_root = f"data/preds/{model_name}"
+    os.makedirs(df_root, exist_ok=True)
+    df_file = f"{df_root}/metrics-{json.dumps(gtbbox_filtering)}.json"
 
-            df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+3].reset_index()
+    # If exist load it
+    if os.path.isfile(df_file):
+        df_mr_fppi = pd.read_csv(df_file, index_col="frame_id").reset_index()
+        df_mr_fppi["frame_id"] = df_mr_fppi["frame_id"].astype(str)
+        df_mr_fppi = df_mr_fppi.set_index(["frame_id", "threshold"])
+    else:
+        df_mr_fppi = pd.DataFrame(columns=["frame_id", "threshold", "MR", "FPPI"]).set_index(["frame_id", "threshold"])
 
-            if gtbbox_filtering is not {}:
 
-                # todo use a set
-                excluded = set()
-                for key,val in gtbbox_filtering.items():
-                    if val[1] == "min":
-                        excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] < val[0]].index)
-                    elif val[1] == "max":
-                        excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] > val[0]].index)
+
+    df_mr_fppi_list = []
+    frame_ids = preds.keys() #todo all for now
+
+    # maybe do a set here ?
+
+    for frame_id in frame_ids:
+
+        # If image not already parsed
+        if str(frame_id) not in df_mr_fppi.index:
+            print(f"{frame_id} Not already done")
+
+            results = {}
+            for threshold in thresholds:
+
+
+                    df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+3].reset_index()
+
+                    if gtbbox_filtering is not {}:
+
+                        # todo use a set
+                        excluded = set()
+                        for key,val in gtbbox_filtering.items():
+                            if val[1] == "min":
+                                excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] < val[0]].index)
+                            elif val[1] == "max":
+                                excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] > val[0]].index)
+                            else:
+                                raise ValueError("Nor minimal nor maximal filtering proposed.")
+                        excluded_gt = list(excluded)
                     else:
-                        raise ValueError("Nor minimal nor maximal filtering proposed.")
-                excluded_gt = list(excluded)
-            else:
-                excluded_gt = []
+                        excluded_gt = []
 
-            results[frame_id] = compute_fp_missratio2(preds[frame_id], targets[frame_id],
-                                                      threshold=threshold, excluded_gt=excluded_gt)
+                    results[threshold] = compute_fp_missratio2(preds[frame_id], targets[frame_id],
+                                                              threshold=threshold, excluded_gt=excluded_gt)
 
 
-        df_results_threshold = pd.DataFrame({key:val[:2] for key,val in results.items()}).T.rename(columns={0: "MR", 1: "FPPI"})
-        df_results_threshold["threshold"] = threshold
-        df_results_threshold["frame_id"] = frame_id
-        df_mr_fppi_list.append(df_results_threshold)
+            df_results_threshold = pd.DataFrame({key:val[:2] for key,val in results.items()}).T.rename(columns={0: "MR", 1: "FPPI"})
+            df_results_threshold.index.name = "threshold"
+            df_results_threshold["frame_id"] = str(frame_id)
+            df_mr_fppi_list.append(df_results_threshold.reset_index().set_index(["frame_id", "threshold"]))
 
         # todo output here details for each image as a dataframe ? score threshold x image_id
 
-        """
-        avrg_fp = np.mean([x[0] for x in results.values()])
-        avrg_missrate = np.mean([x[1] for x in results.values()])
-        avrg_fp_list.append(avrg_fp)
-        avrg_missrate_list.append(avrg_missrate)
-        """
+        if df_mr_fppi_list:
+            df_mr_fppi_current = pd.concat(df_mr_fppi_list, axis=0)
+            df_mr_fppi_current["model"] = model_name
+            df_mr_fppi = pd.concat([df_mr_fppi, df_mr_fppi_current], axis=0)
+            df_mr_fppi.to_csv(df_file)
 
-        df_mr_fppi = pd.concat(df_mr_fppi_list, axis=0)
-        df_mr_fppi["model"] = model_name
-
-    return df_mr_fppi
+    return df_mr_fppi.loc[frame_ids]
 
 
 #todo here bug with 1711 too many
@@ -259,7 +193,7 @@ def get_preds_from_files(config_file, checkpoint_file, frame_id_list, file_list,
         if img_id in set_missing_frames:
             missing_files.append(file)
             missing_frames.append(img_id)
-    print(f"{len(preds)} img done already, predicting for {len(missing_frames)} more.")
+    print(f"{len(frame_id_list)} img done already, predicting for {len(missing_frames)} more.")
 
     if len(missing_frames) > 0:
         model = init_detector(config_file, checkpoint_file, device=device)

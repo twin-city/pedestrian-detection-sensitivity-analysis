@@ -1,4 +1,5 @@
 
+- handle more sequences
 - test unitaires !!!!!!
 - at the box level ? Detected or not ?
 - Do a maxiumm of predictions, see where it bugs

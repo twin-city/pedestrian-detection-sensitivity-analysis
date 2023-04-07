@@ -4,7 +4,7 @@ import os.path as osp
 
 # Parameters data
 video_ids = ["004", "170","130", "033", "103", "107", "145"]
-max_sample = 100
+max_sample = 30
 
 #todo bug 140, 174
 
@@ -23,7 +23,7 @@ configs_root = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysi
 
 if model_name == "faster-rcnn_cityscapes":
     checkpoint_path = "faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
-    config_path = "models/faster_rcnn/faster_rcnn_cityscapes.py"
+    config_path = "models/faster_rcnn/faster-rcnn_cityscapes.py"
 elif model_name == "yolo3_coco":
     config_path = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs/models/yolo/yolov3_d53_320_273e_coco.py"
     checkpoint_path = "/home/raphael/work/checkpoints/detection/yolov3_d53_320_273e_coco-421362b6.pth"
