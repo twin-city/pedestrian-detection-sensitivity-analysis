@@ -162,92 +162,6 @@ def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filterin
     return df_mr_fppi.loc[frame_ids]
 
 
-#todo here bug with 1711 too many
-def get_preds_from_files(config_file, checkpoint_file, frame_id_list, file_list, nms=False, device="cuda"):
-
-    #todo problem with int / str id
-
-    json_root = f"data/preds/{config_file.split('/')[-1].replace('.py', '')}"
-    os.makedirs(json_root, exist_ok=True)
-    json_file = f"{json_root}/preds.json"
-
-    # If exist load it
-    if os.path.isfile(json_file):
-        with open(json_file) as f:
-            preds = json.load(f)
-
-            # To pytorch for the ones it needs
-            for key in preds.keys():
-                preds[key][0]["boxes"] = torch.tensor(preds[key][0]["boxes"])
-                preds[key][0]["scores"] = torch.tensor(preds[key][0]["scores"])
-                preds[key][0]["labels"] = torch.tensor(preds[key][0]["labels"])
-    else:
-        preds = {}
-
-
-    # How many preds done, how many to do more ?
-    missing_frames = []
-    set_missing_frames = list(set(frame_id_list) - set(preds.keys()))
-    missing_files = []
-    for (file, img_id) in zip(file_list, frame_id_list):
-        if img_id in set_missing_frames:
-            missing_files.append(file)
-            missing_frames.append(img_id)
-    print(f"{len(frame_id_list)} img done already, predicting for {len(missing_frames)} more.")
-
-    if len(missing_frames) > 0:
-        model = init_detector(config_file, checkpoint_file, device=device)
-
-    #for frame_id, img_path in zip(frame_id_list, file_list):
-
-    for i in tqdm(range(len(missing_files))):
-
-        frame_id = missing_frames[i]
-        img_path = missing_files[i]
-
-
-        try:
-            # test a single image and show the results
-            result = inference_detector(model, img_path)
-            bboxes_people = result[0]
-
-            if nms:
-                bboxes_people, _ = nms(
-                    bboxes_people[:, :4],
-                    bboxes_people[:, 4],
-                    0.25,
-                    score_threshold=0.25)
-
-            pred = [
-                dict(
-                    boxes=torch.tensor(bboxes_people[:, :4]),
-                    scores=torch.tensor(bboxes_people[:, 4]),
-                    labels=torch.tensor([0] * len(bboxes_people)),
-                    img_path=img_path
-                )
-            ]
-            preds[str(frame_id)] = pred
-        except:
-            print(f"Could not infer {frame_id} {img_path}")
-
-    # to be able to save it
-    preds_json = {}
-    for key,val in preds.items():
-        preds_json[key] = [{
-            "boxes": val[0]["boxes"].numpy().tolist(),
-            "scores": val[0]["scores"].numpy().tolist(),
-            "labels": val[0]["labels"].numpy().tolist(),
-            "img_path": val[0]["img_path"],
-        }]
-
-    # Save predictions that have been done
-    with open(json_file, 'w') as f:
-        json.dump(preds_json, f)
-
-    # Only keys we want
-    preds_out = {key: preds[key] for key in frame_id_list}
-
-    return preds_out
 
 #%% Plot utils
 
@@ -323,6 +237,14 @@ def visual_check_motsynth_annotations(video_num="004", img_file_name="0200.jpg",
     img_path = f"/home/raphael/work/datasets/MOTSynth/frames/{video_num}/rgb/{img_file_name}"
     img = plt.imread(img_path)
     img = add_bboxes_to_img(img, bboxes, c=(0, 255, 0), s=6)
+
+    keypoints = [(np.array(x["keypoints"])).reshape((22, 3)) for x in annot_motsynth["annotations"] if
+                 x["image_id"] == img_id + shift]
+
+    for keypoint in keypoints:
+        plt.scatter(keypoint[:, 0], keypoint[:, 1], c=keypoint[:, 2])
+
+
     plt.imshow(img)
     plt.show()
 
@@ -377,134 +299,3 @@ def get_motsynth_day_night_video_ids(max_iter=50, force=False):
     return day, night
 
 
-
-def get_MoTSynth_annotations_and_imagepaths_video(video_id="004", max_samples=100000, random_sampling=True, delay=3):
-
-
-    np.random.seed(0)
-
-    df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()]*3
-
-    json_path = f"/home/raphael/work/datasets/MOTSynth/coco annot/{video_id}.json"
-
-    with open(json_path) as jsonFile:
-        annot_motsynth = json.load(jsonFile)
-
-    frame_metadata = {}
-    targets = {}
-    img_path_list = []
-    targets_metadata = {}
-
-    # Set images to process (subset for ptotyping)
-    if random_sampling:
-        random_set = np.random.choice(len(annot_motsynth["images"][delay:]), max_samples, replace=False)
-        image_set = [x for i, x in enumerate(annot_motsynth["images"][delay:]) if i in random_set]
-    else:
-        image_set = annot_motsynth["images"][delay:delay+max_samples]
-
-    for image in image_set:
-
-        # todo more info in image
-        for i, name in enumerate(["raw", "pitch", "roll"]):
-            image[name] = image["cam_world_rot"][i]
-        for i, name in enumerate(["x", "y", "z"]):
-            image[name] = image["cam_world_pos"][i]
-        for info_name in ["is_night", "seq_name", "weather", "is_moving", "cam_fov", 'fx', 'fy', 'cx', 'cy']:
-            image[info_name] = annot_motsynth["info"][info_name]
-
-        frame_id = image["id"]
-        bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
-
-        # BBOXES metadata
-        annots = [x for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
-        keypoints = [(np.array(annot["keypoints"])).reshape((22, 3))[:,2] for annot in annots]
-        area = [annot["area"] for annot in annots]
-        is_crowd = [annot["iscrowd"] for annot in annots]
-        is_blurred = [annot["is_blurred"] for annot in annots]
-        attributes = [annot["attributes"] for annot in annots]
-        ped_id = [annot["ped_id"] for annot in annots]
-        id = [annot["id"] for annot in annots]
-        image_id = [annot["image_id"] for annot in annots]
-
-        target_metadata = {
-            "image_id": image_id,
-            "id": id,
-            "keypoints": keypoints,
-            "area": area,
-            "is_crowd": is_crowd,
-            "is_blurred": is_blurred,
-            "attributes": attributes,
-            "ped_id": ped_id,
-        }
-
-        targets_metadata[frame_id] = target_metadata
-
-        # Target and labels
-        target = [
-            dict(
-                boxes=torch.tensor(
-                    bboxes)
-                )]
-        target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
-
-        # Keep only if at least 1 pedestrian
-        if len(target[0]["boxes"]) > 0:
-            targets[str(frame_id)] = target
-            frame_metadata[frame_id] = annot_motsynth["info"]
-            img_path_list.append(osp.join("/home/raphael/work/datasets/MOTSynth", image["file_name"]))
-            # frame_metadata[frame_id] = (annot_ECP["tags"], [ann["tags"] for ann in annot_ECP["children"]])
-
-            # Dataframes
-            df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(target_metadata)], axis=0)
-
-
-
-            frame_metadata_features = ['file_name', 'id', 'frame_n'] + \
-                                      ["is_night", "seq_name", "weather"] + \
-                                      [ "is_moving", "cam_fov", 'fx', 'fy', 'cx', 'cy'] + \
-                                      ["x", "y", "z", "yaw", "pitch", "roll"]
-            df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame({key:val for key,val in image.items() if key in frame_metadata_features}, index=[frame_id])], axis=0)
-    frame_id_list = list(targets.keys())
-
-    # Metadata at the video level
-    df_sequence_metadata = pd.DataFrame(annot_motsynth["info"], index=[video_id])
-
-    metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
-
-    return targets, metadatas, frame_id_list, img_path_list
-
-
-
-
-def get_MoTSynth_annotations_and_imagepaths(video_ids=None, max_samples=100000):
-
-    df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()]*3
-
-    if video_ids is None:
-        folders = os.listdir("/home/raphael/work/datasets/MOTSynth/frames")
-    else:
-        folders = video_ids
-
-    num_folders = len(list(folders))
-    max_num_sample_per_video = int(max_samples/num_folders)
-
-    targets, targets_metadata, frames_metadata, frame_id_list, img_path_list = {}, {}, {}, [], []
-
-    for folder in folders:
-
-        try:
-            targets_folder, targets_metadatas, frame_id_list_folder, img_path_list_folder =\
-                get_MoTSynth_annotations_and_imagepaths_video(video_id=folder, max_samples=max_num_sample_per_video)
-            df_gtbbox_metadata_folder, df_frame_metadata_folder, df_sequence_metadata_folder = targets_metadatas
-            targets.update(targets_folder)
-            df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(df_gtbbox_metadata_folder)], axis=0)
-            df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame(df_frame_metadata_folder)], axis=0)
-            df_sequence_metadata = pd.concat([df_sequence_metadata, pd.DataFrame(df_sequence_metadata_folder)], axis=0)
-            frame_id_list += [str(i) for i in frame_id_list_folder]
-            img_path_list += img_path_list_folder
-        except:
-            print(f"Could not load data from sequence {folder}")
-
-    metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
-
-    return targets, metadatas, frame_id_list, img_path_list

@@ -4,63 +4,28 @@ from utils import *
 import numpy as np
 import os.path as osp
 
-# Parameters data
-video_ids = ["004", "170","130", "033", "103", "107", "145"] #todo do a checkup before running all
-video_ids = [f"00{i}" for i in range(10)]
-
-exclude_ids_frames = set(["060","081","026", "132", "136", "102", "099", "174", "140"])
-video_ids_frames = set(np.sort(os.listdir("/home/raphael/work/datasets/MOTSynth/frames")).tolist())
-video_ids_json = set([i.replace(".json", "") for i in os.listdir("/home/raphael/work/datasets/MOTSynth/coco annot/")]) - exclude_ids_frames
-video_ids = list(np.sort(list(set.intersection(video_ids_frames, video_ids_json)))[:200])
-
-
-
-max_sample = 300
-
-#todo bug 140, 174 and whatt appens if less samples than sequences ?????
 
 
 #%% params
 
-# model loading
-
-model_name = "yolo3_coco"
-model_name = "faster-rcnn_coco"
 model_name = "faster-rcnn_cityscapes"
-device = "cuda"
-checkpoint_root = "/home/raphael/work/checkpoints/detection"
-configs_root = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs"
+max_sample = 20
 
-
-if model_name == "faster-rcnn_cityscapes":
-    checkpoint_path = "faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
-    config_path = "models/faster_rcnn/faster-rcnn_cityscapes.py"
-elif model_name == "yolo3_coco":
-    config_path = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs/models/yolo/yolov3_d53_320_273e_coco.py"
-    checkpoint_path = "/home/raphael/work/checkpoints/detection/yolov3_d53_320_273e_coco-421362b6.pth"
-elif model_name == "faster-rcnn_coco":
-    config_path = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs/models/faster_rcnn/faster_rcnn_r50_caffe_fpn_mstrain_1x_coco-person.py"
-    checkpoint_path = "/home/raphael/work/checkpoints/detection/faster_rcnn_r50_fpn_1x_coco-person_20201216_175929-d022e227.pth"
-else:
-    raise ValueError(f"Model name {model_name} not known")
-config_file = osp.join(configs_root, config_path)
-checkpoint_file = osp.join(checkpoint_root, checkpoint_path)
-
-targets, metadatas, frame_id_list, img_path_list = get_MoTSynth_annotations_and_imagepaths(video_ids=video_ids, max_samples=max_sample)
-preds = get_preds_from_files(config_file, checkpoint_file, frame_id_list, img_path_list, device=device)
-
-#%%
-
+# Dataset #todo add statistical comparison between datasets
+from src.preprocessing.motsynth_processing import MotsynthProcessing
+motsynth_processor = MotsynthProcessing(max_samples=max_sample, video_ids=None)
+targets, metadatas, frame_id_list, img_path_list = motsynth_processor.get_MoTSynth_annotations_and_imagepaths()
 df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = metadatas
-df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
-df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata["keypoints"].apply(lambda x: 1-(x-1).mean())
-delay = 3
+delay = motsynth_processor.delay
 
-"""
-sequence -> weather
-sequence -> is_night
-gtbbox -> occlusion_rate
-"""
+# Detections
+from src.detection.detector import Detector
+detector = Detector(model_name)
+preds = detector.get_preds_from_files(frame_id_list, img_path_list)
+
+
+
+#########################################   Peform Tests   ############################################################
 
 #%% Analyze results on an image
 
@@ -89,14 +54,16 @@ pred_bbox, target_bbox = preds[str(frame_id)], targets[str(frame_id)]
 gtbbox_filtering = {"occlusion_rate": (0.9, "max"),
                     "area": (20, "min")}
 
-# Cofactor to explore #todo discrete or continuous
-cofactor = "weather"
-
 df_mr_fppi = compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filtering, model_name)
 
-#frame_ids_day = df_frame_metadata[df_frame_metadata[cofactor] != "THUNDER"].index.to_list()
-#avrg_fp_list_2, avrg_missrate_list_2 = compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filtering, frame_ids_day)
 
+
+#########################################   Peform Analysis   #########################################################
+
+
+
+# Cofactor to explore #todo discrete or continuous
+cofactor = "weather"
 
 #%%
 
@@ -113,7 +80,7 @@ df_frame_metadata["adverse_weather"] = df_frame_metadata["weather"].apply(lambda
 
 #todo combine multiple : weather and night ...
 
-cofactor = "adverse_weather"
+cofactor = "is_night"
 value = 1
 
 def listint2liststr(l):
@@ -159,7 +126,7 @@ visual_check_motsynth_annotations(video_num="145", img_file_name="1455.jpg", shi
 #%% Analysis of p-value of cofactors (and plot it) for both MR and FPPI
 
 import statsmodels.api as sm
-df_frame_metadata[["blizzard", "smog", "thunder"]] = pd.get_dummies(df_frame_metadata["weather"])[['BLIZZARD', 'SMOG', 'THUNDER']]
+# df_frame_metadata[["blizzard", "smog", "thunder"]] = pd.get_dummies(df_frame_metadata["weather"])[['BLIZZARD', 'SMOG', 'THUNDER']]
 
 
 """
