@@ -28,7 +28,9 @@ class MotsynthProcessing:
             video_ids_frames = set(np.sort(os.listdir("/home/raphael/work/datasets/MOTSynth/frames")).tolist())
             video_ids_json = set([i.replace(".json", "") for i in
                                   os.listdir(self.annot_dir)]) - exclude_ids_frames
-            self.video_ids = list(np.sort(list(set.intersection(video_ids_frames, video_ids_json)))[:10])
+            self.video_ids = list(np.sort(list(set.intersection(video_ids_frames, video_ids_json))))
+            if self.max_samples < len(self.video_ids):
+                self.video_ids = np.random.choice(self.video_ids, max_samples, replace=False)
         else:
             self.video_ids = video_ids
 
@@ -70,7 +72,7 @@ class MotsynthProcessing:
         for image in image_set:
 
             # todo more info in image
-            for i, name in enumerate(["raw", "pitch", "roll"]):
+            for i, name in enumerate(["yaw", "pitch", "roll"]):
                 image[name] = image["cam_world_rot"][i]
             for i, name in enumerate(["x", "y", "z"]):
                 image[name] = image["cam_world_pos"][i]
@@ -126,7 +128,7 @@ class MotsynthProcessing:
 
                 frame_metadata_features = ['file_name', 'id', 'frame_n'] + \
                                           ["is_night", "seq_name", "weather"] + \
-                                          [ "is_moving", "cam_fov", 'fx', 'fy', 'cx', 'cy'] + \
+                                          ["is_moving", "cam_fov", 'fx', 'fy', 'cx', 'cy'] + \
                                           ["x", "y", "z", "yaw", "pitch", "roll"]
                 df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame({key:val for key,val in image.items() if key in frame_metadata_features}, index=[frame_id])], axis=0)
         frame_id_list = list(targets.keys())
@@ -178,6 +180,26 @@ class MotsynthProcessing:
         df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
         df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata["keypoints"].apply(lambda x: 1 - (x - 1).mean())
 
+        # Compute specific cofactors
+        adverse_weather = ['THUNDER', 'SMOG', 'FOGGY', 'BLIZZARD', 'RAIN', 'CLOUDS',
+                           'OVERCAST']  # 'CLEAR' 'EXTRASUNNY',
+        df_frame_metadata["adverse_weather"] = df_frame_metadata["weather"].apply(lambda x: x in adverse_weather)
+
+        extreme_weather = ['THUNDER', 'SMOG', 'FOGGY', 'BLIZZARD', 'RAIN']  # 'CLEAR' 'EXTRASUNNY',
+        df_frame_metadata["extreme_weather"] = df_frame_metadata["weather"].apply(lambda x: x in extreme_weather)
+
+
+        # Drop and rename too
+#        df_frame_metadata.drop(["cam_fov", "frame_n"], inplace=True)
+
+        new_cam_extr_names = {key: f'cam-extr-{key}' for key in ["x", "y", "z", "yaw", "pitch", "roll"]}
+        #df_frame_metadata = df_frame_metadata.rename(columns=new_cam_extr_names)
+
+        new_cam_intr_names = {key: f'cam-intr-{key}' for key in ['fx', 'fy', 'cx', 'cy']}
+        #df_frame_metadata = df_frame_metadata.rename(columns=new_cam_intr_names)
+
         metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+
+        #todo : american, synthetic, ... (labels)
 
         return targets, metadatas, frame_id_list, img_path_list

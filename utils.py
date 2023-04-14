@@ -82,7 +82,22 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[])
     return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds
 
 
+def filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering):
+    if gtbbox_filtering is not {}:
+        # todo use a set
+        excluded = set()
+        for key, val in gtbbox_filtering.items():
+            if val[1] == "min":
+                excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] < val[0]].index)
+            elif val[1] == "max":
+                excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] > val[0]].index)
+            else:
+                raise ValueError("Nor minimal nor maximal filtering proposed.")
+        excluded_gt = list(excluded)
+    else:
+        excluded_gt = []
 
+    return excluded_gt
 
 
 def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filtering={}, model_name="unknown"):
@@ -124,23 +139,9 @@ def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filterin
             results = {}
             for threshold in thresholds:
 
-
                     df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+3].reset_index()
 
-                    if gtbbox_filtering is not {}:
-
-                        # todo use a set
-                        excluded = set()
-                        for key,val in gtbbox_filtering.items():
-                            if val[1] == "min":
-                                excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] < val[0]].index)
-                            elif val[1] == "max":
-                                excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] > val[0]].index)
-                            else:
-                                raise ValueError("Nor minimal nor maximal filtering proposed.")
-                        excluded_gt = list(excluded)
-                    else:
-                        excluded_gt = []
+                    excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
 
                     results[threshold] = compute_fp_missratio2(preds[frame_id], targets[frame_id],
                                                               threshold=threshold, excluded_gt=excluded_gt)

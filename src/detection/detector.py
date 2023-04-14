@@ -13,8 +13,8 @@ class Detector:
 
     def get_config_and_checkpoints_path(self):
         if self.model_name == "faster-rcnn_cityscapes": #todo change here
-            checkpoint_path = "faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
-            config_path = "../../models/faster_rcnn/faster-rcnn_cityscapes.py"
+            checkpoint_path = "/home/raphael/work/checkpoints/detection/faster_rcnn_r50_fpn_1x_cityscapes_20200502-829424c0.pth"
+            config_path = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs/models/faster_rcnn/faster-rcnn_cityscapes.py"
         elif self.model_name == "yolo3_coco":
             config_path = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs/models/yolo/yolov3_d53_320_273e_coco.py"
             checkpoint_path = "/home/raphael/work/checkpoints/detection/yolov3_d53_320_273e_coco-421362b6.pth"
@@ -64,7 +64,7 @@ class Detector:
             if img_id in set_missing_frames:
                 missing_files.append(file)
                 missing_frames.append(img_id)
-        print(f"{len(frame_id_list)} img done already, predicting for {len(missing_frames)} more.")
+        print(f"{len(frame_id_list)-len(missing_frames)} img done already, predicting for {len(missing_frames)} more.")
 
         if len(missing_frames) > 0:
             model = init_detector(config_file, checkpoint_file, device=self.device)

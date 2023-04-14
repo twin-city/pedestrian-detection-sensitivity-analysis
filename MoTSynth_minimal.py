@@ -1,15 +1,19 @@
+import pandas as pd
 import setuptools.errors
-
-from utils import *
+from utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
 import numpy as np
 import os.path as osp
 
 
+#todo feature mean distance to camera
+
+#todo plot and quantify difference between datasets
+
+#todo mixed effect model to get the parameters ????? of significance. Or linear model ?? Cf Park
 
 #%% params
-
 model_name = "faster-rcnn_cityscapes"
-max_sample = 20
+max_sample = 300 # Uniform sampled in dataset
 
 # Dataset #todo add statistical comparison between datasets
 from src.preprocessing.motsynth_processing import MotsynthProcessing
@@ -18,52 +22,145 @@ targets, metadatas, frame_id_list, img_path_list = motsynth_processor.get_MoTSyn
 df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = metadatas
 delay = motsynth_processor.delay
 
+#%% Show Dataset distributions
+
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots(1,1, figsize=(10,10))
+df_frame_metadata.hist(ax=ax)
+plt.show()
+
+#%% What are the correlations ?
+
+import seaborn as sns
+corr_matrix = df_frame_metadata.corr()
+fig, ax = plt.subplots(1,1, figsize=(10,10))
+sns.heatmap(corr_matrix, annot=True, ax=ax)
+plt.show()
+
+#%% Check more detailed : plot 3v3 extreme images in category
+
+criteria = "yaw"
+
+firsts = df_frame_metadata.sort_values("yaw").iloc[:3]["file_name"].values.tolist()
+lasts = df_frame_metadata.sort_values("yaw").iloc[-3:]["file_name"].values.tolist()
+fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(10, 5))
+for i, (path1, path2) in enumerate(zip(firsts, lasts)):
+    axs[0, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../",path1)))
+    axs[0, i].axis('off')
+    axs[1, i].imshow(plt.imread(osp.join( motsynth_processor.frames_dir, "../",path2)))
+    axs[1, i].axis('off')
+plt.show()
+
+#%%
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+criteria = "z"
+
+# sort dataframe by yaw
+df_frame_metadata = df_frame_metadata.sort_values(criteria)
+
+# select first and last three images
+firsts = df_frame_metadata.iloc[:3]["file_name"].values.tolist()
+lasts = df_frame_metadata.iloc[-3:]["file_name"].values.tolist()
+
+# create a figure with two subplots
+fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(10, 5))
+
+# plot the images and add the yaw value in the title
+for i, (path1, path2) in enumerate(zip(firsts, lasts)):
+    img1 = plt.imread(osp.join(motsynth_processor.frames_dir, "../", path1))
+    img2 = plt.imread(osp.join(motsynth_processor.frames_dir, "../", path2))
+    axs[0, i].imshow(img1)
+    axs[0, i].axis('off')
+    axs[0, i].set_title(f"{criteria}: {df_frame_metadata.loc[df_frame_metadata['file_name']==path1]['yaw'].iloc[0]}")
+    axs[1, i].imshow(img2)
+    axs[1, i].axis('off')
+    axs[1, i].set_title(f"{criteria}: {df_frame_metadata.loc[df_frame_metadata['file_name']==path2]['yaw'].iloc[0]}")
+
+# display the plot
+plt.show()
+
+#%%
+
+
+
+#%%
+
 # Detections
 from src.detection.detector import Detector
 detector = Detector(model_name)
 preds = detector.get_preds_from_files(frame_id_list, img_path_list)
 
-
-
 #########################################   Peform Tests   ############################################################
 
 #%% Analyze results on an image
 
-threshold = 0.6
+#todo a test --> is it the image we saved ?
 
-# choose image
-i = 1
+gtbbox_filtering = {"occlusion_rate": (0.9, "max"),
+                    "area": (20, "min")}
+i = 15
+
 frame_id = frame_id_list[i]
 img_path = img_path_list[i]
-
-occlusions_ids = np.where(df_gtbbox_metadata.loc[int(frame_id)+delay, "occlusion_rate"] > 0.8)[0].tolist()
-
-# plot
+df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+delay] #todo delay
+excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
+occlusions_ids = [i for i, idx in enumerate(df_gtbbox_metadata_frame.index) if idx  in excluded_gt]
 plot_results_img(img_path, frame_id, preds, targets, occlusions_ids)
-
-# Compute metrics from image
-pred_bbox, target_bbox = preds[str(frame_id)], targets[str(frame_id)]
 
 
 #%% Compute depending on a condition
 
-
-#todo a gt filtering for frames/sequence also ? Also save it to save time
-
+# todo a gt filtering for frames/sequence also ? Also save it to save time
 # GT filtering #todo minimal value for now
-gtbbox_filtering = {"occlusion_rate": (0.9, "max"),
-                    "area": (20, "min")}
 
 df_mr_fppi = compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filtering, model_name)
-
+df_mr_fppi = df_mr_fppi.reset_index()
+df_mr_fppi["frame_id"] = df_mr_fppi["frame_id"].astype(int)
 
 
 #########################################   Peform Analysis   #########################################################
 
 
+#%%
 
-# Cofactor to explore #todo discrete or continuous
-cofactor = "weather"
+df_analysis = pd.merge(df_mr_fppi, df_frame_metadata.reset_index().rename(columns={"index": "frame_id"}), on="frame_id")
+
+df_analysis.groupby(df_analysis["yaw"]>df_analysis["yaw"].median()).apply(np.mean)[["MR","FPPI"]]
+
+#%%
+
+df_analysis.groupby("frame_id").apply(np.mean).plot.scatter("z", "is_night")
+plt.show()
+
+
+#%%
+
+#todo discrete case
+
+def plot_mr_fppi_curve(df_mr_fppi, filtering):
+
+    # todo for now only 2 values ?
+
+
+#%%
+
+
+#todo continuous case
+
+#%%
+
+
+
+"""
+#%%
+
+pd.merge(df_mr_fppi, df_frame_metadata.reset_index().rename(columns={"index": "frame_id"}), on="frame_id")
+
+
+#%%
 
 #%%
 
@@ -74,9 +171,6 @@ def get_mr_fppi_curve(df_mr_fppi, frame_ids):
     return mr, fppi
 
 
-adverse_weather = ['THUNDER', 'SMOG', 'FOGGY', 'BLIZZARD', 'RAIN', 'CLOUDS', 'OVERCAST'] # 'CLEAR' 'EXTRASUNNY',
-
-df_frame_metadata["adverse_weather"] = df_frame_metadata["weather"].apply(lambda x: x in adverse_weather)
 
 #todo combine multiple : weather and night ...
 
@@ -103,10 +197,7 @@ mr, fppi = get_mr_fppi_curve(df_mr_fppi, nocof_frame_ids)
 ax.plot(mr, fppi, c="red", label=f"no has {cofactor}")
 ax.scatter(mr, fppi, c="red")
 
-"""
-ax.plot(avrg_fp_list_2, avrg_missrate_list_2, c="purple", label="Night test set")
-ax.scatter(avrg_fp_list_2, avrg_missrate_list_2, c="purple")
-"""
+
 
 ax.set_xscale('log')
 ax.set_yscale('log')
@@ -116,67 +207,4 @@ ax.set_xlim(0.1, 20)
 
 plt.legend()
 plt.show()
-
-
-#%%
-from utils import visual_check_motsynth_annotations
-visual_check_motsynth_annotations(video_num="145", img_file_name="1455.jpg", shift=3)
-
-
-#%% Analysis of p-value of cofactors (and plot it) for both MR and FPPI
-
-import statsmodels.api as sm
-# df_frame_metadata[["blizzard", "smog", "thunder"]] = pd.get_dummies(df_frame_metadata["weather"])[['BLIZZARD', 'SMOG', 'THUNDER']]
-
-
 """
-
-#%% All at once
-cofactors = ["is_night", 'pitch', 'roll', 'x', 'y', 'z','is_moving', "blizzard", "smog", "thunder"]
-X = df_frame_metadata[cofactors]
-Y = df_mr_fppi[df_mr_fppi["threshold"]==0.5]["MR"].loc[listint2liststr(X.index)]
-X = sm.add_constant(X)
-fit = sm.OLS(Y, X).fit()
-for i, cofactor in enumerate(cofactors):
-    print(fit.pvalues[i], cofactor)
-
-
-#%% Separated
-cofactors = ["is_night", 'pitch', 'roll', 'x', 'y', 'z','is_moving', "blizzard", "smog", "thunder"]
-
-for cofactor in cofactors:
-    X = df_frame_metadata[cofactor]
-    Y = df_mr_fppi[df_mr_fppi["threshold"]==0.5]["MR"].loc[listint2liststr(X.index)]
-    X = sm.add_constant(X)
-    fit = sm.OLS(Y, X).fit()
-    for i, cofactor in enumerate([cofactor]):
-        print(fit.pvalues[i], cofactor)
-"""
-
-
-
-"""
-Corriger BOnferroni + DataViz
-
-Matrice de correlation des cofacteurs
-
-Peut-être plutot les performances au niveau de la séquence ??? 
-Par exemple pour weather oui... Car sinon les tests sont non indépendants
-
-"""
-
-"""
-
-#%%
-import pandas as pd
-import seaborn as sns
-
-
-# compute the correlation matrix using the corr method
-correlation_matrix = df_frame_metadata[cofactors].corr()
-
-# plot the correlation matrix using the heatmap function from seaborn
-sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
-plt.show()
-"""
-
