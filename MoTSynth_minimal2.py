@@ -1,19 +1,28 @@
 import os
 import pandas as pd
 import setuptools.errors
-from utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
 import numpy as np
+from utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
 import os.path as osp
 
 #%% params
 model_name = "faster-rcnn_cityscapes"
 dataset_name = "motsynth"
-max_sample = 500 # Uniform sampled in dataset
+max_sample = 550 # Uniform sampled in dataset
 
 # Dataset #todo add statistical comparison between datasets
 from src.preprocessing.motsynth_processing import MotsynthProcessing
 motsynth_processor = MotsynthProcessing(max_samples=max_sample, video_ids=None)
 targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = motsynth_processor.get_MoTSynth_annotations_and_imagepaths()
+df_frame_metadata.index.rename("frame_id", inplace=True)
+df_frame_metadata = df_frame_metadata.reset_index()
+df_frame_metadata["frame_id"] = df_frame_metadata["frame_id"].astype(str)
+df_frame_metadata = df_frame_metadata.set_index("frame_id")
+
+df_gtbbox_metadata = df_gtbbox_metadata.reset_index()
+df_gtbbox_metadata["id"] = df_gtbbox_metadata["id"].astype(str)
+df_gtbbox_metadata["image_id"] = df_gtbbox_metadata["image_id"].astype(str)
+df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id","id"])
 
 print(targets.keys())
 
@@ -43,13 +52,12 @@ gtbbox_filtering = {"occlusion_rate": (0.9, "max"),
 i = 1
 frame_id = frame_id_list[i]
 img_path = img_path_list[i]
-df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)] #todo delay
+df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id] #todo delay
 excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
-occlusions_ids = [i for i, idx in enumerate(df_gtbbox_metadata_frame.index) if idx  in excluded_gt]
+occlusions_ids = [i for i, idx in enumerate(df_gtbbox_metadata_frame.index) if idx in excluded_gt]
 plot_results_img(img_path, frame_id, preds, targets, occlusions_ids)
 
 #%% As in ECP
-
 
 df_mr_fppi = compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering)
 
@@ -59,7 +67,7 @@ df_analysis = pd.merge(df_mr_fppi, df_frame_metadata, on="frame_id")
 df_analysis_frame = df_analysis.groupby("frame_id").apply(lambda x: x.mean())
 
 #%% study correlations
-frame_cofactors = ["rainy", "is_night"]
+frame_cofactors = ["adverse_weather", "is_night"]
 metrics = ["MR", "FPPI"]
 from scipy.stats import pearsonr
 corr_matrix = df_analysis_frame[metrics+frame_cofactors].corr(method=lambda x, y: pearsonr(x, y)[0])

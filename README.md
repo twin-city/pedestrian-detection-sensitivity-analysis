@@ -1,4 +1,9 @@
 
+# Check reasons for false positives ???? what class is predcited instead ? (synthétique ou alors faire passer un detecteur d'objet)
+
+
+todo : fppi vs mr is very slow
+
 - handle more sequences
 - test unitaires !!!!!!
 - at the box level ? Detected or not ?

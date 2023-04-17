@@ -12,7 +12,7 @@ import torch
 #%% params
 dataset_name = "EuroCityPerson"
 model_name = "faster-rcnn_cityscapes"
-max_sample = 50 # Uniform sampled in dataset
+max_sample = 15 # Uniform sampled in dataset
 
 # Dataset #todo add statistical comparison between datasets
 #from src.preprocessing.motsynth_processing import MotsynthProcessing
@@ -94,6 +94,7 @@ for luminosity in ["day", "night"]:
                 df_frames_metadata_folder["city"] = city
                 df_frames_metadata_folder["path"] = img_path_list_folder
                 df_frames_metadata_folder["frame_id"] = frame_id_list_folder
+                df_frames_metadata_folder["adverse_weather"] = df_frames_metadata_folder["rainy"]
 
 
                 # Df bbox_gt

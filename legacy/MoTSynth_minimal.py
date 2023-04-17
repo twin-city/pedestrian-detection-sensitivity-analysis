@@ -27,7 +27,7 @@ video_ids = np.random.choice(video_ids, 20, replace=False)
 
 #%% params
 model_name = "faster-rcnn_cityscapes"
-max_sample = 100 # Uniform sampled in dataset
+max_sample = 1000 # Uniform sampled in dataset
 
 # Dataset #todo add statistical comparison between datasets
 from src.preprocessing.motsynth_processing import MotsynthProcessing
@@ -59,9 +59,9 @@ firsts = df_frame_metadata.sort_values("yaw").iloc[:3]["file_name"].values.tolis
 lasts = df_frame_metadata.sort_values("yaw").iloc[-3:]["file_name"].values.tolist()
 fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(10, 5))
 for i, (path1, path2) in enumerate(zip(firsts, lasts)):
-    axs[0, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../",path1)))
+    axs[0, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../../", path1)))
     axs[0, i].axis('off')
-    axs[1, i].imshow(plt.imread(osp.join( motsynth_processor.frames_dir, "../",path2)))
+    axs[1, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../../", path2)))
     axs[1, i].axis('off')
 plt.show()
 
@@ -84,8 +84,8 @@ fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(10, 5))
 
 # plot the images and add the yaw value in the title
 for i, (path1, path2) in enumerate(zip(firsts, lasts)):
-    img1 = plt.imread(osp.join(motsynth_processor.frames_dir, "../", path1))
-    img2 = plt.imread(osp.join(motsynth_processor.frames_dir, "../", path2))
+    img1 = plt.imread(osp.join(motsynth_processor.frames_dir, "../../", path1))
+    img2 = plt.imread(osp.join(motsynth_processor.frames_dir, "../../", path2))
     axs[0, i].imshow(img1)
     axs[0, i].axis('off')
     axs[0, i].set_title(f"{criteria}: {df_frame_metadata.loc[df_frame_metadata['file_name']==path1]['yaw'].iloc[0]}")

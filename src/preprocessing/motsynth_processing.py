@@ -116,7 +116,7 @@ class MotsynthProcessing:
                 "keypoints": keypoints,
                 "area": area,
                 "is_crowd": is_crowd,
-                "is_blurred": is_blurred,
+                "is_blurred": is_blurred, #todo check examples in dataset
                 "attributes": attributes,
                 "ped_id": ped_id,
             }
