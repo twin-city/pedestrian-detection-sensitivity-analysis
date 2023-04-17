@@ -100,7 +100,7 @@ def filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering):
     return excluded_gt
 
 
-def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filtering={}, model_name="unknown"):
+def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering={}):
     """
     On preds keys.
     :param preds:
@@ -111,7 +111,7 @@ def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filterin
     thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
 
 
-    df_root = f"data/preds/{model_name}"
+    df_root = f"data/preds/{dataset_name}_{model_name}"
     os.makedirs(df_root, exist_ok=True)
     df_file = f"{df_root}/metrics-{json.dumps(gtbbox_filtering)}.json"
 
@@ -139,7 +139,8 @@ def compute_ffpi_against_fp2(preds, targets, df_gtbbox_metadata, gtbbox_filterin
             results = {}
             for threshold in thresholds:
 
-                    df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+3].reset_index()
+                    df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id].reset_index()
+                    #todo delay here was removed for ECP df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+3].reset_index()
 
                     excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
 
