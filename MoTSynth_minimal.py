@@ -1,19 +1,33 @@
+import os
+
 import pandas as pd
 import setuptools.errors
 from utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
 import numpy as np
 import os.path as osp
 
+""" #todo features to add 
 
 #todo feature mean distance to camera
-
 #todo plot and quantify difference between datasets
-
 #todo mixed effect model to get the parameters ????? of significance. Or linear model ?? Cf Park
+"""
+
+#%% For now only 20 different
+
+
+np.random.seed(0)
+annot_dir = "/home/raphael/work/datasets/MOTSynth/coco annot"
+exclude_ids_frames = set(["060", "081", "026", "132", "136", "102", "099", "174", "140"])
+video_ids_frames = set(np.sort(os.listdir("/home/raphael/work/datasets/MOTSynth/frames")).tolist())
+video_ids_json = set([i.replace(".json", "") for i in os.listdir(annot_dir)]) - exclude_ids_frames
+video_ids = list(np.sort(list(set.intersection(video_ids_frames, video_ids_json))))
+video_ids = np.random.choice(video_ids, 20, replace=False)
+
 
 #%% params
 model_name = "faster-rcnn_cityscapes"
-max_sample = 300 # Uniform sampled in dataset
+max_sample = 100 # Uniform sampled in dataset
 
 # Dataset #todo add statistical comparison between datasets
 from src.preprocessing.motsynth_processing import MotsynthProcessing
@@ -82,8 +96,6 @@ for i, (path1, path2) in enumerate(zip(firsts, lasts)):
 # display the plot
 plt.show()
 
-#%%
-
 
 
 #%%
@@ -125,22 +137,69 @@ df_mr_fppi["frame_id"] = df_mr_fppi["frame_id"].astype(int)
 
 
 #%%
-
 df_analysis = pd.merge(df_mr_fppi, df_frame_metadata.reset_index().rename(columns={"index": "frame_id"}), on="frame_id")
-
 df_analysis.groupby(df_analysis["yaw"]>df_analysis["yaw"].median()).apply(np.mean)[["MR","FPPI"]]
 
 #%%
 
-df_analysis.groupby("frame_id").apply(np.mean).plot.scatter("z", "is_night")
-plt.show()
+# df_analysis.groupby("frame_id").apply(np.mean).plot.scatter("z", "is_night")
+# plt.show()
 
+
+#%%
+
+#todo add metrics : AP50, LAMR https://eurocity-dataset.tudelft.nl/eval/benchmarks/detection
+
+
+"""
+At image / video level : 
+    Cam_angle : pitch
+    adverse_weather
+    is_night
+    
+At bbox level : 
+    - reasonable / small / occluded / all https://eurocity-dataset.tudelft.nl/eval/benchmarks/detection
+"""
+
+#%% T-test
+
+#todo : correlation to begin with  (((/test with metrics (mr, fppi, mAP50, YAML), plot fppi/mr, precision/recall)))
+#todo should take into account non-independant (e.g. mixed effect ?)
+
+from scipy.stats import ttest_rel
+
+df_analysis_frame = df_analysis.groupby("frame_id").apply(lambda x: x.mean())
+
+frame_cofactors = ["pitch", "adverse_weather", "is_night"]
+metrics = ["MR", "FPPI"]
+
+from scipy.stats import pearsonr
+corr_matrix = df_analysis_frame[metrics+frame_cofactors].corr(method=lambda x, y: pearsonr(x, y)[0])
+p_matrix = df_analysis_frame[metrics+frame_cofactors].corr(method=lambda x, y: pearsonr(x, y)[1])
+
+
+"""
+before = df_analysis_frame[df_analysis_frame["yaw"]>df_analysis_frame["yaw"].median()]["frame_id"]
+after = df_analysis_frame[df_analysis_frame["yaw"]<=df_analysis_frame["yaw"].median()]["frame_id"]
+
+# Perform paired t-test
+t, p = ttest_rel(df_analysis_frame.loc[before, "MR"].values, df_analysis_frame.loc[after.values, "MR"])
+
+# Print results
+print("t-value:", t)
+print("p-value:", p)
+
+fig, ax = plt.subplots(1,1)
+ax.hist(df_analysis_frame.loc[before, "MR"].values, alpha=0.5)
+ax.hist(df_analysis_frame.loc[after, "MR"].values, alpha=0.5)
+plt.show()
+"""
 
 #%%
 
 #todo discrete case
 
-def plot_mr_fppi_curve(df_mr_fppi, filtering):
+# def plot_mr_fppi_curve(df_mr_fppi, filtering):
 
     # todo for now only 2 values ?
 
