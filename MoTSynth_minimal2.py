@@ -67,15 +67,22 @@ df_analysis = pd.merge(df_mr_fppi, df_frame_metadata, on="frame_id")
 df_analysis_frame = df_analysis.groupby("frame_id").apply(lambda x: x.mean())
 
 #%% study correlations
+import matplotlib.pyplot as plt
 frame_cofactors = ["adverse_weather", "is_night"]
 metrics = ["MR", "FPPI"]
 from scipy.stats import pearsonr
 corr_matrix = df_analysis_frame[metrics+frame_cofactors].corr(method=lambda x, y: pearsonr(x, y)[0])
 p_matrix = df_analysis_frame[metrics+frame_cofactors].corr(method=lambda x, y: pearsonr(x, y)[1])
 
+print(p_matrix)
+import seaborn as sns
+sns.heatmap(corr_matrix, annot=True)
+plt.show()
 
+sns.heatmap(p_matrix, annot=True)
+plt.show()
 #%% Day 'n Night
-import matplotlib.pyplot as plt
+
 
 night_ids = df_analysis_frame[df_analysis_frame["is_night"]==1].index.to_list()
 day_ids = df_analysis_frame[df_analysis_frame["is_night"]==0].index.to_list()
