@@ -32,7 +32,7 @@ class Detector:
     #configs_root = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs"
 
     # todo here bug with 1711 too many
-    def get_preds_from_files(self, frame_id_list, file_list):
+    def get_preds_from_files(self, dataset_name, frame_id_list, file_list):
 
         config_file = self.config_path
         checkpoint_file = self.checkpoint_path
@@ -41,7 +41,7 @@ class Detector:
 
         json_root = f"data/preds/{config_file.split('/')[-1].replace('.py', '')}"
         os.makedirs(json_root, exist_ok=True)
-        json_file = f"{json_root}/preds.json"
+        json_file = f"{json_root}/preds_{dataset_name}.json"
 
         # If exist load it
         if os.path.isfile(json_file):

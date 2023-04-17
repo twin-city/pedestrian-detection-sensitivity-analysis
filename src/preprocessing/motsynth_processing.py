@@ -162,22 +162,24 @@ class MotsynthProcessing:
 
     def get_MoTSynth_annotations_and_imagepaths(self):
 
-
-
         path_df_gtbbox_metadata = osp.join(self.saves_dir, f"df_gtbbox_{self.max_samples}.csv")
         path_df_frame_metadata = osp.join(self.saves_dir, f"df_frame_{self.max_samples}.csv")
         path_df_sequence_metadata = osp.join(self.saves_dir, f"df_sequence_{self.max_samples}.csv")
+        path_target = osp.join(self.saves_dir, f"targets_{self.max_samples}.json")
 
         try:
+            print("Try")
             df_gtbbox_metadata = pd.read_csv(path_df_gtbbox_metadata).set_index(["image_id", "id"])
             df_frame_metadata = pd.read_csv(path_df_frame_metadata).set_index("Unnamed: 0")
             df_sequence_metadata = pd.read_csv(path_df_sequence_metadata).set_index("Unnamed: 0")
 
-            json_path = osp.join(self.saves_dir, f"targets_{self.max_samples}.json")
-            with open(json_path) as jsonFile:
+
+            with open(path_target) as jsonFile:
                 targets = target_2_torch(json.load(jsonFile))
+            print("End Try")
 
         except:
+            print("Except")
             video_ids = self.video_ids
             max_samples = self.max_samples
             df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()]*3
@@ -193,6 +195,7 @@ class MotsynthProcessing:
             targets, targets_metadata, frames_metadata, frame_id_list, img_path_list = {}, {}, {}, [], []
 
             for folder in folders:
+                print(f"Checking folder {folder}")
 
                 try:
                     targets_folder, targets_metadatas, frame_id_list_folder, img_path_list_folder =\
@@ -238,12 +241,10 @@ class MotsynthProcessing:
             #todo : american, synthetic, ... (labels)
 
             # Save dataframes
-            df_gtbbox_metadata.to_csv(osp.join(self.saves_dir, f"df_gtbbox_{self.max_samples}.csv"))
-            df_frame_metadata.to_csv(osp.join(self.saves_dir, f"df_frame_{self.max_samples}.csv"))
-            df_sequence_metadata.to_csv(osp.join(self.saves_dir, f"df_sequence_{self.max_samples}.csv"))
-
-            output_file = f"targets_{self.max_samples}.json"
-            with open(output_file, 'w') as f:
+            df_gtbbox_metadata.to_csv(path_df_gtbbox_metadata)
+            df_frame_metadata.to_csv(path_df_frame_metadata)
+            df_sequence_metadata.to_csv(path_df_sequence_metadata)
+            with open(path_target, 'w') as f:
                 json.dump(target_2_json(targets), f)
 
         return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
