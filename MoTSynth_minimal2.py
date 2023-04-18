@@ -68,7 +68,7 @@ df_analysis_frame = df_analysis.groupby("frame_id").apply(lambda x: x.mean())
 
 #%% study correlations
 import matplotlib.pyplot as plt
-frame_cofactors = ["adverse_weather", "is_night"]
+frame_cofactors = ["adverse_weather", "is_night", "pitch"]
 metrics = ["MR", "FPPI"]
 from scipy.stats import pearsonr
 corr_matrix = df_analysis_frame[metrics+frame_cofactors].corr(method=lambda x, y: pearsonr(x, y)[0])

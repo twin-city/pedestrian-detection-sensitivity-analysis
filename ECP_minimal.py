@@ -53,17 +53,21 @@ def get_ECP_annotations_and_imagepaths(time, set, city, max_samples=100000):
             # Keep only if at least 1 pedestrian
             if len(target[0]["boxes"]) > 0:
                 targets[frame_id] = target
-                targets_metadata[frame_id] = (annot_ECP["tags"], [ann["tags"] for ann in annot_ECP["children"]])
+
+                tags = [c["tags"] for c in annot_ECP["children"] if c["identity"] in ["pedestrian", "rider"]]
+                areas = [(c["x1"]-c["x0"]) *  (c["y1"]-c["y0"]) for c in annot_ECP["children"] if c["identity"] in ["pedestrian", "rider"]]
+                iscrowd = [1*("group" in c["identity"]) for c in annot_ECP["children"] if c["identity"] in ["pedestrian", "rider"]]
+
+                targets_metadata[frame_id] = (annot_ECP["tags"], tags, areas, iscrowd)
 
     frame_id_list = list(targets.keys())
-
     img_path_list = []
     for frame_id in frame_id_list:
         # print(frame_id)
         img_path = f"/media/raphael/Projects/datasets/EuroCityPerson/ECP/{time}/img/val/{city}/{frame_id}.png"
         img_path_list.append(img_path)
 
-    # frame_id_list = [city + "_" + frame_id for frame_id in frame_id_list]
+    # todo plot it ?
 
     return targets, targets_metadata, frame_id_list, img_path_list
 
@@ -88,7 +92,7 @@ for luminosity in ["day", "night"]:
 
                 # Df frame                 # print(np.unique([val[0] for key,val in targets_metadata.items()]))
                 categories = ["motionBlur", "rainy", "wiper", "lenseFlare", "constructionSite"]
-                df_frames_metadata_folder = pd.DataFrame({key: [cat in val[0] for cat in categories] for key,val in targets_metadata_folder.items()}).T
+                df_frames_metadata_folder = pd.DataFrame({key: [cat in val[0] for cat in categories] for key, val in targets_metadata_folder.items()}).T
                 df_frames_metadata_folder.columns = categories
                 df_frames_metadata_folder["is_night"] = luminosity == "night"
                 df_frames_metadata_folder["city"] = city
@@ -102,11 +106,15 @@ for luminosity in ["day", "night"]:
                 categories_gtbbox = [f"occluded>{i}0" for i in range(1, 10)] + ["depiction"]
                 df_gt_bbox_folder = pd.DataFrame()
                 for key, val in targets_metadata_folder.items():
-                    df_gt_bbox_frame = pd.DataFrame(val).T
+                    df_gt_bbox_frame = pd.DataFrame(val[1:]).T
                     df_gt_bbox_frame["frame_id"] = key
                     for cat in categories_gtbbox:
-                        df_gt_bbox_frame[cat] = df_gt_bbox_frame[1].apply(lambda x: cat in x)
-                    df_gt_bbox_frame.drop(columns=[0,1], inplace=True)
+                        try:
+                            df_gt_bbox_frame[cat] = cat in val[0]
+                        except:
+                            print("coucou")
+                    df_gt_bbox_frame.drop(columns=[0], inplace=True)
+                    df_gt_bbox_frame.rename(columns={1: "area", 2: "iscrowd"}, inplace=True)
                     df_gt_bbox_folder = pd.concat([df_gt_bbox_folder, df_gt_bbox_frame])
 
                 # Add the folder
