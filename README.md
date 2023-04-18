@@ -1,100 +1,29 @@
 
-# Check reasons for false positives ???? what class is predcited instead ? (synthétique ou alors faire passer un detecteur d'objet)
+
+Download motsynth
+Download eurocityperson
+
+Run `python motsynth_demo.py`
+Run `python ECP_demo.py`
+
+For more information on MoTSynth and its license see https://aimagelab.ing.unimore.it/imagelab/page.asp?IdPage=42 
+For more information on EuroCityPerson and its license see https://eurocity-dataset.tudelft.nl/ 
 
 
-todo : fppi vs mr is very slow
+# Results
 
-- handle more sequences
-- test unitaires !!!!!!
-- at the box level ? Detected or not ?
-- Do a maxiumm of predictions, see where it bugs
+Study on a baseline (Faster-RCNN trained on Cityscapes) :
 
-Frame_id : int or string ?????
-
-TODO
-- show dataset characteristics --> so as to identify biases between datasets from their characteristics in advance !!!
+| Dataset                  | MoTSynth (Synthetic)                                                                      | EuroCityPerson (Real)                                                                                                                    |
+|--------------------------|-------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------| 
+| Img example              | <img src="results/motsynth_img.png" alt="Product A Image" style="max-width: 150;">        | <img src="https://eurocity-dataset.tudelft.nl/eval/static/images/slider/1_composition.jpg" alt="Product A Image" style="max-width: 150px;"> |
+| pval or correlation test | <img src="results/motsynth_pval.png" alt="Product A Image" style="max-width: 150;">       | <img src="results/ecp_pval.png" alt="Product A Image" style="max-width: 150;">                                                                                                 |
+| Day vs Night             | <img src="results/motsynth_dayvsnight.png" alt="Product A Image" style="max-width: 150;"> | <img src="results/ecp_dayvsnight.png" alt="Product A Image" style="max-width: 150;">                                                                                     |
 
 
-Bug
-- gpu inference does not work mmdet (problem CUDA error, due to conda install ?)
+pval indicates statstical significance for night/day for both MR and FPPI, and weather for MR.
 
-Attention peut être occludé par lui même avec les keypoints
-
-TODO motsynth
-#todo assumes idex and frame_id are same same
-#todo : occluded body joints
-#todo city and time in metadata also, then set filters when we want to compare ? But apriori compare on all, no need per city ?
-#todo balance may be needed though ...
-#todo take subset of all the images nto be not too long ?
-
-todo : better way to handle datasets
-
-# Objective : show it works same-same in pedestrian detection task
-
-Models to try : 
-
-- Faster RCNN
-  - Cityscapes
-  - Caltech Pedestrian
-  - NightOwls
-- Mask RCNN 
-  - MoTSynth (bonus)
-- SoTA
-  - SSD ?
-
-Datasets 
-
-- ECP
-- MoTSynth
-- (Caltech ?)
-- (Synthia ?)
-
-Parameters to try
-
-- Weather
-- Day / Night
-- BBox size 
-- BBox difficulty
-- Occlusions
+We plot an example of performance for the baseline, in either day or night scenes in both datasets. Performance are worse at night.
 
 
 
-
-
-
-
-Code and reasonable !!! https://eurocity-dataset.tudelft.nl/eval/benchmarks/detection
-
-conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
-
-torchmetrics
-tqdm
-
-Can help with bug on machine
-https://discuss.pytorch.org/t/userwarning-cuda-initialization-cuda-unknown-error-this-may-be-due-to-an-incorrectly-set-up-environment-e-g-changing-env-variable-cuda-visible-devices-after-program-start-setting-the-available-devices-to-be-zero/129335/2
-
-
-
-
-TODO
-- Get a forked mmdet with added datasets (+ add the dataset description such as day and night ?)
-- Resultats contre intuitifs : il faut check le mAP !!!!! Commencer par la.
-  - Sinon c'est que je me suis perdu dans trop de paramètres des datasets ... Reste la méteo ... Et aussi par bbox
-- Too long for inference with a network : how to speed up ? GPU ? Or Pickle at once ?
-- NMS ? Check analyze_per_img_dets
-- Far scale : ça ça marche !!!! (mais est-ce interessant pour nous ? Oui quand même pour définir une zone où ça marche quoi)
-- (après a voir si les solutions du privé ont déjà des zones définies ? Ce qui serait plus malin comme specs)
-
-
-TODO Later
-- relative package import such as mmdet ?
-- Est-ce okay avec la proba ?
-- did I do NMS ? Or is it to do yet ?
-
-Caltech Dataset
-Downloaded at ???
-
-CUHK was downloaded
-
-other ideas : 
-https://dbcollection.readthedocs.io/en/latest/datasets/inria_ped.html
