@@ -130,16 +130,22 @@ def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox
 
     # maybe do a set here ?
 
-    for frame_id in frame_ids:
+    for i, frame_id in enumerate(frame_ids):
 
         # If image not already parsed
-        if str(frame_id) not in df_mr_fppi.index:
-            print(f"{frame_id} Not already done")
+        if str(frame_id)  in df_mr_fppi.index:
+            print(f"{frame_id}  {gtbbox_filtering} Already done")
+        else:
+            print(f"{frame_id}  {gtbbox_filtering} Not already done")
 
             results = {}
             for threshold in thresholds:
 
-                    df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id].reset_index()
+                    #todo handle only 1 ???
+                    if len(pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T) == 1:
+                        df_gtbbox_metadata_frame = pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T.reset_index()
+                    else:
+                        df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id].reset_index()
                     #todo delay here was removed for ECP df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+3].reset_index()
 
                     excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
@@ -159,7 +165,12 @@ def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox
             df_mr_fppi_current = pd.concat(df_mr_fppi_list, axis=0)
             df_mr_fppi_current["model"] = model_name
             df_mr_fppi = pd.concat([df_mr_fppi, df_mr_fppi_current], axis=0)
-            df_mr_fppi.to_csv(df_file)
+
+            if i % 50 == 0:
+                df_mr_fppi.to_csv(df_file)
+
+    # Save at the end
+    df_mr_fppi.to_csv(df_file)
 
     return df_mr_fppi.loc[frame_ids]
 
@@ -253,7 +264,6 @@ def visual_check_motsynth_annotations(video_num="004", img_file_name="0200.jpg",
 
 
 def get_motsynth_day_night_video_ids(max_iter=50, force=False):
-
 
     # Save
     if os.path.exists("/home/raphael/work/datasets/MOTSynth/coco_infos.json") or not force:

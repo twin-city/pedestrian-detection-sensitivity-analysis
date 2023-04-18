@@ -20,6 +20,18 @@ max_sample = 15 # Uniform sampled in dataset
 
 #%%
 
+#todo : unsure_orientation, ...
+
+def syntax_occl_ECP(x):
+    # keep only occluded
+    x = [x for x in x if "occluded" in x]
+    if x and "occluded" in x[0]:
+        return int(x[0].replace("occluded>", "")) / 100
+    elif x:
+        print(x)
+    else:
+        return 0
+
 def get_ECP_annotations_and_imagepaths(time, set, city, max_samples=100000):
 
     # Here ECP specific
@@ -114,7 +126,9 @@ for luminosity in ["day", "night"]:
                         except:
                             print("coucou")
                     df_gt_bbox_frame.drop(columns=[0], inplace=True)
+                    df_gt_bbox_frame["occlusion_rate"] = [syntax_occl_ECP(x) for x in val[1]]
                     df_gt_bbox_frame.rename(columns={1: "area", 2: "iscrowd"}, inplace=True)
+
                     df_gt_bbox_folder = pd.concat([df_gt_bbox_folder, df_gt_bbox_frame])
 
                 # Add the folder
@@ -143,6 +157,10 @@ print(frame_id_list)
 
 #%% Compute the metrics
 gtbbox_filtering = {}
+
+gtbbox_filtering = {"occlusion_rate": (0.9, "max"),
+                    "area": (20, "min")}
+
 df_mr_fppi = compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering)
 
 
