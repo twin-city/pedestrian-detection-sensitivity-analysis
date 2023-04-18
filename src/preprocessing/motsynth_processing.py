@@ -6,6 +6,10 @@ import pandas as pd
 import os
 from utils import xywh2xyxy
 
+"""
+Explore : 
+- blurred
+"""
 
 def target_2_json(targets):
     return {key: [{
@@ -28,25 +32,27 @@ class MotsynthProcessing:
     Class that handles the preprocessing of (extracted) MotSynth Dataset in order to get a standardized dataset format.
     """
 
-    def __init__(self, max_samples=200, video_ids=None):
+    def __init__(self, root_motsynth, max_samples=200, video_ids=None):
 
         np.random.seed(0)
 
         self.max_samples = max_samples
+        self.dataset_name = "motsynth"
 
 
 
         #todo change this directory
-        self.frames_dir = "/home/raphael/work/datasets/MOTSynth/frames"
-        self.annot_dir = "/home/raphael/work/datasets/MOTSynth/coco annot"
+        self.root_dir = root_motsynth
+        self.frames_dir = f"{root_motsynth}/frames"
+        self.annot_dir = f"{root_motsynth}/coco annot"
         self.delay = 3
-        self.saves_dir = "data/preprocessing/motsynth"
+        self.saves_dir = f"data/preprocessing/{self.dataset_name}"
         os.makedirs(self.saves_dir, exist_ok=True)
 
         # todo bug 140, 174 and whatt appens if less samples than sequences ?????
         if video_ids is None:
             exclude_ids_frames = set(["060", "081", "026", "132", "136", "102", "099", "174", "140"])
-            video_ids_frames = set(np.sort(os.listdir("/home/raphael/work/datasets/MOTSynth/frames")).tolist())
+            video_ids_frames = set(np.sort(os.listdir(self.frames_dir)).tolist())
             video_ids_json = set([i.replace(".json", "") for i in
                                   os.listdir(self.annot_dir)]) - exclude_ids_frames
             self.video_ids = list(np.sort(list(set.intersection(video_ids_frames, video_ids_json))))
@@ -57,16 +63,11 @@ class MotsynthProcessing:
 
 
     def get_dataset(self):
-        targets, metadatas, frame_id_list, img_path_list = self.get_MoTSynth_annotations_and_imagepaths(
-            self,
-            video_ids=self.video_ids,
-            max_samples=self.max_sample)
-
+        targets, metadatas, frame_id_list, img_path_list = self.get_MoTSynth_annotations_and_imagepaths()
         return targets, metadatas, frame_id_list, img_path_list
 
 
     def get_MoTSynth_annotations_and_imagepaths_video(self, video_id="004", max_samples=100000, random_sampling=True, delay=3):
-
 
         np.random.seed(0)
         df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()]*3
@@ -116,7 +117,7 @@ class MotsynthProcessing:
                 "keypoints": keypoints,
                 "area": area,
                 "is_crowd": is_crowd,
-                "is_blurred": is_blurred, #todo check examples in dataset
+                "is_blurred": is_blurred,
                 "attributes": attributes,
                 "ped_id": ped_id,
             }
@@ -135,7 +136,7 @@ class MotsynthProcessing:
             if len(target[0]["boxes"]) > 0:
                 targets[str(frame_id)] = target
                 frame_metadata[frame_id] = annot_motsynth["info"]
-                img_path_list.append(osp.join("/home/raphael/work/datasets/MOTSynth", image["file_name"]))
+                img_path_list.append(osp.join(self.root_dir, image["file_name"]))
                 # frame_metadata[frame_id] = (annot_ECP["tags"], [ann["tags"] for ann in annot_ECP["children"]])
 
                 # Dataframes
@@ -222,17 +223,14 @@ class MotsynthProcessing:
             extreme_weather = ['THUNDER', 'SMOG', 'FOGGY', 'BLIZZARD', 'RAIN']  # 'CLEAR' 'EXTRASUNNY',
             df_frame_metadata["extreme_weather"] = df_frame_metadata["weather"].apply(lambda x: x in extreme_weather)
 
-
+            """
             # Drop and rename too
-    #        df_frame_metadata.drop(["cam_fov", "frame_n"], inplace=True)
-
+            df_frame_metadata.drop(["cam_fov", "frame_n"], inplace=True)
             new_cam_extr_names = {key: f'cam-extr-{key}' for key in ["x", "y", "z", "yaw", "pitch", "roll"]}
             #df_frame_metadata = df_frame_metadata.rename(columns=new_cam_extr_names)
-
             new_cam_intr_names = {key: f'cam-intr-{key}' for key in ['fx', 'fy', 'cx', 'cy']}
             #df_frame_metadata = df_frame_metadata.rename(columns=new_cam_intr_names)
-
-            metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+            """
 
             df_gtbbox_metadata = df_gtbbox_metadata.reset_index()
             df_gtbbox_metadata["image_id"] = df_gtbbox_metadata["image_id"] - self.delay
@@ -246,5 +244,15 @@ class MotsynthProcessing:
             df_sequence_metadata.to_csv(path_df_sequence_metadata)
             with open(path_target, 'w') as f:
                 json.dump(target_2_json(targets), f)
+
+        df_frame_metadata.index.rename("frame_id", inplace=True)
+        df_frame_metadata = df_frame_metadata.reset_index()
+        df_frame_metadata["frame_id"] = df_frame_metadata["frame_id"].astype(str)
+        df_frame_metadata = df_frame_metadata.set_index("frame_id")
+
+        df_gtbbox_metadata = df_gtbbox_metadata.reset_index()
+        df_gtbbox_metadata["id"] = df_gtbbox_metadata["id"].astype(str)
+        df_gtbbox_metadata["image_id"] = df_gtbbox_metadata["image_id"].astype(str)
+        df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
 
         return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
