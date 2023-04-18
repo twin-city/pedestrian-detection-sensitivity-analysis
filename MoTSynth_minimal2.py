@@ -23,7 +23,6 @@ df_gtbbox_metadata = df_gtbbox_metadata.reset_index()
 df_gtbbox_metadata["id"] = df_gtbbox_metadata["id"].astype(str)
 df_gtbbox_metadata["image_id"] = df_gtbbox_metadata["image_id"].astype(str)
 df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id","id"])
-
 print(targets.keys())
 
 # Frame id list
@@ -64,7 +63,7 @@ df_mr_fppi = compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, 
 
 #%% Concat results and metadata
 df_analysis = pd.merge(df_mr_fppi, df_frame_metadata, on="frame_id")
-df_analysis_frame = df_analysis.groupby("frame_id").apply(lambda x: x.mean())
+df_analysis_frame = df_analysis.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True))
 
 #%% study correlations
 import matplotlib.pyplot as plt
