@@ -14,11 +14,11 @@ For more information on EuroCityPerson and its license see https://eurocity-data
 
 Study on a baseline (Faster-RCNN trained on Cityscapes) :
 
-| Dataset                  | MoTSynth (Synthetic)                                                                      | EuroCityPerson (Real)                                                                                                                    |
-|--------------------------|-------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------| 
-| Img example              | <img src="results/motsynth_img.png" alt="Product A Image" style="max-width: 150;">        | <img src="https://eurocity-dataset.tudelft.nl/eval/static/images/slider/1_composition.jpg" alt="Product A Image" style="max-width: 150px;"> |
-| pval or correlation test | <img src="results/motsynth_pval.png" alt="Product A Image" style="max-width: 150;">       | <img src="results/ecp_pval.png" alt="Product A Image" style="max-width: 150;">                                                                                                 |
-| Day vs Night             | <img src="results/motsynth_dayvsnight.png" alt="Product A Image" style="max-width: 150;"> | <img src="results/ecp_dayvsnight.png" alt="Product A Image" style="max-width: 150;">                                                                                     |
+| Dataset                  | MoTSynth (Synthetic)                                                                            | EuroCityPerson (Real)                                                                                                                              |
+|--------------------------|-------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------| 
+| Img example              | <img src="results/motsynth_img.png" alt="Motsynth example" style="max-width: 150;">             |  |
+| pval or correlation test | <img src="results/motsynth_pval.png" alt="Motsynth pval" style="max-width: 150;">               | <img src="results/ecp_pval.png" alt="Eurocityperson pval" style="max-width: 150;">                                                                 |
+| Day vs Night             | <img src="results/motsynth_dayvsnight.png" alt="Motsynth day vs night" style="max-width: 150;"> | <img src="results/ecp_dayvsnight.png" alt="Eurocityperson pval" style="max-width: 150;">                                                           |
 
 
 pval indicates statstical significance for night/day for both MR and FPPI, and weather for MR.

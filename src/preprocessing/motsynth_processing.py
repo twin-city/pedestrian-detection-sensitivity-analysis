@@ -6,6 +6,8 @@ import pandas as pd
 import os
 from utils import xywh2xyxy
 
+from .processing import DatasetProcessing
+
 """
 Explore : 
 - blurred
@@ -27,28 +29,21 @@ def target_2_torch(targets):
     ] for key, val in targets.items()}
 
 
-class MotsynthProcessing:
-    """
-    Class that handles the preprocessing of (extracted) MotSynth Dataset in order to get a standardized dataset format.
-    """
-
-    def __init__(self, root_motsynth, max_samples=200, video_ids=None):
-
-        np.random.seed(0)
-
-        self.max_samples = max_samples
-        self.dataset_name = "motsynth"
+class MotsynthProcessing(DatasetProcessing):
 
 
+    def __init__(self, root, max_samples=200, video_ids=None):
 
-        #todo change this directory
-        self.root_dir = root_motsynth
-        self.frames_dir = f"{root_motsynth}/frames"
-        self.annot_dir = f"{root_motsynth}/coco annot"
+        super().__init__(root, max_samples)
+
         self.delay = 3
+        self.dataset_name = "motsynth"
+        self.frames_dir = f"{root}/frames"
+        self.annot_dir = f"{root}/coco annot"
         self.saves_dir = f"data/preprocessing/{self.dataset_name}"
         os.makedirs(self.saves_dir, exist_ok=True)
 
+        # todo specific to motsynth
         # todo bug 140, 174 and whatt appens if less samples than sequences ?????
         if video_ids is None:
             exclude_ids_frames = set(["060", "081", "026", "132", "136", "102", "099", "174", "140"])

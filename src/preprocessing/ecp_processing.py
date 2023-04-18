@@ -4,11 +4,10 @@ import torch
 import os.path as osp
 import pandas as pd
 import os
-
+from .processing import DatasetProcessing
 
 """
 Check more info https://eurocity-dataset.tudelft.nl/
-
 For example : ignore regions, snow ...
 """
 
@@ -46,18 +45,16 @@ def syntax_criteria_ECP(x, criteria):
 
 
 
-class ECPProcessing:
+class ECPProcessing(DatasetProcessing):
     """
     Class that handles the preprocessing of (extracted) ECP Dataset in order to get a standardized dataset format.
     """
 
-    def __init__(self, root, max_samples=200, video_ids=None):
+    def __init__(self, root, max_samples=100): #todo max_samples here is different than from MoTSynth
 
-        np.random.seed(0)
-        self.max_samples = max_samples
+        super().__init__(root, max_samples)
+
         self.dataset_name = "ecp"
-        self.root_dir = root
-        self.delay = 3
         self.saves_dir = f"data/preprocessing/{self.dataset_name}"
         os.makedirs(self.saves_dir, exist_ok=True)
 
@@ -68,7 +65,7 @@ class ECPProcessing:
     def get_ECP_annotations_and_imagepaths_folder(self, time, set, city):
 
         # Here ECP specific
-        root = f"{self.root_dir}/{time}/labels/{set}/{city}"
+        root = f"{self.root}/{time}/labels/{set}/{city}"
         total_frame_ids = [x.split(".json")[0] for x in os.listdir(root) if ".json" in x]
 
         # Init dicts for bboxes annotations and metadata
@@ -81,7 +78,7 @@ class ECPProcessing:
                 break
 
             # Load ECP annotations
-            json_path = f"{self.root_dir}/{time}/labels/{set}/{city}/{frame_id}.json"
+            json_path = f"{self.root}/{time}/labels/{set}/{city}/{frame_id}.json"
             with open(json_path) as jsonFile:
                 annot_ECP = json.load(jsonFile)
 
@@ -131,7 +128,7 @@ class ECPProcessing:
         for luminosity in ["day", "night"]:
             for chosen_set in ["val"]:
                 for city in os.listdir(
-                        f"{self.root_dir}/{luminosity}/img/{chosen_set}"):
+                        f"{self.root}/{luminosity}/img/{chosen_set}"):
                     if city not in ["berlin_small"]:
                         print(luminosity, city)
 
