@@ -1,4 +1,19 @@
 
+# Check reasons for false positives ???? what class is predcited instead ? (synthétique ou alors faire passer un detecteur d'objet)
+
+
+todo : fppi vs mr is very slow
+
+- handle more sequences
+- test unitaires !!!!!!
+- at the box level ? Detected or not ?
+- Do a maxiumm of predictions, see where it bugs
+
+Frame_id : int or string ?????
+
+TODO
+- show dataset characteristics --> so as to identify biases between datasets from their characteristics in advance !!!
+
 
 Bug
 - gpu inference does not work mmdet (problem CUDA error, due to conda install ?)

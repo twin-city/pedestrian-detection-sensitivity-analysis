@@ -10,56 +10,13 @@ import json
 import os.path as osp
 from tqdm import tqdm
 from utils import *
+import pandas as pd
 
 
 def xywh2xyxy(bbox):
     x, y, w, h = bbox
     return x, y, x + w, y + h
 
-
-"""
-def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5):
-    score_sorted = np.argsort(pred_bbox[0]["scores"].numpy())[::-1]
-
-    possible_target_bboxs = [target_bbox for target_bbox in target_bbox[0]["boxes"]]
-    possible_target_bboxs_ids = list(range(len(target_bbox[0]["boxes"])))
-    matched_target_bbox_list = []
-    unmatched_preds = []
-
-    for i in score_sorted:
-
-        if len(possible_target_bboxs) == 0 or pred_bbox[0]["scores"][i] < threshold:
-            break
-
-        bbox = pred_bbox[0]["boxes"][i]
-
-        # Compute all IoU
-        IoUs = [torchvision.ops.box_iou(bbox.unsqueeze(0), target_bbox.unsqueeze(0)) for
-                target_bbox in possible_target_bboxs]
-        IoUs_index = [IoU for IoU in IoUs if IoU > 0.5]
-        if len(IoUs_index) == 0:
-            unmatched_preds.append(i)
-        else:
-            # Match it best with existing boxes
-            matched_target_bbox = np.argmax(IoUs)
-            matched_target_bbox_list.append(possible_target_bboxs_ids[matched_target_bbox])
-
-            # Remove
-            possible_target_bboxs.pop(matched_target_bbox)
-            possible_target_bboxs_ids.pop(matched_target_bbox)
-
-    # Compute the False Positives
-    target_bbox_missed = np.setdiff1d(list(range(len(target_bbox[0]["boxes"]))), matched_target_bbox_list).tolist()
-
-    # Number of predictions above threshold - Number of matched target_bboxs
-    fp_image = max(0, (pred_bbox[0]["scores"] > threshold).numpy().sum() - len(matched_target_bbox_list))
-
-    # False negatives
-    fn_image = max(0, len(target_bbox[0]["boxes"]) - len(matched_target_bbox_list))
-    miss_ratio_image = fn_image / len(target_bbox[0]["boxes"])
-
-    return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds
-"""
 
 def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
 
@@ -104,7 +61,7 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[])
         # Else there exist at least an overlap with an included bounding box
         else:
             # Match it best with target boxes, included and still unmatched
-            matched_target_bbox = np.intersect1d(np.argsort(IoUs), incl_possible_target_bboxs_ids)[-1]
+            matched_target_bbox = np.intersect1d(torch.stack(IoUs).reshape(-1).numpy().argsort(), incl_possible_target_bboxs_ids)[-1]
             matched_target_bbox_list.append(possible_target_bboxs_ids[matched_target_bbox])
 
             # Remove
@@ -125,7 +82,25 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[])
     return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds
 
 
-def compute_ffpi_against_fp(preds, targets, targets_metadata=None, ids=None):
+def filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering):
+    if gtbbox_filtering is not {}:
+        # todo use a set
+        excluded = set()
+        for key, val in gtbbox_filtering.items():
+            if val[1] == "min":
+                excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] < val[0]].index)
+            elif val[1] == "max":
+                excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] > val[0]].index)
+            else:
+                raise ValueError("Nor minimal nor maximal filtering proposed.")
+        excluded_gt = list(excluded)
+    else:
+        excluded_gt = []
+
+    return excluded_gt
+
+
+def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering={}):
     """
     On preds keys.
     :param preds:
@@ -133,71 +108,73 @@ def compute_ffpi_against_fp(preds, targets, targets_metadata=None, ids=None):
     :return:
     """
 
-    if ids is None:
-        ids = preds.keys()
-
     thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
 
-    avrg_fp_list = []
-    avrg_missrate_list = []
 
-    for threshold in thresholds:
-        results = {}
-        for frame_id in ids:
+    df_root = f"data/preds/{dataset_name}_{model_name}"
+    os.makedirs(df_root, exist_ok=True)
+    df_file = f"{df_root}/metrics-{json.dumps(gtbbox_filtering)}.json"
 
-            if targets_metadata is not None:
-                target_metadata = targets_metadata[frame_id]
-                occlusions = [(x - 1).mean() for x in target_metadata["keypoints"]]
-                occlusions_ids = list(np.where(np.array(occlusions) < 0.5)[0])
-            else:
-                occlusions_ids = []
-
-            results[frame_id] = compute_fp_missratio2(preds[frame_id], targets[frame_id], threshold=threshold, excluded_gt=occlusions_ids)
-        avrg_fp = np.mean([x[0] for x in results.values()])
-        avrg_missrate = np.mean([x[1] for x in results.values()])
-
-        avrg_fp_list.append(avrg_fp)
-        avrg_missrate_list.append(avrg_missrate)
-
-    return avrg_fp_list, avrg_missrate_list
+    # If exist load it
+    if os.path.isfile(df_file):
+        df_mr_fppi = pd.read_csv(df_file, index_col="frame_id").reset_index()
+        df_mr_fppi["frame_id"] = df_mr_fppi["frame_id"].astype(str)
+        df_mr_fppi = df_mr_fppi.set_index(["frame_id", "threshold"])
+    else:
+        df_mr_fppi = pd.DataFrame(columns=["frame_id", "threshold", "MR", "FPPI"]).set_index(["frame_id", "threshold"])
 
 
 
+    df_mr_fppi_list = []
+    frame_ids = preds.keys() #todo all for now
 
-def get_preds_from_files(config_file, checkpoint_file, frame_id_list, file_list, nms=False, device="cuda"):
+    # maybe do a set here ?
 
-    preds = {}
+    for i, frame_id in enumerate(frame_ids):
 
-    model = init_detector(config_file, checkpoint_file, device=device)
+        # If image not already parsed
+        if str(frame_id)  in df_mr_fppi.index:
+            print(f"{frame_id}  {gtbbox_filtering} Already done")
+        else:
+            print(f"{frame_id}  {gtbbox_filtering} Not already done")
 
-    #for frame_id, img_path in zip(frame_id_list, file_list):
+            results = {}
+            for threshold in thresholds:
 
-    for i in tqdm(range(len(file_list))):
+                    #todo handle only 1 ???
+                    if len(pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T) == 1:
+                        df_gtbbox_metadata_frame = pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T.reset_index()
+                    else:
+                        df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id].reset_index()
+                    #todo delay here was removed for ECP df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+3].reset_index()
 
-        frame_id = frame_id_list[i]
-        img_path = file_list[i]
+                    excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
 
-        # test a single image and show the results
-        result = inference_detector(model, img_path)
-        bboxes_people = result[0]
+                    results[threshold] = compute_fp_missratio2(preds[frame_id], targets[frame_id],
+                                                              threshold=threshold, excluded_gt=excluded_gt)
 
-        if nms:
-            bboxes_people, _ = nms(
-                bboxes_people[:, :4],
-                bboxes_people[:, 4],
-                0.25,
-                score_threshold=0.25)
 
-        pred = [
-            dict(
-                boxes=torch.tensor(bboxes_people[:, :4]),
-                scores=torch.tensor(bboxes_people[:, 4]),
-                labels=torch.tensor([0] * len(bboxes_people)),
-            )
-        ]
-        preds[frame_id] = pred
+            df_results_threshold = pd.DataFrame({key:val[:2] for key,val in results.items()}).T.rename(columns={0: "MR", 1: "FPPI"})
+            df_results_threshold.index.name = "threshold"
+            df_results_threshold["frame_id"] = str(frame_id)
+            df_mr_fppi_list.append(df_results_threshold.reset_index().set_index(["frame_id", "threshold"]))
 
-    return preds
+        # todo output here details for each image as a dataframe ? score threshold x image_id
+
+        if df_mr_fppi_list:
+            df_mr_fppi_current = pd.concat(df_mr_fppi_list, axis=0)
+            df_mr_fppi_current["model"] = model_name
+            df_mr_fppi = pd.concat([df_mr_fppi, df_mr_fppi_current], axis=0)
+
+            if i % 50 == 0:
+                df_mr_fppi.to_csv(df_file)
+
+    # Save at the end
+    df_mr_fppi.to_csv(df_file)
+
+    return df_mr_fppi.loc[frame_ids]
+
+
 
 #%% Plot utils
 
@@ -210,18 +187,18 @@ def add_bboxes_to_img(img, bboxes, c=(0,0,255), s=1):
 def plot_results_img(img_path, frame_id, preds=None, targets=None, excl_gt_indices=None):
     img = plt.imread(img_path)
 
-    num_gt_bbox = len(targets[frame_id][0]["boxes"])
+    num_gt_bbox = len(targets[(frame_id)][0]["boxes"])
 
     incl_gt_indices = np.setdiff1d(list(range(num_gt_bbox)), excl_gt_indices)
 
     if preds is not None:
-        img = add_bboxes_to_img(img, preds[frame_id][0]["boxes"], c=(0, 0, 255), s=3)
+        img = add_bboxes_to_img(img, preds[(frame_id)][0]["boxes"], c=(0, 0, 255), s=3)
     if targets is not None:
         if excl_gt_indices is None:
-            img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"], c=(0, 255, 0), s=6)
+            img = add_bboxes_to_img(img, targets[(frame_id)][0]["boxes"], c=(0, 255, 0), s=6)
         else:
-            img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"][incl_gt_indices], c=(0, 255, 0), s=6)
-            img = add_bboxes_to_img(img, targets[frame_id][0]["boxes"][excl_gt_indices], c=(255, 255, 0), s=6)
+            img = add_bboxes_to_img(img, targets[(frame_id)][0]["boxes"][incl_gt_indices], c=(0, 255, 0), s=6)
+            img = add_bboxes_to_img(img, targets[(frame_id)][0]["boxes"][excl_gt_indices], c=(255, 255, 0), s=6)
     plt.imshow(img)
     plt.show()
 
@@ -273,13 +250,20 @@ def visual_check_motsynth_annotations(video_num="004", img_file_name="0200.jpg",
     img_path = f"/home/raphael/work/datasets/MOTSynth/frames/{video_num}/rgb/{img_file_name}"
     img = plt.imread(img_path)
     img = add_bboxes_to_img(img, bboxes, c=(0, 255, 0), s=6)
+
+    keypoints = [(np.array(x["keypoints"])).reshape((22, 3)) for x in annot_motsynth["annotations"] if
+                 x["image_id"] == img_id + shift]
+
+    for keypoint in keypoints:
+        plt.scatter(keypoint[:, 0], keypoint[:, 1], c=keypoint[:, 2])
+
+
     plt.imshow(img)
     plt.show()
 
 
 
 def get_motsynth_day_night_video_ids(max_iter=50, force=False):
-
 
     # Save
     if os.path.exists("/home/raphael/work/datasets/MOTSynth/coco_infos.json") or not force:
@@ -327,121 +311,3 @@ def get_motsynth_day_night_video_ids(max_iter=50, force=False):
     return day, night
 
 
-
-def get_MoTSynth_annotations_and_imagepaths_video(video_id="004", max_samples=100000, random_sampling=True, delay=3):
-
-    np.random.seed(0)
-
-    json_path = f"/home/raphael/work/datasets/MOTSynth/coco annot/{video_id}.json"
-
-    with open(json_path) as jsonFile:
-        annot_motsynth = json.load(jsonFile)
-
-    frame_metadata = {}
-    targets = {}
-    img_path_list = []
-    targets_metadata = {}
-
-    # Set images to process
-    if random_sampling:
-        random_set = np.random.choice(len(annot_motsynth["images"][delay:]), max_samples, replace=False)
-        image_set = [x for i, x in enumerate(annot_motsynth["images"][delay:]) if i in random_set]
-    else:
-        image_set = annot_motsynth["images"][delay:delay+max_samples]
-
-    for image in image_set:
-
-        frame_id = image["id"]
-        bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
-
-        # BBOXES metadata
-        annots = [x for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
-        keypoints = [(np.array(annot["keypoints"])).reshape((22, 3))[:,2] for annot in annots]
-        area = [annot["area"] for annot in annots]
-        is_crowd = [annot["iscrowd"] for annot in annots]
-        is_blurred = [annot["is_blurred"] for annot in annots]
-        attributes = [annot["attributes"] for annot in annots]
-
-        target_metadata = {
-            "keypoints": keypoints,
-            "area": area,
-            "is_crowd": is_crowd,
-            "is_blurred": is_blurred,
-            "attributes": attributes,
-        }
-
-        targets_metadata[frame_id] = target_metadata
-
-        # Target and labels
-        target = [
-            dict(
-                boxes=torch.tensor(
-                    bboxes)
-                )]
-        target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
-
-        # Keep only if at least 1 pedestrian
-        if len(target[0]["boxes"]) > 0:
-            targets[frame_id] = target
-            frame_metadata[frame_id] = annot_motsynth["info"]
-
-            img_path_list.append(osp.join("/home/raphael/work/datasets/MOTSynth", image["file_name"]))
-            # frame_metadata[frame_id] = (annot_ECP["tags"], [ann["tags"] for ann in annot_ECP["children"]])
-
-    frame_id_list = list(targets.keys())
-
-
-    """ Plot the first image
-    
-    idx = 2
-    frame_id = list(targets.keys())[idx]
-    delay = 3
-    
-        bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
-
-    # Target and labels
-    target = [
-        dict(
-            boxes=torch.tensor(
-                bboxes)
-            )]
-    target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
-    
-    
-
-    #target_boxes = [targets[40185][0]["boxes"]]
-    img_path = img_path_list[idx]
-    plot_results_img(img_path, frame_id, preds=None, targets={frame_id: target})
-    plot_results_img(img_path, frame_id, preds=None, targets=targets)
-
-    
-    """
-
-    return targets, targets_metadata, frame_metadata, frame_id_list, img_path_list
-
-
-
-
-def get_MoTSynth_annotations_and_imagepaths(video_ids=None, max_samples=100000):
-
-    if video_ids is None:
-        folders = os.listdir("/home/raphael/work/datasets/MOTSynth/frames")
-    else:
-        folders = video_ids
-
-    num_folders = len(list(folders))
-    max_num_sample_per_video = int(max_samples/num_folders)
-
-    targets, targets_metadata, frames_metadata, frame_id_list, img_path_list = {}, {}, {}, [], []
-
-    for folder in folders:
-        targets_folder, targets_metadata_folder, frames_metadata_folder, frame_id_list_folder, img_path_list_folder =\
-            get_MoTSynth_annotations_and_imagepaths_video(video_id=folder, max_samples=max_num_sample_per_video)
-
-        targets.update(targets_folder)
-        targets_metadata.update(targets_metadata_folder)
-        frames_metadata.update(frames_metadata_folder)
-        frame_id_list += frame_id_list_folder
-        img_path_list += img_path_list_folder
-
-    return targets, targets_metadata, frames_metadata, frame_id_list, img_path_list
