@@ -11,7 +11,7 @@ import os.path as osp
 model_name = "faster-rcnn_cityscapes"
 dataset_name = "motsynth"
 root_motsynth = "/home/raphael/work/datasets/MOTSynth/"
-max_sample = 1200  # Uniform sampled in dataset
+max_sample = 1000  # Uniform sampled in dataset
 
 #%%
 from src.preprocessing.motsynth_processing import MotsynthProcessing
@@ -56,7 +56,7 @@ df_analysis_frame = df_analysis.groupby("frame_id").apply(lambda x: x.mean(numer
 
 #%% study correlations
 import matplotlib.pyplot as plt
-frame_cofactors = ["adverse_weather", "is_night", "pitch"]
+frame_cofactors = ["adverse_weather", "is_night", "pitch", "yaw", "roll"]
 metrics = ["MR", "FPPI"]
 from scipy.stats import pearsonr
 corr_matrix = df_analysis_frame[metrics+frame_cofactors].corr(method=lambda x, y: pearsonr(x, y)[0])
@@ -92,3 +92,74 @@ plt.show()
 
 
 #%% What is the Operational Design Domain ???????? Give spec
+
+"""
+For now threshold = 0.5, IoU=0.5
+
+What happens ?
+    - Give expected specs (e.g. MR=0.2)
+    - Visualize when specs are met (when the case, and when not how much is the drop ?)
+    
+/!\ Keep in mind correlation between cofactors
+"""
+
+df_analysis_50 = pd.merge(df_mr_fppi[df_mr_fppi.index.get_level_values('threshold') == 0.5], df_frame_metadata, on="frame_id")
+
+# Sensitivity of the method ?
+plt.bar(frame_cofactors, -np.log10(p_matrix["MR"][frame_cofactors]))
+plt.title("p-val pour le test de correlation")
+plt.show()
+
+#%% When is it working ? Plage de fonctionnement --> What did they do in Synscapes ?
+
+"""
+2 methods : either a regressor, or by average on zones/tiles (and measure that on XX? of cases we meet the criteria ?)
+--> should plot it
+"""
+
+
+from sklearn.datasets import make_hastie_10_2
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.inspection import PartialDependenceDisplay
+
+y = df_analysis_50["MR"].values
+X = df_analysis_50[frame_cofactors].values
+X[:,0]=1.*X[:,0]
+
+clf = GradientBoostingRegressor(n_estimators=50, learning_rate=1.0,
+    max_depth=1, random_state=0).fit(X, y)
+features = [0,1,2,3,4, (0,1), (1,3)]
+
+fig, ax = plt.subplots(1,1, figsize=(16,10))
+PartialDependenceDisplay.from_estimator(clf, X, features, feature_names=frame_cofactors, ax=ax)
+plt.show()
+
+#%% Distribution each one
+
+feat = "adverse_weather"
+metric = "FPPI"
+
+fig, ax = plt.subplots(1,1, figsize=(16,10))
+ax.hist(df_analysis_50[df_analysis_50[feat]==1][metric], alpha=0.5, label="1")
+ax.hist(df_analysis_50[df_analysis_50[feat]==0][metric], alpha=0.5, label="0")
+plt.legend()
+plt.title(metric+"  vs   "+feat)
+plt.show()
+
+
+"""
+But dataset may be biased : with adverse weather less people ?
+
+Also sensitivity to yaw does not make sense 
+"""
+
+#todo sensitivity yaw ???
+
+#%%
+
+
+fig, ax = plt.subplots(1,1, figsize=(16,10))
+ax.hist(df_analysis_50["yaw"], alpha=0.5, label="1", bins=50)
+plt.legend()
+plt.title("pitch")
+plt.show()

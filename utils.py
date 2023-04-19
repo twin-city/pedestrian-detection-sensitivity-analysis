@@ -154,20 +154,20 @@ def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox
                                                               threshold=threshold, excluded_gt=excluded_gt)
 
 
-            df_results_threshold = pd.DataFrame({key:val[:2] for key,val in results.items()}).T.rename(columns={0: "MR", 1: "FPPI"})
+            df_results_threshold = pd.DataFrame({key:val[:2] for key,val in results.items()}).T.rename(columns={0: "FPPI", 1: "MR"})
             df_results_threshold.index.name = "threshold"
             df_results_threshold["frame_id"] = str(frame_id)
             df_mr_fppi_list.append(df_results_threshold.reset_index().set_index(["frame_id", "threshold"]))
 
         # todo output here details for each image as a dataframe ? score threshold x image_id
 
-        if df_mr_fppi_list:
-            df_mr_fppi_current = pd.concat(df_mr_fppi_list, axis=0)
-            df_mr_fppi_current["model"] = model_name
-            df_mr_fppi = pd.concat([df_mr_fppi, df_mr_fppi_current], axis=0)
+    if df_mr_fppi_list:
+        df_mr_fppi_current = pd.concat(df_mr_fppi_list, axis=0)
+        df_mr_fppi_current["model"] = model_name
+        df_mr_fppi = pd.concat([df_mr_fppi, df_mr_fppi_current], axis=0)
 
-            if i % 50 == 0:
-                df_mr_fppi.to_csv(df_file)
+        if i % 50 == 0:
+            df_mr_fppi.to_csv(df_file)
 
     # Save at the end
     df_mr_fppi.to_csv(df_file)

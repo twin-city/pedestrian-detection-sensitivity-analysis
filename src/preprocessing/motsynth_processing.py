@@ -131,7 +131,7 @@ class MotsynthProcessing(DatasetProcessing):
             if len(target[0]["boxes"]) > 0:
                 targets[str(frame_id)] = target
                 frame_metadata[frame_id] = annot_motsynth["info"]
-                img_path_list.append(osp.join(self.root_dir, image["file_name"]))
+                img_path_list.append(osp.join(self.root, image["file_name"]))
                 # frame_metadata[frame_id] = (annot_ECP["tags"], [ann["tags"] for ann in annot_ECP["children"]])
 
                 # Dataframes
