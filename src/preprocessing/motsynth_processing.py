@@ -213,10 +213,10 @@ class MotsynthProcessing(DatasetProcessing):
             # Compute specific cofactors
             adverse_weather = ['THUNDER', 'SMOG', 'FOGGY', 'BLIZZARD', 'RAIN', 'CLOUDS',
                                'OVERCAST']  # 'CLEAR' 'EXTRASUNNY',
-            df_frame_metadata["adverse_weather"] = df_frame_metadata["weather"].apply(lambda x: x in adverse_weather)
+            df_frame_metadata["adverse_weather"] = 1*df_frame_metadata["weather"].apply(lambda x: x in adverse_weather)
 
             extreme_weather = ['THUNDER', 'SMOG', 'FOGGY', 'BLIZZARD', 'RAIN']  # 'CLEAR' 'EXTRASUNNY',
-            df_frame_metadata["extreme_weather"] = df_frame_metadata["weather"].apply(lambda x: x in extreme_weather)
+            df_frame_metadata["extreme_weather"] = 1*df_frame_metadata["weather"].apply(lambda x: x in extreme_weather)
 
             """
             # Drop and rename too
@@ -251,3 +251,83 @@ class MotsynthProcessing(DatasetProcessing):
         df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
 
         return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+
+
+
+"""
+
+def visual_check_motsynth_annotations(video_num="004", img_file_name="0200.jpg", shift=3):
+
+
+    json_path = f"/home/raphael/work/datasets/MOTSynth/coco annot/{video_num}.json"
+    with open(json_path) as jsonFile:
+        annot_motsynth = json.load(jsonFile)
+
+
+    img_id = [(x["id"]) for x in annot_motsynth["images"] if img_file_name in x["file_name"]][0]
+    bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == img_id+shift]
+
+    img_path = f"/home/raphael/work/datasets/MOTSynth/frames/{video_num}/rgb/{img_file_name}"
+    img = plt.imread(img_path)
+    img = add_bboxes_to_img(img, bboxes, c=(0, 255, 0), s=6)
+
+    keypoints = [(np.array(x["keypoints"])).reshape((22, 3)) for x in annot_motsynth["annotations"] if
+                 x["image_id"] == img_id + shift]
+
+    for keypoint in keypoints:
+        plt.scatter(keypoint[:, 0], keypoint[:, 1], c=keypoint[:, 2])
+
+
+    plt.imshow(img)
+    plt.show()
+
+
+
+def get_motsynth_day_night_video_ids(max_iter=50, force=False):
+
+    # Save
+    if os.path.exists("/home/raphael/work/datasets/MOTSynth/coco_infos.json") or not force:
+        with open("/home/raphael/work/datasets/MOTSynth/coco_infos.json") as jsonFile:
+            video_info = json.load(jsonFile)
+    else:
+        video_info = {}
+
+
+    for i, video_file in enumerate(mmcv.scandir("/home/raphael/work/datasets/MOTSynth/coco annot/")):
+
+        print(video_file)
+
+        if video_file.replace(".json", "") not in video_info.keys():
+            try:
+                json_path = f"/home/raphael/work/datasets/MOTSynth/coco annot/{video_file}"
+
+                with open(json_path) as jsonFile:
+                    annot_motsynth = json.load(jsonFile)
+
+
+                is_night = annot_motsynth["info"]["is_night"]
+                print(video_file, is_night)
+
+                video_info[video_file.replace(".json", "")] = annot_motsynth["info"]
+            except:
+                print(f"Did not work for {video_file}")
+
+        if i > max_iter:
+            break
+
+    with open("/home/raphael/work/datasets/MOTSynth/coco_infos.json", 'w') as f:
+        json.dump(video_info, f)
+    night = []
+    day = []
+
+    day_index = [key for key, value in video_info.items() if
+           not value["is_night"] and os.path.exists(f"/home/raphael/work/datasets/MOTSynth/frames/{key}")]
+    night_index = [key for key, value in video_info.items() if
+           value["is_night"] and os.path.exists(f"/home/raphael/work/datasets/MOTSynth/frames/{key}")]
+
+    print("night", night_index)
+    print("day", day_index)
+
+    return day, night
+
+"""

@@ -18,6 +18,8 @@ from src.preprocessing.motsynth_processing import MotsynthProcessing
 motsynth_processor = MotsynthProcessing(root_motsynth, max_samples=max_sample, video_ids=None)
 targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = motsynth_processor.get_dataset()
 
+#todo seems there is a bug on pitch/roll/yaw
+
 # Frame id list
 img_path_list = [osp.join(root_motsynth, x) for x in df_frame_metadata["file_name"]]
 frame_id_list = list(df_frame_metadata["id"].values.astype(str))
@@ -163,3 +165,22 @@ ax.hist(df_analysis_50["yaw"], alpha=0.5, label="1", bins=50)
 plt.legend()
 plt.title("pitch")
 plt.show()
+
+#%% Check the roll/pitch ?
+
+criteria = "roll"
+
+firsts = df_frame_metadata.sort_values(criteria).iloc[:5]["file_name"].values.tolist()
+lasts = df_frame_metadata.sort_values(criteria).iloc[-5:]["file_name"].values.tolist()
+fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(10, 5))
+for i, (path1, path2) in enumerate(zip(firsts, lasts)):
+    axs[0, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../", path1)))
+    axs[0, i].axis('off')
+    axs[1, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../", path2)))
+    axs[1, i].axis('off')
+plt.show()
+
+
+#%% Check if camera angles change during videos ???
+
+df_frame_metadata.groupby("seq_name").apply(lambda x: x.std())[["pitch", "roll", "yaw"]].max()

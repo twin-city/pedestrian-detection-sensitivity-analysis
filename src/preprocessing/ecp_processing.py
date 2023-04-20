@@ -66,6 +66,11 @@ class ECPProcessing(DatasetProcessing):
 
         # Here ECP specific
         root = f"{self.root}/{time}/labels/{set}/{city}"
+
+
+
+
+
         total_frame_ids = [x.split(".json")[0] for x in os.listdir(root) if ".json" in x]
 
         # Init dicts for bboxes annotations and metadata
@@ -112,10 +117,24 @@ class ECPProcessing(DatasetProcessing):
             img_path = f"{time}/img/val/{city}/{frame_id}.png"
             img_path_list.append(img_path)
 
+
+
         return targets, targets_metadata, frame_id_list, img_path_list
 
 
     def get_annotations_and_imagepaths(self):
+
+        try:
+            print("Try")
+            df_gtbbox_metadata = pd.read_csv(path_df_gtbbox_metadata).set_index(["image_id", "id"])
+            df_frame_metadata = pd.read_csv(path_df_frame_metadata).set_index("Unnamed: 0")
+            df_sequence_metadata = pd.read_csv(path_df_sequence_metadata).set_index("Unnamed: 0")
+
+
+            with open(path_target) as jsonFile:
+                targets = target_2_torch(json.load(jsonFile))
+            print("End Try")
+
 
         targets = {}
         frame_id_list = []
@@ -145,7 +164,7 @@ class ECPProcessing(DatasetProcessing):
                         df_frames_metadata_folder["city"] = city
                         df_frames_metadata_folder["path"] = img_path_list_folder
                         df_frames_metadata_folder["frame_id"] = frame_id_list_folder
-                        df_frames_metadata_folder["adverse_weather"] = df_frames_metadata_folder["rainy"]
+                        df_frames_metadata_folder["adverse_weather"] = 1*df_frames_metadata_folder["rainy"]
                         df_frames_metadata_folder["file_name"] = img_path_list_folder
                         df_frames_metadata_folder["id"] = frame_id_list_folder
                         # df_frames_metadata_folder["file_name"] = img_path_list_folder
