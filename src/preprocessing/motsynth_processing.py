@@ -42,19 +42,25 @@ class MotsynthProcessing(DatasetProcessing):
         self.annot_dir = f"{root}/coco annot"
         self.saves_dir = f"data/preprocessing/{self.dataset_name}"
         os.makedirs(self.saves_dir, exist_ok=True)
+        self.video_ids = video_ids
 
         # todo specific to motsynth
         # todo bug 140, 174 and whatt appens if less samples than sequences ?????
-        if video_ids is None:
+
+
+    def get_video_ids(self):
+        if self.video_ids is None:
             exclude_ids_frames = set(["060", "081", "026", "132", "136", "102", "099", "174", "140"])
             video_ids_frames = set(np.sort(os.listdir(self.frames_dir)).tolist())
             video_ids_json = set([i.replace(".json", "") for i in
                                   os.listdir(self.annot_dir)]) - exclude_ids_frames
             self.video_ids = list(np.sort(list(set.intersection(video_ids_frames, video_ids_json))))
             if self.max_samples < len(self.video_ids):
-                self.video_ids = np.random.choice(self.video_ids, max_samples, replace=False)
+                self.video_ids = np.random.choice(self.video_ids, self.max_samples, replace=False)
         else:
-            self.video_ids = video_ids
+            video_ids = self.video_ids
+
+        return video_ids
 
 
     def get_dataset(self):
@@ -176,7 +182,7 @@ class MotsynthProcessing(DatasetProcessing):
 
         except:
             print("Except")
-            video_ids = self.video_ids
+            video_ids = self.get_video_ids()
             max_samples = self.max_samples
             df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()]*3
 

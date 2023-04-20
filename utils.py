@@ -20,6 +20,8 @@ def xywh2xyxy(bbox):
 
 def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
 
+    num_gtbbox = len(target_bbox[0]["boxes"])
+
     score_sorted = np.argsort(pred_bbox[0]["scores"].numpy())[::-1]
 
     # All target bboxes
@@ -77,9 +79,9 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[])
     # False negatives
     # fn_image = max(0, len(target_bbox[0]["boxes"]) - len(matched_target_bbox_list))
     fn_image = max(0, len(incl_possible_target_bboxs_ids) - len(matched_target_bbox_list))
-    miss_ratio_image = fn_image / len(target_bbox[0]["boxes"])
+    miss_ratio_image = fn_image / num_gtbbox
 
-    return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds
+    return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox
 
 
 def filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering):
@@ -108,12 +110,15 @@ def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox
     :return:
     """
 
-    thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
+    # thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
+
+    thresholds = [0.1, 0.5, 0.9]
 
 
     df_root = f"data/preds/{dataset_name}_{model_name}"
     os.makedirs(df_root, exist_ok=True)
     df_file = f"{df_root}/metrics-{json.dumps(gtbbox_filtering)}.json"
+    df_matched_file = f"{df_root}/matched-{json.dumps(gtbbox_filtering)}.json"
 
     # If exist load it
     if os.path.isfile(df_file):
@@ -124,13 +129,25 @@ def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox
         df_mr_fppi = pd.DataFrame(columns=["frame_id", "threshold", "MR", "FPPI"]).set_index(["frame_id", "threshold"])
 
 
+    if os.path.isfile(df_matched_file):
+        df_matched_gtbbox = pd.read_csv(df_matched_file, index_col="frame_id").reset_index()
+        df_matched_gtbbox["frame_id"] = df_matched_gtbbox["frame_id"].astype(str)
+        df_matched_gtbbox = df_matched_gtbbox.set_index(["frame_id", "id"])
+    else:
+        df_matched_gtbbox = pd.DataFrame(columns=["frame_id", "id", "threshold", "matched"]).set_index(["frame_id", "id"])
 
+
+    df_matched_gtbbox_list = []
     df_mr_fppi_list = []
     frame_ids = preds.keys() #todo all for now
 
     # maybe do a set here ?
 
     for i, frame_id in enumerate(frame_ids):
+
+        # todo here to compute few for now. At random ?
+        if i > 50:
+            break
 
         # If image not already parsed
         if str(frame_id)  in df_mr_fppi.index:
@@ -154,25 +171,48 @@ def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox
                                                               threshold=threshold, excluded_gt=excluded_gt)
 
 
+            def get_df_matched_gtbbox(results, threshold, gtbbox_ids):
+                df_matched_gtbbox = 1*pd.DataFrame([i in results[threshold][3] for i in range(results[threshold][5])])
+                df_matched_gtbbox["frame_id"] = frame_id
+                df_matched_gtbbox["threshold"] = threshold
+                df_matched_gtbbox["id"] = gtbbox_ids
+                df_matched_gtbbox = df_matched_gtbbox.rename(columns={0: 'matched'})
+                return df_matched_gtbbox
+
+            df_matched_gtbbox = pd.concat([get_df_matched_gtbbox(results, threshold, df_gtbbox_metadata_frame["id"]) for threshold in thresholds])
+            df_matched_gtbbox = df_matched_gtbbox.set_index(["frame_id", "id"])
+
+            # df = matched_gtbbox = pd.DataFrame({key:val[3] for key,val in results.items()})
+
             df_results_threshold = pd.DataFrame({key:val[:2] for key,val in results.items()}).T.rename(columns={0: "FPPI", 1: "MR"})
             df_results_threshold.index.name = "threshold"
             df_results_threshold["frame_id"] = str(frame_id)
             df_mr_fppi_list.append(df_results_threshold.reset_index().set_index(["frame_id", "threshold"]))
 
+            df_matched_gtbbox_list.append(df_matched_gtbbox)
+
         # todo output here details for each image as a dataframe ? score threshold x image_id
 
     if df_mr_fppi_list:
+        #todo duplicated code
         df_mr_fppi_current = pd.concat(df_mr_fppi_list, axis=0)
         df_mr_fppi_current["model"] = model_name
         df_mr_fppi = pd.concat([df_mr_fppi, df_mr_fppi_current], axis=0)
 
+        df_matched_gtbbox_current = pd.concat(df_matched_gtbbox_list, axis=0)
+        df_matched_gtbbox_current["model"] = model_name
+        df_matched_gtbbox = pd.concat([df_matched_gtbbox, df_matched_gtbbox_current], axis=0)
+
+
         if i % 50 == 0:
             df_mr_fppi.to_csv(df_file)
+            df_matched_gtbbox.to_csv(df_matched_file)
 
     # Save at the end
     df_mr_fppi.to_csv(df_file)
+    df_matched_gtbbox.to_csv(df_matched_file)
 
-    return df_mr_fppi.loc[frame_ids]
+    return df_mr_fppi.loc[frame_ids], df_matched_gtbbox.loc[frame_ids]
 
 
 

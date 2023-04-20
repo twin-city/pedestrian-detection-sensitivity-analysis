@@ -28,7 +28,7 @@ frame_id_list = list(df_frame_metadata["id"].values.astype(str))
 
 # Detections
 from src.detection.detector import Detector
-detector = Detector(model_name, device="cuda")
+detector = Detector(model_name, device="cpu")
 preds = detector.get_preds_from_files(dataset_name, frame_id_list, img_path_list)
 
 #########################################   Peform Tests   ############################################################
@@ -45,7 +45,7 @@ img_path = img_path_list[i]
 df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id] #todo delay
 excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
 occlusions_ids = [i for i, idx in enumerate(df_gtbbox_metadata_frame.index) if idx in excluded_gt]
-plot_results_img(img_path, frame_id, preds, targets, occlusions_ids)
+# plot_results_img(img_path, frame_id, preds, targets, occlusions_ids)
 
 #%% As in ECP
 
@@ -170,6 +170,7 @@ plt.show()
 
 criteria = "roll"
 
+"""
 firsts = df_frame_metadata.sort_values(criteria).iloc[:5]["file_name"].values.tolist()
 lasts = df_frame_metadata.sort_values(criteria).iloc[-5:]["file_name"].values.tolist()
 fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(10, 5))
@@ -179,6 +180,7 @@ for i, (path1, path2) in enumerate(zip(firsts, lasts)):
     axs[1, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../", path2)))
     axs[1, i].axis('off')
 plt.show()
+"""
 
 
 #%% Check if camera angles change during videos ???
