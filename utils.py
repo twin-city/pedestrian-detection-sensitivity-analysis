@@ -102,7 +102,15 @@ def filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering):
     return excluded_gt
 
 
-def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering={}):
+def get_df_matched_gtbbox(results, frame_id, threshold, gtbbox_ids):
+    df_matched_gtbbox = 1 * pd.DataFrame([i in results[threshold][3] for i in range(results[threshold][5])])
+    df_matched_gtbbox["frame_id"] = frame_id
+    df_matched_gtbbox["threshold"] = threshold
+    df_matched_gtbbox["id"] = gtbbox_ids
+    df_matched_gtbbox = df_matched_gtbbox.rename(columns={0: 'matched'})
+    return df_matched_gtbbox
+
+def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering={}, max_frames=1e6):
     """
     On preds keys.
     :param preds:
@@ -146,11 +154,11 @@ def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox
     for i, frame_id in enumerate(frame_ids):
 
         # todo here to compute few for now. At random ?
-        if i > 50:
+        if i > max_frames:
             break
 
         # If image not already parsed
-        if str(frame_id)  in df_mr_fppi.index:
+        if str(frame_id) in df_mr_fppi.index and str(frame_id) in df_matched_gtbbox.index:
             print(f"{frame_id}  {gtbbox_filtering} Already done")
         else:
             print(f"{frame_id}  {gtbbox_filtering} Not already done")
@@ -171,15 +179,9 @@ def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox
                                                               threshold=threshold, excluded_gt=excluded_gt)
 
 
-            def get_df_matched_gtbbox(results, threshold, gtbbox_ids):
-                df_matched_gtbbox = 1*pd.DataFrame([i in results[threshold][3] for i in range(results[threshold][5])])
-                df_matched_gtbbox["frame_id"] = frame_id
-                df_matched_gtbbox["threshold"] = threshold
-                df_matched_gtbbox["id"] = gtbbox_ids
-                df_matched_gtbbox = df_matched_gtbbox.rename(columns={0: 'matched'})
-                return df_matched_gtbbox
 
-            df_matched_gtbbox = pd.concat([get_df_matched_gtbbox(results, threshold, df_gtbbox_metadata_frame["id"]) for threshold in thresholds])
+
+            df_matched_gtbbox = pd.concat([get_df_matched_gtbbox(results, frame_id, threshold, df_gtbbox_metadata_frame["id"]) for threshold in thresholds])
             df_matched_gtbbox = df_matched_gtbbox.set_index(["frame_id", "id"])
 
             # df = matched_gtbbox = pd.DataFrame({key:val[3] for key,val in results.items()})
@@ -211,6 +213,10 @@ def compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox
     # Save at the end
     df_mr_fppi.to_csv(df_file)
     df_matched_gtbbox.to_csv(df_matched_file)
+
+    df_matched_gtbbox = df_matched_gtbbox.reset_index()
+    df_matched_gtbbox["id"] = df_matched_gtbbox["id"].astype(str)
+    df_matched_gtbbox = df_matched_gtbbox.set_index(["frame_id", "id"])
 
     return df_mr_fppi.loc[frame_ids], df_matched_gtbbox.loc[frame_ids]
 

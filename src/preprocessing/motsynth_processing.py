@@ -54,9 +54,9 @@ class MotsynthProcessing(DatasetProcessing):
             video_ids_frames = set(np.sort(os.listdir(self.frames_dir)).tolist())
             video_ids_json = set([i.replace(".json", "") for i in
                                   os.listdir(self.annot_dir)]) - exclude_ids_frames
-            self.video_ids = list(np.sort(list(set.intersection(video_ids_frames, video_ids_json))))
-            if self.max_samples < len(self.video_ids):
-                self.video_ids = np.random.choice(self.video_ids, self.max_samples, replace=False)
+            video_ids = list(np.sort(list(set.intersection(video_ids_frames, video_ids_json))))
+            if self.max_samples < len(video_ids):
+                video_ids = np.random.choice(video_ids, self.max_samples, replace=False)
         else:
             video_ids = self.video_ids
 
@@ -103,7 +103,9 @@ class MotsynthProcessing(DatasetProcessing):
 
             # BBOXES metadata
             annots = [x for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
-            keypoints = [(np.array(annot["keypoints"])).reshape((22, 3))[:,2] for annot in annots]
+            keypoints_label = [(np.array(annot["keypoints"])).reshape((22, 3))[:,2] for annot in annots]
+            keypoints_posx = [(np.array(annot["keypoints"])).reshape((22, 3))[:,0] for annot in annots]
+            keypoints_posy = [(np.array(annot["keypoints"])).reshape((22, 3))[:, 1] for annot in annots]
             area = [annot["area"] for annot in annots]
             is_crowd = [annot["iscrowd"] for annot in annots]
             is_blurred = [annot["is_blurred"] for annot in annots]
@@ -115,7 +117,9 @@ class MotsynthProcessing(DatasetProcessing):
             target_metadata = {
                 "image_id": image_id,
                 "id": id,
-                "keypoints": keypoints,
+                "keypoints_label": keypoints_label,
+                "keypoints_posx": keypoints_posx,
+                "keypoints_posy": keypoints_posy,
                 "area": area,
                 "is_crowd": is_crowd,
                 "is_blurred": is_blurred,
@@ -143,6 +147,13 @@ class MotsynthProcessing(DatasetProcessing):
                 # Dataframes
                 df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(target_metadata)], axis=0)
 
+                keypoints_label_names = [f"keypoints_label_{i}" for i in range(22)]
+                keypoints_posx_names = [f"keypoints_posx_{i}" for i in range(22)]
+                keypoints_posy_names = [f"keypoints_posy_{i}" for i in range(22)]
+
+                df_gtbbox_metadata[keypoints_label_names] = df_gtbbox_metadata["keypoints_label"].apply(lambda x: pd.Series(x))
+                df_gtbbox_metadata[keypoints_posx_names] = df_gtbbox_metadata["keypoints_posx"].apply(lambda x: pd.Series(x))
+                df_gtbbox_metadata[keypoints_posy_names] = df_gtbbox_metadata["keypoints_posy"].apply(lambda x: pd.Series(x))
 
 
                 frame_metadata_features = ['file_name', 'id', 'frame_n'] + \
@@ -214,7 +225,8 @@ class MotsynthProcessing(DatasetProcessing):
 
             # compute occlusion rates
             df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
-            df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata["keypoints"].apply(lambda x: 1 - (x - 1).mean())
+            # -->  0 : visible, 1 : occluded/truncated
+            df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata["keypoints_label"].apply(lambda x: (2-x).mean())
 
             # Compute specific cofactors
             adverse_weather = ['THUNDER', 'SMOG', 'FOGGY', 'BLIZZARD', 'RAIN', 'CLOUDS',

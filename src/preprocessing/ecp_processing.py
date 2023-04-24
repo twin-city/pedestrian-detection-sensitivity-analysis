@@ -124,6 +124,7 @@ class ECPProcessing(DatasetProcessing):
 
     def get_annotations_and_imagepaths(self):
 
+        """
         try:
             print("Try")
             df_gtbbox_metadata = pd.read_csv(path_df_gtbbox_metadata).set_index(["image_id", "id"])
@@ -134,6 +135,7 @@ class ECPProcessing(DatasetProcessing):
             with open(path_target) as jsonFile:
                 targets = target_2_torch(json.load(jsonFile))
             print("End Try")
+        """
 
 
         targets = {}

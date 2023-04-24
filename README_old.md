@@ -6,6 +6,7 @@ Analysis at the box level
 - BBox difficulty (what is it exactly ? Reasonable ?)
 - Occlusions
 
+
 Tests
   - test fonctionels généraux
   - tests unitaires
@@ -13,9 +14,13 @@ Tests
 Metrics
   - mAP
 
-Features ? DebiAI for Visualization
+Features ? Visualization (hard examples, specific criteria ...) 
+DebiAI for Visualization
+
 
 # Nice-to-have
+
+Specify ODD for given metrics
 
 Statistical Tests to uncover biases / detect significance
 
@@ -54,6 +59,10 @@ Trying other model
   - SoTA ??? SSD ??? Pedestron ???
 
 # Reflexion / Biblio
+
+
+Do the biblio
+
 Check ODD principles
 Variety for independance would be nice !
 Motsynth : choice occlusion is computed from keypoints

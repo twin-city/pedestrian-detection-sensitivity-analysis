@@ -36,7 +36,7 @@ preds = detector.get_preds_from_files(dataset_name, frame_id_list, img_path_list
 #%% Analyze results on an image
 
 gtbbox_filtering = {"occlusion_rate": (0.9, "max"),
-                    "area": (20, "min")}
+                    "area": (50, "min")}
 
 # plot
 i = 1

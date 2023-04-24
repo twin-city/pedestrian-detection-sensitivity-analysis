@@ -19,10 +19,12 @@ motsynth_processor = MotsynthProcessing(root_motsynth, max_samples=max_sample, v
 targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = motsynth_processor.get_dataset()
 df_gtbbox_metadata.index = df_gtbbox_metadata.index.rename({"image_id": "frame_id"})
 df_gtbbox_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len)
+keypoints_label_names = [f"keypoints_label_{i}" for i in range(22)]
+df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata[keypoints_label_names].apply(lambda x: (2-x)).mean(axis=1)
 
 #Todo https://github.com/cocodataset/cocoapi/issues/130
 #tidi 0 is truncation, 1 is occluded 2 is visible
-df_gtbbox_metadata["occlusion_rate"] = 1-df_gtbbox_metadata["occlusion_rate"]
+# df_gtbbox_metadata["occlusion_rate"] = 1-df_gtbbox_metadata["occlusion_rate"]
 
 
 #todo seems there is a bug on pitch/roll/yaw. We assume a mistake of MoTSynth authors, and the referenced "yaw" is in fact "pitch"
@@ -46,8 +48,8 @@ preds = detector.get_preds_from_files(dataset_name, frame_id_list, img_path_list
 
 #%% Analyze results on an image
 
-gtbbox_filtering = {"occlusion_rate": (0.92, "max"),
-                    "area": (40, "min")}
+gtbbox_filtering = {"occlusion_rate": (0.8, "max"),
+                    "area": (400, "min")}
 
 # plot
 i = 1
@@ -56,15 +58,11 @@ img_path = img_path_list[i]
 df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id] #todo delay
 excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
 occlusions_ids = [i for i, idx in enumerate(df_gtbbox_metadata_frame.index) if idx in excluded_gt]
-# plot_results_img(img_path, frame_id, preds, targets, occlusions_ids)
+plot_results_img(img_path, frame_id, preds, targets, occlusions_ids)
 
 #%% As in ECP
 
 df_mr_fppi, df_matched_gtbbox = compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering)
-#todo
-df_matched_gtbbox = df_matched_gtbbox.reset_index()
-df_matched_gtbbox["id"] = df_matched_gtbbox["id"].astype(str)
-df_matched_gtbbox = df_matched_gtbbox.set_index(["frame_id", "id"])
 
 #%% Concat results and metadata
 df_analysis = pd.merge(df_mr_fppi, df_frame_metadata, on="frame_id")
@@ -147,7 +145,7 @@ What happens ?
 df_analysis_50 = pd.merge(df_mr_fppi[df_mr_fppi.index.get_level_values('threshold') == 0.5], df_frame_metadata, on="frame_id")
 
 # Sensitivity of the method ?
-plt.bar(seq_cofactors, -np.log10(p_matrix["FPPI"][seq_cofactors]))
+plt.bar(seq_cofactors, -np.log10(p_matrix["MR"][seq_cofactors]))
 plt.title("p-val pour le test de correlation")
 plt.show()
 
@@ -173,6 +171,31 @@ features = [0,1,2,3,4, (0,1), (1,3)]
 
 fig, ax = plt.subplots(1,1, figsize=(16,10))
 PartialDependenceDisplay.from_estimator(clf, X, features, feature_names=frame_cofactors, ax=ax)
+plt.show()
+
+#%% Feature importance w/ trees
+
+y = df_analysis_50["FPPI"].values
+
+from sklearn.ensemble import RandomForestRegressor
+
+feature_names = frame_cofactors
+forest = RandomForestRegressor(random_state=0)
+
+from sklearn.inspection import permutation_importance
+
+forest.fit(X, y)
+
+result = permutation_importance(
+    forest, X, y, n_repeats=10, random_state=42, n_jobs=2
+)
+forest_importances = pd.Series(result.importances_mean, index=feature_names)
+
+fig, ax = plt.subplots()
+forest_importances.plot.bar(yerr=result.importances_std, ax=ax)
+ax.set_title("Feature importances using permutation on full model")
+ax.set_ylabel("Mean MR decrease")
+fig.tight_layout()
 plt.show()
 
 #%% Distribution each one
@@ -215,7 +238,7 @@ lasts = df_frame_metadata.sort_values(criteria).iloc[-5:]["file_name"].values.to
 values_firsts = df_frame_metadata.sort_values(criteria).iloc[:5][criteria]
 values_lasts = df_frame_metadata.sort_values(criteria).iloc[-5:][criteria]
 
-"""
+
 fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(10, 5))
 for i, (path1, path2) in enumerate(zip(firsts, lasts)):
     axs[0, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../", path1)))
@@ -225,7 +248,7 @@ for i, (path1, path2) in enumerate(zip(firsts, lasts)):
     axs[1, i].axis('off')
     axs[1, i].set_title(values_lasts.iloc[i])
 plt.show()
-"""
+
 
 #%% Check if camera angles change during videos ???
 
@@ -236,7 +259,7 @@ df_frame_metadata.groupby("seq_name").apply(lambda x: x.std(numeric_only=True))[
 #%%
 
 metric = "MR"
-minimal_requirement = 0.45
+minimal_requirement = 0.3
 
 matrix_odd = df_analysis_50.groupby(["is_night", "adverse_weather"]).apply(lambda x: x.mean())[metric].reset_index().pivot("is_night", "adverse_weather")
 cmap = plt.get_cmap('hot')

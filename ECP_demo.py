@@ -53,9 +53,10 @@ gtbbox_filtering = {}
 
 gtbbox_filtering = {"occlusion_rate": (0.9, "max"),
                     "truncation_rate": (0.9, "max"),
-                    "area": (20, "min")}
+                    "area": (40, "min")}
 
-df_mr_fppi = compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering)
+df_mr_fppi, _ = compute_ffpi_against_fp2(dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering)
+#todo matched bbox
 
 #%% Concat results and metadata
 df_analysis = pd.merge(df_mr_fppi, df_frame_metadata, on="frame_id")
@@ -80,6 +81,9 @@ plt.show()
 #%% Day 'n Night
 import matplotlib.pyplot as plt
 
+
+#%% Day 'n Night example
+
 night_ids = df_analysis_frame[df_analysis_frame["is_night"]==1].index.to_list()
 day_ids = df_analysis_frame[df_analysis_frame["is_night"]==0].index.to_list()
 
@@ -87,8 +91,8 @@ metrics_day = df_mr_fppi.loc[day_ids].groupby("threshold").apply(lambda x: x.mea
 metrics_night = df_mr_fppi.loc[night_ids].groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
 
 fig, ax = plt.subplots(1,1)
-ax.plot(metrics_day["MR"], metrics_day["FPPI"], label="day")
-ax.plot(metrics_night["MR"], metrics_night["FPPI"], label="night")
+ax.plot(metrics_day["FPPI"], metrics_day["MR"], label="day")
+ax.plot(metrics_night["FPPI"], metrics_night["MR"], label="night")
 
 ax.set_xscale('log')
 ax.set_yscale('log')
@@ -96,4 +100,29 @@ ax.set_yscale('log')
 ax.set_ylim(0.1, 1)
 ax.set_xlim(0.1, 20)
 plt.legend()
+plt.show()
+
+
+#%%
+df_analysis_50 = pd.merge(df_mr_fppi[df_mr_fppi.index.get_level_values('threshold') == 0.5], df_frame_metadata, on="frame_id")
+df_gtbbox_metadata_frame = df_gtbbox_metadata.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True))
+df_analysis_50_gtbbox = pd.merge(df_gtbbox_metadata_frame, df_analysis_50, on="frame_id")
+
+import matplotlib.pyplot as plt
+seq_cofactors = ["is_night", "adverse_weather", "occlusion_rate"]
+metrics = ["MR", "FPPI"]
+from scipy.stats import pearsonr
+corr_matrix = df_analysis_50_gtbbox[metrics+seq_cofactors].corr(method=lambda x, y: pearsonr(x, y)[0])
+p_matrix = df_analysis_50_gtbbox[metrics+seq_cofactors].corr(method=lambda x, y: pearsonr(x, y)[1])
+
+print(p_matrix)
+import seaborn as sns
+sns.heatmap(corr_matrix, annot=True)
+plt.show()
+
+sns.heatmap(p_matrix, annot=True)
+plt.show()
+
+sns.heatmap(corr_matrix[p_matrix<0.05].loc[:,["MR", "FPPI"]], annot=True)
+plt.tight_layout()
 plt.show()
