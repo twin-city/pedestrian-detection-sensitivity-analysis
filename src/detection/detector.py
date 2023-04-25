@@ -3,6 +3,7 @@ import torch
 from tqdm import tqdm
 import json
 from mmdet.apis import init_detector, inference_detector
+import os.path as osp
 
 class Detector:
     def __init__(self, name, device="cuda", nms=False):
@@ -32,7 +33,11 @@ class Detector:
     #configs_root = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs"
 
     # todo here bug with 1711 too many
-    def get_preds_from_files(self, dataset_name, frame_id_list, file_list):
+    def get_preds_from_files(self, dataset_name, root, df_frame_metadata):
+
+        # Frame id list
+        file_list = [osp.join(root, x) for x in df_frame_metadata["file_name"]]
+        frame_id_list = list(df_frame_metadata["id"].values.astype(str))
 
         config_file = self.config_path
         checkpoint_file = self.checkpoint_path

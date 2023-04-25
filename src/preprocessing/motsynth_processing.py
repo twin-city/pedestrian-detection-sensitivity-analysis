@@ -268,6 +268,19 @@ class MotsynthProcessing(DatasetProcessing):
         df_gtbbox_metadata["image_id"] = df_gtbbox_metadata["image_id"].astype(str)
         df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
 
+        df_gtbbox_metadata.index = df_gtbbox_metadata.index.rename({"image_id": "frame_id"})
+        df_gtbbox_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len)
+        keypoints_label_names = [f"keypoints_label_{i}" for i in range(22)]
+
+        # Todo https://github.com/cocodataset/cocoapi/issues/130
+        df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata[keypoints_label_names].apply(lambda x: (2 - x)).mean(
+            axis=1)
+
+        # todo seems there is a bug on pitch/roll/yaw. We assume a mistake of MoTSynth authors, and the referenced "yaw" is in fact "pitch"
+        df_frame_metadata["temp"] = df_frame_metadata["pitch"]
+        df_frame_metadata["pitch"] = df_frame_metadata["yaw"]
+        df_frame_metadata["yaw"] = df_frame_metadata["temp"]
+
         return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 
 

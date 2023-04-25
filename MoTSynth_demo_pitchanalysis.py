@@ -161,16 +161,19 @@ from sklearn.datasets import make_hastie_10_2
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.inspection import PartialDependenceDisplay
 
+
+pdp_cofactors = ['adverse_weather', 'is_night', 'pitch']
+
 y = df_analysis_50["MR"].values
-X = df_analysis_50[frame_cofactors].values
+X = df_analysis_50[pdp_cofactors].values
 X[:,0]=1.*X[:,0]
 
 clf = GradientBoostingRegressor(n_estimators=50, learning_rate=1.0,
     max_depth=1, random_state=0).fit(X, y)
-features = [0,1,2,3,4, (0,1), (1,3)]
+features = [0,1,2, (0,1), (1,2)]
 
 fig, ax = plt.subplots(1,1, figsize=(16,10))
-PartialDependenceDisplay.from_estimator(clf, X, features, feature_names=frame_cofactors, ax=ax)
+PartialDependenceDisplay.from_estimator(clf, X, features, feature_names=pdp_cofactors, ax=ax)
 plt.show()
 
 #%% Feature importance w/ trees
@@ -179,7 +182,7 @@ y = df_analysis_50["FPPI"].values
 
 from sklearn.ensemble import RandomForestRegressor
 
-feature_names = frame_cofactors
+feature_names = pdp_cofactors
 forest = RandomForestRegressor(random_state=0)
 
 from sklearn.inspection import permutation_importance
@@ -254,6 +257,7 @@ plt.show()
 
 df_frame_metadata.groupby("seq_name").apply(lambda x: x.std(numeric_only=True))[["pitch", "roll", "yaw"]].max()
 
+
 #%%
 
 #%%
@@ -272,8 +276,9 @@ print("coucou")
 df_gtbbox_metadata_frame = df_gtbbox_metadata.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True))
 df_analysis_50_gtbbox = pd.merge(df_gtbbox_metadata_frame, df_analysis_50, on="frame_id")
 
+#%%
 import matplotlib.pyplot as plt
-seq_cofactors = ["is_night","pitch", "adverse_weather", "occlusion_rate", "area", "is_crowd", "is_blurred", "num_person"]
+seq_cofactors = ["is_night","occl2","pitch", "adverse_weather", "occlusion_rate", "area", "is_crowd", "is_blurred", "num_person"]
 metrics = ["MR", "FPPI"]
 from scipy.stats import pearsonr
 corr_matrix = df_analysis_50_gtbbox[metrics+seq_cofactors].corr(method=lambda x, y: pearsonr(x, y)[0])
@@ -319,7 +324,43 @@ plt.legend()
 plt.title(metric+"  vs   "+feat)
 plt.show()
 
-#%% At the box level
 
 
-#%% Multiple plots
+#%% Why do occlusion level correlate negatively ?
+
+frame_id = df_gtbbox_metadata_frame.sort_values("occlusion_rate").index[8]
+img_path = osp.join(motsynth_processor.root, df_frame_metadata.loc[frame_id]["file_name"])
+plot_results_img(img_path, frame_id, preds, targets, [])
+
+#%%
+
+
+for j in range(50,60):
+
+    j = -j
+
+    frame_id = df_analysis_50_gtbbox.sort_values("occl2").index[j]
+    img_path = osp.join(motsynth_processor.root, df_frame_metadata.loc[frame_id]["file_name"])
+
+    fig, ax = plt.subplots(1,2, figsize=(10,4))
+    df_analysis_50_gtbbox.plot.scatter("occl2", "MR", ax=ax[0])
+
+    ax[0].scatter(df_analysis_50_gtbbox.loc[frame_id]["occl2"],
+               df_analysis_50_gtbbox.loc[frame_id]["MR"], c="red")
+
+    plot_results_img(img_path, frame_id, preds, targets, [], ax=ax[1])
+    ax[0].set_title(j)
+    plt.show()
+
+
+#%%
+df_analysis_50_gtbbox[df_analysis_50_gtbbox["pitch"]==0].plot.scatter("occlusion_rate", "MR")
+plt.show()
+
+#%%
+df_gtbbox_metadata_subset = df_gtbbox_metadata[df_gtbbox_metadata["occlusion_rate"]<0.92]
+df_gtbbox_metadata_subset = df_gtbbox_metadata[df_gtbbox_metadata["area"]>400]
+df_analysis_50_gtbbox["occl2"] = df_gtbbox_metadata_subset.groupby("frame_id").apply(np.mean)["occlusion_rate"]
+
+df_analysis_50_gtbbox[df_analysis_50_gtbbox["pitch"]==0].plot.scatter("occl2", "MR")
+plt.show()
