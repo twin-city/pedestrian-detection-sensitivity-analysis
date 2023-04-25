@@ -1,8 +1,6 @@
-import os
 import pandas as pd
-import setuptools.errors
 import numpy as np
-from utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
+from src.utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
 import os.path as osp
 
 #todo truncation
@@ -72,7 +70,6 @@ df_analysis_frame = df_analysis.groupby("frame_id").apply(lambda x: x.mean(numer
 import matplotlib.pyplot as plt
 frame_cofactors = ["adverse_weather", "is_night", "pitch", "yaw", "roll"]
 metrics = ["MR", "FPPI"]
-from scipy.stats import pearsonr
 corr_matrix = df_analysis_frame[metrics+frame_cofactors].corr(method=lambda x, y: pearsonr(x, y)[0])
 p_matrix = df_analysis_frame[metrics+frame_cofactors].corr(method=lambda x, y: pearsonr(x, y)[1])
 
@@ -92,7 +89,6 @@ plt.show()
 import matplotlib.pyplot as plt
 seq_cofactors = ["adverse_weather", "is_night", "pitch"]
 metrics = ["MR", "FPPI"]
-from scipy.stats import pearsonr
 corr_matrix = df_analysis_frame.groupby("seq_name").apply(lambda x: x.mean())[metrics+seq_cofactors].corr(method=lambda x, y: pearsonr(x, y)[0])
 p_matrix = df_analysis_frame.groupby("seq_name").apply(lambda x: x.mean())[metrics+seq_cofactors].corr(method=lambda x, y: pearsonr(x, y)[1])
 
@@ -156,8 +152,6 @@ plt.show()
 --> should plot it
 """
 
-
-from sklearn.datasets import make_hastie_10_2
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.inspection import PartialDependenceDisplay
 
@@ -244,10 +238,10 @@ values_lasts = df_frame_metadata.sort_values(criteria).iloc[-5:][criteria]
 
 fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(10, 5))
 for i, (path1, path2) in enumerate(zip(firsts, lasts)):
-    axs[0, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../", path1)))
+    axs[0, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../../../", path1)))
     axs[0, i].axis('off')
     axs[0, i].set_title(values_firsts.iloc[i])
-    axs[1, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../", path2)))
+    axs[1, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../../../", path2)))
     axs[1, i].axis('off')
     axs[1, i].set_title(values_lasts.iloc[i])
 plt.show()

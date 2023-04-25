@@ -1,8 +1,7 @@
 import os
 
 import pandas as pd
-import setuptools.errors
-from utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
+from src.utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
 import numpy as np
 import os.path as osp
 
@@ -165,8 +164,6 @@ At bbox level :
 
 #todo : correlation to begin with  (((/test with metrics (mr, fppi, mAP50, YAML), plot fppi/mr, precision/recall)))
 #todo should take into account non-independant (e.g. mixed effect ?)
-
-from scipy.stats import ttest_rel
 
 df_analysis_frame = df_analysis.groupby("frame_id").apply(lambda x: x.mean())
 

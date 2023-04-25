@@ -3,13 +3,71 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from src.detection.metrics import compute_fp_missratio2
+import pandas as pd
+
+
+def subset_dataframe(df, conditions):
+    """
+
+
+    Example :
+
+    filter_frame = {
+        "is_night": {
+            "value": 1
+        },
+        "pitch": {
+            "max": 10,
+            "min": -10,
+        },
+        "adverse_weather": set([1])
+    }
+
+    :param df:
+    :param conditions:
+    :return:
+    """
+    # Create an empty mask
+    mask = pd.Series([True] * len(df), index=df.index)
+
+    # Iterate over each condition in the dictionary and update the mask accordingly
+    for column, values in conditions.items():
+        if isinstance(values, dict):
+            if '>' in values:
+                mask &= df[column] >= values['>']
+            if '<' in values:
+                mask &= df[column] <= values['<']
+            if 'value' in values:
+                mask &= df[column] == values['value']
+            if 'set_values' in values:
+                mask &= df[column].isin(values['set_values'])
+        elif isinstance(values, (list, set, np.ndarray)):
+            mask &= df[column].isin(values)
+        elif isinstance(values, (int, float)):
+            mask &= df[column] == values
+
+    # Apply the mask to the DataFrame to get the subset
+    subset_df = df[mask]
+
+    if len(conditions) > 0 & len(subset_df) == len(df):
+        print("Warning : filtering did not change the dataframe size")
+
+    return subset_df
+
+
+
+
+
+
+
+
+
+#%% Plot utils
 
 def xywh2xyxy(bbox):
     x, y, w, h = bbox
     return x, y, x + w, y + h
 
-
-#%% Plot utils
 
 def add_bboxes_to_img(img, bboxes, c=(0,0,255), s=1):
     for bbox in bboxes:

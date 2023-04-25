@@ -80,9 +80,11 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[])
     return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox
 
 
+
 def filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering):
+    # replace by subset_dataframe
+
     if gtbbox_filtering is not {}:
-        # todo use a set
         excluded = set()
         for key, val in gtbbox_filtering.items():
             if val[1] == "min":

@@ -1,12 +1,6 @@
-import os
-import matplotlib.pyplot as plt
 import pandas as pd
-import setuptools.errors
-from utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
-import numpy as np
+from src.utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
 import os.path as osp
-import json
-import torch
 
 #%% params
 dataset_name = "EuroCityPerson"
@@ -66,7 +60,6 @@ df_analysis_frame = df_analysis.groupby("frame_id").apply(lambda x: x.mean(numer
 import matplotlib.pyplot as plt
 frame_cofactors = ["rainy", "is_night"]
 metrics = ["MR", "FPPI"]
-from scipy.stats import pearsonr
 corr_matrix = df_analysis_frame[metrics+frame_cofactors].corr(method=lambda x, y: pearsonr(x, y)[0])
 p_matrix = df_analysis_frame[metrics+frame_cofactors].corr(method=lambda x, y: pearsonr(x, y)[1])
 

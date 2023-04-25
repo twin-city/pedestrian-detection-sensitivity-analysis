@@ -1,8 +1,6 @@
-import os
 import pandas as pd
-import setuptools.errors
 import numpy as np
-from utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
+from src.utils import filter_gt_bboxes, compute_ffpi_against_fp2
 import os.path as osp
 
 #todo truncation
@@ -119,8 +117,6 @@ plt.show()
 --> should plot it
 """
 
-
-from sklearn.datasets import make_hastie_10_2
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.inspection import PartialDependenceDisplay
 

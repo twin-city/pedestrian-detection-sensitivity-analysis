@@ -1,8 +1,6 @@
-import os
 import pandas as pd
-import setuptools.errors
 import numpy as np
-from utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
+from src.utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
 import os.path as osp
 
 #todo truncation
@@ -85,7 +83,7 @@ plot_results_img(img_path, frame_id, None, targets, occlusions_ids)
 
 #%%
 import matplotlib.pyplot as plt
-from utils import add_bboxes_to_img
+from src.utils import add_bboxes_to_img
 
 gtbbox_filtering = {"occlusion_rate": (0.9, "min"),
                     "area": (500, "min")

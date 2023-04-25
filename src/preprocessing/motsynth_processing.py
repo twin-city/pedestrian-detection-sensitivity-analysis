@@ -4,7 +4,7 @@ import torch
 import os.path as osp
 import pandas as pd
 import os
-from utils import xywh2xyxy
+from src.utils import xywh2xyxy
 
 from .processing import DatasetProcessing
 
@@ -65,7 +65,7 @@ class MotsynthProcessing(DatasetProcessing):
 
     def get_dataset(self):
         targets, metadatas, frame_id_list, img_path_list = self.get_MoTSynth_annotations_and_imagepaths()
-        return targets, metadatas, frame_id_list, img_path_list
+        return self.root, targets, metadatas, frame_id_list, img_path_list
 
 
     def get_MoTSynth_annotations_and_imagepaths_video(self, video_id="004", max_samples=100000, random_sampling=True, delay=3):
