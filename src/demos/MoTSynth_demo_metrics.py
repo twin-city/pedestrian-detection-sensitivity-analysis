@@ -32,22 +32,34 @@ def compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_f
     preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
 
     metric = detection_metric(gtbbox_filtering)
-    metric_results = metric.compute(dataset_name, model_name, preds, targets, df_gtbbox_metadata,
+    df_mr_fppi, df_gt_bbox = metric.compute(dataset_name, model_name, preds, targets, df_gtbbox_metadata,
                                     gtbbox_filtering)
 
-    return metric_results
+    df_mr_fppi["model_name"] = model_name
+    df_mr_fppi["dataset_name"] = dataset_name
+    df_mr_fppi["gtbbox_filtering"] = str(gtbbox_filtering)
+
+    return df_mr_fppi, df_gt_bbox
 
 gtbbox_filtering = {
     "occlusion_rate": (0.96, "max"),# At least 1 keypoint visible
     "area": (200, "min")
 }
 
-model_name = "faster-rcnn_cityscapes"
+model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
+
+
+df_metrics = pd.concat([compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_filtering, device="cuda")[0]
+for model_name in model_names])
+
+df_analysis = pd.merge(df_metrics.reset_index(), df_frame_metadata, on="frame_id")
+
+
+
+"""
 df_mr_fppi_model1, _ = compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_filtering, device="cuda")
 
-model_name = "mask-rcnn_coco"
 df_mr_fppi_model2, _ = compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_filtering, device="cuda")
-
 
 #%% Concat results and metadata
 df_analysis_model1 = pd.merge(df_mr_fppi_model1.reset_index(), df_frame_metadata, on="frame_id")
@@ -56,32 +68,65 @@ df_analysis_frame_model_1 = df_analysis_model1.groupby("frame_id").apply(lambda 
 
 df_analysis_model2 = pd.merge(df_mr_fppi_model2.reset_index(), df_frame_metadata, on="frame_id")
 df_analysis_frame_model_2 = df_analysis_model2.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True))
+"""
+
+
 
 #%% Additional foo
 
-import seaborn as sns
+
+
+
+###########################################################################################
+#%% Compare the models
+###########################################################################################
+
+#todo do a plot on this, also give intuition with some plot of the given criterias. + extreme plots ???
+
+from src.utils import subset_dataframe
 import matplotlib.pyplot as plt
-from scipy.stats import pearsonr
 
-def compute_correlations(df, features):
-    corr_matrix = df[features].corr(
-        method=lambda x, y: pearsonr(x, y)[0])
-    p_matrix = df[features].corr(
-        method=lambda x, y: pearsonr(x, y)[1])
-    return corr_matrix, p_matrix
+dict_filter_frames = {
+    "all": [{}],
+    "is_night": ({"is_night": 0}, {"is_night": 1}),
+    "adverse_weather": ({"adverse_weather": 0}, {"adverse_weather": 1}),
+    "pitch": ({"pitch": {"<": -10}}, {"pitch": {">": -10}}),
+}
 
-def plot_correlations(corr_matrix, p_matrix, title=""):
-    fig, ax = plt.subplots(1,2, figsize=(10,5))
-    sns.heatmap(corr_matrix[p_matrix<0.05], annot=True, ax=ax[0])
-    sns.heatmap(p_matrix, annot=True, ax=ax[1])
-    if title:
-        ax[1].set_title(title)
-    plt.tight_layout()
-    plt.show()
+n_col = max([len(val) for _, val in dict_filter_frames.items()])
+n_row = len(dict_filter_frames)
+
+fig, ax = plt.subplots(n_row, n_col, figsize=(6,12))
+for i, (key, filter_frames) in enumerate(dict_filter_frames.items()):
+    for j, filter_frame in enumerate(filter_frames):
+
+        for model, df_analysis_model in df_analysis.groupby("model_name"):
+            df_analysis_subset = subset_dataframe(df_analysis_model, filter_frame)
+            metrics_model = df_analysis_subset.groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
+            ax[i, j].plot(metrics_model["FPPI"], metrics_model["MR"], label="model")
+
+        ax[i,j].set_xscale('log')
+        ax[i,j].set_yscale('log')
+        ax[i,j].set_ylim(0.1, 1)
+        ax[i,j].set_xlim(0.5, 20)
+        ax[i,j].set_title(filter_frame)
+        ax[i, j].legend()
+
+plt.tight_layout()
+plt.show()
+
+
+
+###########################################################################################
+#%% Zoom on one model
+###########################################################################################
 
 #%% Correlations
+from src.utils import compute_correlations, plot_correlations
 
-df = df_analysis_frame_model_2
+model_name = "faster-rcnn_cityscapes"
+
+df = df_analysis[df_analysis["model_name"] == model_name].groupby("frame_id").apply(lambda x: x.mean(numeric_only=True))
 
 seq_cofactors = ["adverse_weather", "is_night", "pitch"]
 metrics = ["MR", "FPPI"]
@@ -93,44 +138,6 @@ plot_correlations(corr_matrix, p_matrix, title="per_sequence")
 
 corr_matrix, p_matrix = compute_correlations(df, features)
 plot_correlations(corr_matrix, p_matrix, title="per_frame")
-
-
-#%%
-
-#todo do a plot on this, also give intuition with some plot of the given criterias. + extreme plots ???
-
-from src.utils import subset_dataframe
-
-filter_frames = [
-    {},
-    {"is_night": 0},
-    {"is_night": 1},
-    {"adverse_weather": 0},
-    {"adverse_weather": 1},
-    {"pitch": {"<": -10}},
-    {"pitch": {">": -10, "<": 10}},
-    {"pitch": {">": 10}}
-]
-
-for filter_frame in filter_frames:
-
-    # Filter use cases
-    df_mr_fppi_model1_subset = subset_dataframe(df_analysis_model1, filter_frame)
-    df_mr_fppi_model2_subset = subset_dataframe(df_analysis_model2, filter_frame)
-
-    metrics_model1 = df_mr_fppi_model1_subset.groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
-    metrics_model2 = df_mr_fppi_model2_subset.groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
-
-    fig, ax = plt.subplots(1,1)
-    ax.plot(metrics_model1["FPPI"], metrics_model1["MR"], label="model_1")
-    ax.plot(metrics_model2["FPPI"], metrics_model2["MR"], label="model_2")
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.set_ylim(0.1, 1)
-    ax.set_xlim(0.1, 20)
-    plt.legend()
-    plt.title(filter_frame)
-    plt.show()
 
 
 

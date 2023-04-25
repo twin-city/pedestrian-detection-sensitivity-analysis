@@ -4,6 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from src.detection.metrics import compute_fp_missratio2
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.stats import pearsonr
 
 
 def subset_dataframe(df, conditions):
@@ -58,6 +61,22 @@ def subset_dataframe(df, conditions):
 
 
 
+
+def compute_correlations(df, features):
+    corr_matrix = df[features].corr(
+        method=lambda x, y: pearsonr(x, y)[0])
+    p_matrix = df[features].corr(
+        method=lambda x, y: pearsonr(x, y)[1])
+    return corr_matrix, p_matrix
+
+def plot_correlations(corr_matrix, p_matrix, title=""):
+    fig, ax = plt.subplots(1,2, figsize=(10,5))
+    sns.heatmap(corr_matrix[p_matrix<0.05], annot=True, ax=ax[0])
+    sns.heatmap(p_matrix, annot=True, ax=ax[1])
+    if title:
+        ax[1].set_title(title)
+    plt.tight_layout()
+    plt.show()
 
 
 
