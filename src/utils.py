@@ -7,6 +7,91 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.inspection import permutation_importance
+from sklearn.linear_model import RidgeCV
+
+
+def plot_importance(model_names, metrics, df_analysis, features, importance_method="linear"):
+    # from https://inria.github.io/scikit-learn-mooc/python_scripts/dev_features_importance.html#linear-model-inspection
+
+    bar_width = 1/(len(metrics)+1)
+
+    fig, ax = plt.subplots(len(metrics), 1, figsize=(6,10))
+
+    # Do the bar plots
+    for i, metric in enumerate(metrics):
+        for j, model_name in enumerate(model_names):
+
+            # Compute the according result dataframe
+            df = df_analysis[df_analysis["model_name"] == model_name].groupby("frame_id").apply(
+                lambda x: x.mean(numeric_only=True)).sample(frac=1)
+
+            # Compute the coefs for a given metric
+            if importance_method == "linear":
+                coefs = get_linear_importance(df, metric, features)
+            elif importance_method == "permutation":
+                coefs = get_permuation_importance(df, metric, features)
+            else:
+                raise NotImplementedError(f"Importance method {importance_method} not known")
+
+            ax[i].bar(np.arange(len(features)) + j * bar_width,
+                      coefs, width=bar_width, label=model_name)
+
+        ax[i].set_title(f"{importance_method} importance for {metric} (avrg per frame)")
+        ax[i].legend()
+        ax[i].set_xticks(range(len(features)))
+        ax[i].set_xticklabels(features, rotation=45)
+
+    plt.tight_layout()
+    plt.show()
+
+
+#todo get pval also same same
+
+def get_linear_importance(df, metric, features):
+
+    X = df[features]
+    X = (X-X.mean())/X.std()
+    y = df[metric]
+    X_train, X_test = X[:len(X)//2], X[len(X)//2:]
+    y_train, y_test = y[:len(y)//2], y[len(y)//2:]
+
+
+
+    model = RidgeCV()
+    model.fit(X_train, y_train)
+    print(f'{metric} model score on training data: {model.score(X_train, y_train)}')
+    print(f'{metric} model score on testing data: {model.score(X_test, y_test)}')
+
+    coefs = pd.DataFrame(
+       model.coef_,
+       columns=['Coefficients'], index=X_train.columns
+    )
+
+    return coefs.values[:,0]
+
+
+
+def get_permuation_importance(df, metric, features):
+
+    X = df[features]
+    X = (X-X.mean())/X.std()
+    y = df[metric]
+    X_train, X_test = X[:len(X)//2], X[len(X)//2:]
+    y_train, y_test = y[:len(y)//2], y[len(y)//2:]
+
+    forest = RandomForestRegressor(random_state=0)
+    forest.fit(X_train, y_train)
+    print(f'{metric} model score on training data: {forest.score(X_train, y_train)}')
+    print(f'{metric} model score on testing data: {forest.score(X_test, y_test)}')
+
+    # Compute importance
+    result = permutation_importance(forest, X, y, n_repeats=10, random_state=42, n_jobs=2)
+    forest_importances = pd.Series(result.importances_mean, index=features)
+
+    return forest_importances.values
+
 
 
 def subset_dataframe(df, conditions):

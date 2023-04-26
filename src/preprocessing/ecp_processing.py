@@ -60,7 +60,7 @@ class ECPProcessing(DatasetProcessing):
 
     def get_dataset(self):
         targets, metadatas, frame_id_list, img_path_list = self.get_annotations_and_imagepaths()
-        return targets, metadatas, frame_id_list, img_path_list
+        return self.root, targets, metadatas, frame_id_list, img_path_list
 
     def get_ECP_annotations_and_imagepaths_folder(self, time, set, city):
 
@@ -169,6 +169,7 @@ class ECPProcessing(DatasetProcessing):
                         df_frames_metadata_folder["adverse_weather"] = 1*df_frames_metadata_folder["rainy"]
                         df_frames_metadata_folder["file_name"] = img_path_list_folder
                         df_frames_metadata_folder["id"] = frame_id_list_folder
+                        df_frames_metadata_folder["seq_name"] = city + " "+luminosity
                         # df_frames_metadata_folder["file_name"] = img_path_list_folder
                         # media/raphael/Projects/datasets/EuroCityPerson/ECP/
 

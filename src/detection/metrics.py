@@ -4,6 +4,24 @@ import os
 import numpy as np
 import torchvision
 import torch
+from .detector import Detector
+def compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_filtering, device="cuda"):
+
+    # dataset info
+    root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
+
+    detector = Detector(model_name, device=device)
+    preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
+
+    metric = detection_metric(gtbbox_filtering)
+    df_mr_fppi, df_gt_bbox = metric.compute(dataset_name, model_name, preds, targets, df_gtbbox_metadata,
+                                    gtbbox_filtering)
+
+    df_mr_fppi["model_name"] = model_name
+    df_mr_fppi["dataset_name"] = dataset_name
+    df_mr_fppi["gtbbox_filtering"] = str(gtbbox_filtering)
+
+    return df_mr_fppi, df_gt_bbox
 
 def get_df_matched_gtbbox(results, frame_id, threshold, gtbbox_ids):
     df_matched_gtbbox = 1 * pd.DataFrame([i in results[threshold][3] for i in range(results[threshold][5])])

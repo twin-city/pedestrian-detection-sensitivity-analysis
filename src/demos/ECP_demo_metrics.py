@@ -1,54 +1,50 @@
-import os
 import pandas as pd
-import setuptools.errors
-import numpy as np
+# from src.utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
+
+from src.detection.metrics import filter_gt_bboxes, compute_fp_missratio2
+
 import os.path as osp
+import numpy as np
 
-#%% params of input dataset
+#%% params
+dataset_name = "EuroCityPerson"
+model_name = "faster-rcnn_cityscapes"
+max_sample = 30 # Uniform sampled in dataset
 
-dataset_name = "motsynth"
-root_motsynth = "/home/raphael/work/datasets/MOTSynth/"
-max_sample = 400  # Uniform sampled in dataset
-
-seq_cofactors = ["adverse_weather", "is_night", "pitch"]
+model_name = "faster-rcnn_cityscapes"
+seq_cofactors = ["adverse_weather", "is_night"]# , "pitch"]
 metrics = ["MR", "FPPI"]
+
+gtbbox_filtering = {
+    "occlusion_rate": (0.9, "max"),# At least 1 keypoint visible
+    "truncation_rate": (0.9, "max"),
+    "area": (20, "min")
+}
+
 ODD_criterias = {
     "MR": 0.5,
     "FPPI": 5,
 }
 
-#%% Get the dataset
-from src.preprocessing.motsynth_processing import MotsynthProcessing
-motsynth_processor = MotsynthProcessing(root_motsynth, max_samples=max_sample, video_ids=None)
-dataset = motsynth_processor.get_dataset() #todo as class
-root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
+model_names = ["faster-rcnn_cityscapes"]
 
+#%%
+from src.preprocessing.ecp_processing import ECPProcessing
 
-#%% Perform Dataset visualization
+root_ecp = "/media/raphael/Projects/datasets/EuroCityPerson/ECP/"
+ecp_processor = ECPProcessing(root_ecp, max_samples=max_sample)
+dataset = ecp_processor.get_dataset()
+_, targets, df_gtbbox_metadata, df_frame_metadata, _ = dataset
 
-#todo : 1D hist of : occlusion frequency, occlusion amount, height distribution, pitch
-
-#todo : table for discrete variables : num_sequences, weather, day/night,
-
-#todo distribution image ped position (bbox center)
-
-#todo correlation between the metadatas !!!
+img_path_list = [osp.join(root_ecp, x) for x in df_frame_metadata["file_name"]]
+frame_id_list = list(df_frame_metadata["id"].values.astype(str))
 
 
 #%% Params of detection
-
-
 from src.detection.detector import Detector
 from src.detection.metrics import detection_metric
 from src.detection.metrics import compute_model_metrics_on_dataset
 
-
-gtbbox_filtering = {
-    "occlusion_rate": (0.96, "max"),# At least 1 keypoint visible
-    "area": (200, "min")
-}
-
-model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
 
 # Compute the metrics at different detection thresholds, for each model
 df_metrics = pd.concat([compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_filtering, device="cuda")[0] for model_name in model_names])
@@ -61,6 +57,7 @@ df_analysis = pd.merge(df_metrics.reset_index(), df_frame_metadata, on="frame_id
 ###########################################################################################
 #%% Compare the models
 ###########################################################################################
+
 
 #todo Add imgs + extreme imgs plots ???
 
@@ -204,6 +201,7 @@ plot_correlations(corr_matrix, p_matrix, title="per_frame")
 
 #todo add the ODD representation
 
+
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.inspection import PartialDependenceDisplay
 
@@ -219,7 +217,7 @@ for i, metric in enumerate(metrics):
 
     clf = GradientBoostingRegressor(n_estimators=50, learning_rate=1.0,
         max_depth=1, random_state=0).fit(X, y)
-    features = list(range(len(seq_cofactors)))
+    features = [0,1]
     PartialDependenceDisplay.from_estimator(clf, X, features, feature_names=seq_cofactors, ax=ax[i])
     ax[i].set_title(f"PDP for metric {metric}")
 
