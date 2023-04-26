@@ -101,8 +101,15 @@ class MotsynthProcessing(DatasetProcessing):
             frame_id = image["id"]
             bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
 
+
+
             # BBOXES metadata
             annots = [x for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
+
+            height = [x["bbox"][3] for x in annots]
+            width = [x["bbox"][2] for x in annots]
+            aspect_ratio = [h/w for h,w in zip(height, width)]
+
             keypoints_label = [(np.array(annot["keypoints"])).reshape((22, 3))[:,2] for annot in annots]
             keypoints_posx = [(np.array(annot["keypoints"])).reshape((22, 3))[:,0] for annot in annots]
             keypoints_posy = [(np.array(annot["keypoints"])).reshape((22, 3))[:, 1] for annot in annots]
@@ -121,6 +128,9 @@ class MotsynthProcessing(DatasetProcessing):
                 "keypoints_posx": keypoints_posx,
                 "keypoints_posy": keypoints_posy,
                 "area": area,
+                "height": height,
+                "width": width,
+                "aspect_ratio": aspect_ratio,
                 "is_crowd": is_crowd,
                 "is_blurred": is_blurred,
                 "attributes": attributes,
@@ -150,11 +160,13 @@ class MotsynthProcessing(DatasetProcessing):
                 keypoints_label_names = [f"keypoints_label_{i}" for i in range(22)]
                 keypoints_posx_names = [f"keypoints_posx_{i}" for i in range(22)]
                 keypoints_posy_names = [f"keypoints_posy_{i}" for i in range(22)]
+                attributes_names = [f"attributes_{i}" for i in range(11)]
+
 
                 df_gtbbox_metadata[keypoints_label_names] = df_gtbbox_metadata["keypoints_label"].apply(lambda x: pd.Series(x))
                 df_gtbbox_metadata[keypoints_posx_names] = df_gtbbox_metadata["keypoints_posx"].apply(lambda x: pd.Series(x))
                 df_gtbbox_metadata[keypoints_posy_names] = df_gtbbox_metadata["keypoints_posy"].apply(lambda x: pd.Series(x))
-
+                df_gtbbox_metadata[attributes_names] = attributes
 
                 frame_metadata_features = ['file_name', 'id', 'frame_n'] + \
                                           ["is_night", "seq_name", "weather"] + \
@@ -165,6 +177,8 @@ class MotsynthProcessing(DatasetProcessing):
 
         # Metadata at the video level
         df_sequence_metadata = pd.DataFrame(annot_motsynth["info"], index=[video_id])
+
+        df_gtbbox_metadata["seq_name"] = df_frame_metadata["seq_name"].iloc[0]
 
         metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 

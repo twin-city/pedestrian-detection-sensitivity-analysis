@@ -97,20 +97,6 @@ def get_permuation_importance(df, metric, features):
 def subset_dataframe(df, conditions):
     """
 
-
-    Example :
-
-    filter_frame = {
-        "is_night": {
-            "value": 1
-        },
-        "pitch": {
-            "max": 10,
-            "min": -10,
-        },
-        "adverse_weather": set([1])
-    }
-
     :param df:
     :param conditions:
     :return:

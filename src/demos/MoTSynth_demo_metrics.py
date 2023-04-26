@@ -4,11 +4,15 @@ import setuptools.errors
 import numpy as np
 import os.path as osp
 
+"""
+
+"""
+
 #%% params of input dataset
 
 dataset_name = "motsynth"
 root_motsynth = "/home/raphael/work/datasets/MOTSynth/"
-max_sample = 400  # Uniform sampled in dataset
+max_sample = 40  # Uniform sampled in dataset
 
 seq_cofactors = ["adverse_weather", "is_night", "pitch"]
 metrics = ["MR", "FPPI"]
@@ -26,6 +30,8 @@ root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dat
 
 #%% Perform Dataset visualization
 
+import matplotlib.pyplot as plt
+
 #todo : 1D hist of : occlusion frequency, occlusion amount, height distribution, pitch
 
 #todo : table for discrete variables : num_sequences, weather, day/night,
@@ -34,12 +40,40 @@ root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dat
 
 #todo correlation between the metadatas !!!
 
+df_gtbbox_metadata.hist("height", bins=200)
+plt.xlim(0, 300)
+plt.axvline(25, c="red")
+plt.axvline(50, c="red")
+plt.axvline(100, c="red")
+plt.show()
+
+#%%
+
+xs, ys = [], []
+for key, val in targets.items():
+    bbox = val[0]["boxes"]
+    x = bbox[:, 0] + (bbox[:, 2] - bbox[:, 0]) / 2
+    y = bbox[:, 1] + (bbox[:, 3] - bbox[:, 1]) / 2
+    xs.append(x.numpy())
+    ys.append(y.numpy())
+xs = np.concatenate(xs)
+ys = np.concatenate(ys)
+
+
+
+#%%
+
+plt.hist2d(xs, ys, bins=40)
+plt.colorbar()
+plt.title("Bounding box center density (linked to viewpoints)")
+plt.show()
+
+plt.scatter(xs, ys)
+plt.show()
 
 #%% Params of detection
 
 
-from src.detection.detector import Detector
-from src.detection.metrics import detection_metric
 from src.detection.metrics import compute_model_metrics_on_dataset
 
 
@@ -57,6 +91,82 @@ df_metrics = pd.concat([compute_model_metrics_on_dataset(model_name, dataset_nam
 df_analysis = pd.merge(df_metrics.reset_index(), df_frame_metadata, on="frame_id")
 
 
+
+
+#%% Zoom on occlusion levels
+
+df_gtbbox_metadata["occlusion_rate"].hist(bins=22, density=True)
+plt.axvline(1/22, c="red")
+plt.axvline(0.35, c="red")
+plt.axvline(0.8, c="red")
+plt.axvline(1, c="red")
+plt.show()
+
+(df_gtbbox_metadata["occlusion_rate"]==0).mean()
+
+print("No occlusion : ")
+
+from src.utils import subset_dataframe
+
+invalid = subset_dataframe(df_gtbbox_metadata,{"occlusion_rate": 0})
+
+
+partial = subset_dataframe(df_gtbbox_metadata,{"occlusion_rate": {">": 0.001, "<": 0.35}})
+heavy = subset_dataframe(df_gtbbox_metadata,{"occlusion_rate": {">": 0.35, "<": 0.8}})
+full = subset_dataframe(df_gtbbox_metadata,{"occlusion_rate": {">": 0.8}})
+
+print(f"Invalid : {len(invalid)/len(df_gtbbox_metadata):.2f}")
+print(f"partial : {len(partial)/len(df_gtbbox_metadata):.2f}")
+print(f"heavy : {len(heavy)/len(df_gtbbox_metadata):.2f}")
+print(f"full : {len(full)/len(df_gtbbox_metadata):.2f}")
+
+
+#%% Check with ped id how often they are occluded
+
+
+# At least in some cat
+
+df_gtbbox_metadata.groupby(["seq_name", "ped_id"]).apply(lambda x: (x["occlusion_rate"]>0).mean()).hist(bins=50)
+plt.title("Occlusion Frequency")
+plt.xlabel("Fraction of time occluded")
+plt.show()
+
+df_gtbbox_metadata.groupby(["seq_name", "ped_id"]).apply(lambda x: (x["occlusion_rate"]>0.35).mean()).hist(bins=50)
+plt.title("(at least) Heavy Occlusion Frequency")
+plt.xlabel("Fraction of time at least heavily occluded")
+plt.show()
+
+
+#%% Average the occlusion masks if given (here with MoTSynth : keypoints)
+
+keypoints_label_names = [f"keypoints_label_{i}" for i in range(22)]
+keypoints_posx_names = [f"keypoints_posx_{i}" for i in range(22)]
+keypoints_posy_names = [f"keypoints_posy_{i}" for i in range(22)]
+
+df_gtbbox_metadata[keypoints_label_names+keypoints_posx_names+keypoints_posy_names]
+
+
+#%% Compare visible to non-visible !!!!!!
+
+i = 0
+
+df_keypoints = pd.concat([df_gtbbox_metadata[[f"keypoints_label_{i}", f"keypoints_posx_{i}", f"keypoints_posy_{i}"]].rename(
+    columns={f"keypoints_label_{i}": "label",
+    f"keypoints_posx_{i}": "x",
+    f"keypoints_posy_{i}": "y"}) for i in range(22)])
+
+df_keypoints.plot.scatter("x", "y", c="label")
+
+plt.show()
+
+df_keypoints_occluded = df_keypoints[df_keypoints["label"]==2]
+
+plt.hist2d(df_keypoints_occluded["x"], df_keypoints_occluded["y"], bins=100)
+plt.colorbar()
+plt.ylim(0, 1080)
+plt.xlim(0, 1920)
+plt.title("Bounding box center density (linked to viewpoints)")
+plt.show()
 
 ###########################################################################################
 #%% Compare the models
