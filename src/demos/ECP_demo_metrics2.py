@@ -54,6 +54,11 @@ df_gtbbox_metadata["width"] = df_gtbbox_metadata["width"] .astype(int)
 df_gtbbox_metadata["area"] = df_gtbbox_metadata["area"] .astype(float)
 df_gtbbox_metadata["aspect_ratio"] = df_gtbbox_metadata["aspect_ratio"] .astype(float)
 
+#todo add seq_name
+df_gtbbox_metadata["seq_name"] = "toto"
+df_gtbbox_metadata["ped_id"] = 0
+
+
 #%%
 
 df_frame_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
@@ -218,25 +223,26 @@ Very few have no occlusions at all
 
 #%% Compare visible to non-visible !!!!!! Keypoints
 
+if "keypoints_label_0" in df_gtbbox_metadata.columns:
 
-df_keypoints = pd.concat([df_gtbbox_metadata[[f"keypoints_label_{i}", f"keypoints_posx_{i}", f"keypoints_posy_{i}"]].rename(
-    columns={f"keypoints_label_{i}": "label",
-    f"keypoints_posx_{i}": "x",
-    f"keypoints_posy_{i}": "y"}) for i in range(22)])
+    df_keypoints = pd.concat([df_gtbbox_metadata[[f"keypoints_label_{i}", f"keypoints_posx_{i}", f"keypoints_posy_{i}"]].rename(
+        columns={f"keypoints_label_{i}": "label",
+        f"keypoints_posx_{i}": "x",
+        f"keypoints_posy_{i}": "y"}) for i in range(22)])
 
 
-for label in [1,2]:
-    mask = pd.Series([True] * len(df_keypoints), index=df_keypoints.index)
-    mask &= df_keypoints["x"] < 1920
-    mask &= df_keypoints["x"] > 0
-    mask &= df_keypoints["y"] < 1080
-    mask &= df_keypoints["y"] > 0
-    mask &= df_keypoints["label"] == label
+    for label in [1,2]:
+        mask = pd.Series([True] * len(df_keypoints), index=df_keypoints.index)
+        mask &= df_keypoints["x"] < 1920
+        mask &= df_keypoints["x"] > 0
+        mask &= df_keypoints["y"] < 1080
+        mask &= df_keypoints["y"] > 0
+        mask &= df_keypoints["label"] == label
 
-    plt.hist2d(df_keypoints[mask]["x"], df_keypoints[mask]["y"], bins=100, density=True)
-    plt.colorbar()
-    plt.title(f"Keypoint density with occlusion label {label}")
-    plt.show()
+        plt.hist2d(df_keypoints[mask]["x"], df_keypoints[mask]["y"], bins=100, density=True)
+        plt.colorbar()
+        plt.title(f"Keypoint density with occlusion label {label}")
+        plt.show()
 
 ###########################################################################################
 #%% Compare the models
@@ -352,20 +358,21 @@ Warning, the linear case may hide correlations
 #todo for now we take the average on multiple thresholds values
 
 metric = "MR"
-
+#todo ODD on top
 ODD_nominal = {
     "is_night": 0,
     "adverse_weather": 0,
-    "pitch": {">":-10},
+#    "pitch": {">":-10},
 }
 
 ODD_limit = [
     {"is_night": 1},
     {"adverse_weather": 1},
-    {"pitch": {"<":-10}},
+#    {"pitch": {"<":-10}},
 ]
 
-ax_y_labels = ["night", "bad weather", "high-angle shot"]
+#todo adapt
+ax_y_labels = ["night", "bad weather"]#, "high-angle shot"]
 
 nominal_metric_value = subset_dataframe(df_analysis, ODD_nominal)[metric].mean()
 
