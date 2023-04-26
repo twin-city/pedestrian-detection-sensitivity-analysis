@@ -142,8 +142,8 @@ def compute_correlations(df, features):
 
 def plot_correlations(corr_matrix, p_matrix, title=""):
     fig, ax = plt.subplots(1,2, figsize=(10,5))
-    sns.heatmap(corr_matrix[p_matrix<0.05], annot=True, ax=ax[0])
-    sns.heatmap(p_matrix, annot=True, ax=ax[1])
+    sns.heatmap(corr_matrix[p_matrix<0.05], annot=True, ax=ax[0], cmap="PiYG", center=0)
+    sns.heatmap(p_matrix, annot=True, ax=ax[1], cmap="viridis_r")
     if title:
         ax[1].set_title(title)
     plt.tight_layout()

@@ -155,18 +155,21 @@ class MotsynthProcessing(DatasetProcessing):
                 # frame_metadata[frame_id] = (annot_ECP["tags"], [ann["tags"] for ann in annot_ECP["children"]])
 
                 # Dataframes
-                df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(target_metadata)], axis=0)
+                df_gtbbox_metadata_current = pd.DataFrame(target_metadata)
+                attributes_names = [f"attributes_{i}" for i in range(11)]
+                df_gtbbox_metadata_current[attributes_names] = attributes
+
+                df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, df_gtbbox_metadata_current], axis=0)
 
                 keypoints_label_names = [f"keypoints_label_{i}" for i in range(22)]
                 keypoints_posx_names = [f"keypoints_posx_{i}" for i in range(22)]
                 keypoints_posy_names = [f"keypoints_posy_{i}" for i in range(22)]
-                attributes_names = [f"attributes_{i}" for i in range(11)]
 
 
                 df_gtbbox_metadata[keypoints_label_names] = df_gtbbox_metadata["keypoints_label"].apply(lambda x: pd.Series(x))
                 df_gtbbox_metadata[keypoints_posx_names] = df_gtbbox_metadata["keypoints_posx"].apply(lambda x: pd.Series(x))
                 df_gtbbox_metadata[keypoints_posy_names] = df_gtbbox_metadata["keypoints_posy"].apply(lambda x: pd.Series(x))
-                df_gtbbox_metadata[attributes_names] = attributes
+
 
                 frame_metadata_features = ['file_name', 'id', 'frame_n'] + \
                                           ["is_night", "seq_name", "weather"] + \
@@ -206,7 +209,7 @@ class MotsynthProcessing(DatasetProcessing):
             print("End Try")
 
         except:
-            print("Except")
+            print("Did not find precomputed metadatas.")
             video_ids = self.get_video_ids()
             max_samples = self.max_samples
             df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()]*3
@@ -224,21 +227,22 @@ class MotsynthProcessing(DatasetProcessing):
             for folder in folders:
                 print(f"Checking folder {folder}")
 
-                try:
-                    targets_folder, targets_metadatas, frame_id_list_folder, img_path_list_folder =\
-                        self.get_MoTSynth_annotations_and_imagepaths_video(video_id=folder, max_samples=max_num_sample_per_video)
-                    df_gtbbox_metadata_folder, df_frame_metadata_folder, df_sequence_metadata_folder = targets_metadatas
-                    targets.update(targets_folder)
-                    df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(df_gtbbox_metadata_folder)], axis=0)
-                    df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame(df_frame_metadata_folder)], axis=0)
-                    df_sequence_metadata = pd.concat([df_sequence_metadata, pd.DataFrame(df_sequence_metadata_folder)], axis=0)
-                    frame_id_list += [str(i) for i in frame_id_list_folder]
-                    img_path_list += img_path_list_folder
-                except:
-                    print(f"Could not load data from sequence {folder}")
+                #try:
+                targets_folder, targets_metadatas, frame_id_list_folder, img_path_list_folder =\
+                    self.get_MoTSynth_annotations_and_imagepaths_video(video_id=folder, max_samples=max_num_sample_per_video)
+                df_gtbbox_metadata_folder, df_frame_metadata_folder, df_sequence_metadata_folder = targets_metadatas
+                targets.update(targets_folder)
+                df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(df_gtbbox_metadata_folder)], axis=0)
+                df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame(df_frame_metadata_folder)], axis=0)
+                df_sequence_metadata = pd.concat([df_sequence_metadata, pd.DataFrame(df_sequence_metadata_folder)], axis=0)
+                frame_id_list += [str(i) for i in frame_id_list_folder]
+                img_path_list += img_path_list_folder
+                #except:
+                #    print(f"Could not load data from sequence {folder}")
 
             # compute occlusion rates
-            df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
+            #df_gtbbox_metadata = df_gtbbox_metadata.reset_index()
+            #df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
             # -->  0 : visible, 1 : occluded/truncated
             df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata["keypoints_label"].apply(lambda x: (2-x).mean())
 
