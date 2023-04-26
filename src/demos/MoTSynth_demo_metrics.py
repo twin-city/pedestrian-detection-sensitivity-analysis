@@ -283,6 +283,110 @@ plt.show()
 #%% Model performance :  Plots MR vs FPPI on gt bbox filtering
 
 
+model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
+
+# Occlusion
+gtbbox_filtering = {
+    "occlusion_rate": (0.001, "max"),# At least 1 keypoint visible
+    "height": (120, "min")
+}
+# Compute the metrics at different detection thresholds, for each model
+df_metrics_noocclusion = pd.concat([compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_filtering, device="cuda")[0] for model_name in model_names])
+df_metrics_noocclusion["occlusion_criteria"] = "none"
+
+# Occlusion
+gtbbox_filtering = {
+    "occlusion_rate": (0.001, "min"),# At least 1 keypoint visible
+    "occlusion_rate": (0.35, "max"),  # At least 1 keypoint visible
+    "height": (120, "min")
+}
+# Compute the metrics at different detection thresholds, for each model
+df_metrics_partialocclusion = pd.concat([compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_filtering, device="cuda")[0] for model_name in model_names])
+df_metrics_partialocclusion["occlusion_criteria"] = "partial"
+
+# Occlusion
+gtbbox_filtering = {
+    "occlusion_rate": (0.35, "min"),# At least 1 keypoint visible
+    "occlusion_rate": (0.8, "max"),  # At least 1 keypoint visible
+    "height": (120, "min")
+}
+# Compute the metrics at different detection thresholds, for each model
+df_metrics_heavyocclusion = pd.concat([compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_filtering, device="cuda")[0] for model_name in model_names])
+df_metrics_heavyocclusion["occlusion_criteria"] = "heavy"
+
+# Occlusion
+gtbbox_filtering = {
+    "occlusion_rate": (0.8, "min"),# At least 1 keypoint visible
+    "height": (120, "min")
+}
+# Compute the metrics at different detection thresholds, for each model
+df_metrics_fullyocclusion = pd.concat([compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_filtering, device="cuda")[0] for model_name in model_names])
+df_metrics_fullyocclusion["occlusion_criteria"] = "fully"
+
+#%%
+
+# Merge with metadatas
+df_analysis_noocclusion = pd.merge(df_metrics_noocclusion.reset_index(), df_frame_metadata, on="frame_id")
+df_analysis_partialocclusion = pd.merge(df_metrics_partialocclusion.reset_index(), df_frame_metadata, on="frame_id")
+df_analysis_heavyocclusion = pd.merge(df_metrics_heavyocclusion.reset_index(), df_frame_metadata, on="frame_id")
+df_analysis_fullyocclusion = pd.merge(df_metrics_fullyocclusion.reset_index(), df_frame_metadata, on="frame_id")
+
+df_analysis_allocclusions = pd.concat([
+df_analysis_noocclusion,
+df_analysis_partialocclusion,
+df_analysis_heavyocclusion,
+df_analysis_fullyocclusion,
+])
+
+#%%
+#todo currently bugging
+
+from src.utils import subset_dataframe
+import matplotlib.pyplot as plt
+
+dict_filter_frames = {
+    "occlusion_criteria": (
+        {"occlusion_criteria": "none"},
+        {"occlusion_criteria": "partial"},
+        {"occlusion_criteria": "heavy"},
+        {"occlusion_criteria": "fully"},
+    )
+}
+min_x, max_x = 0.5, 20
+min_y, max_y = 0.1, 1
+
+n_col = max([len(val) for _, val in dict_filter_frames.items()])
+n_row = len(dict_filter_frames)
+
+fig, ax = plt.subplots(n_row, n_col, figsize=(10,6))
+
+i = 0
+for j, filter_frame in enumerate(dict_filter_frames["occlusion_criteria"]):
+
+    for model, df_analysis_model in df_analysis_allocclusions.groupby("model_name"):
+        df_analysis_subset = subset_dataframe(df_analysis_model, filter_frame)
+        metrics_model = df_analysis_subset.groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
+        ax[j].plot(metrics_model["FPPI"], metrics_model["MR"], label=model)
+        ax[j].scatter(metrics_model["FPPI"], metrics_model["MR"])
+    ax[j].set_xscale('log')
+    ax[j].set_yscale('log')
+    #ax[j].set_ylim(min_y, max_y)
+    #ax[j].set_xlim(min_x, max_x)
+    ax[j].set_title(filter_frame)
+    ax[j].legend()
+
+    import matplotlib.patches as patches
+    x = min_x
+    y = min_y
+    width = ODD_criterias["FPPI"] - min_x
+    height = ODD_criterias["MR"] - min_y
+    # Add the grey square patch to the axes
+    grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
+    ax[j].add_patch(grey_square)
+    ax[j].text(min_x+width/2/10, min_y+height/2/10, s="ODD")
+
+plt.tight_layout()
+plt.show()
 
 
 
@@ -291,8 +395,6 @@ plt.show()
 #%% Model sensibility :  What are the main parameters influencing model performance ?
 
 from src.utils import compute_correlations, plot_correlations
-
-
 
 
 p_matrix_list = []
