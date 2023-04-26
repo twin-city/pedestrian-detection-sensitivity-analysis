@@ -344,6 +344,8 @@ Warning, the linear case may hide correlations
 
 #%% Do simple visualization
 
+#todo for now we take the average on multiple thresholds values
+
 metric = "MR"
 
 ODD_nominal = {
@@ -352,11 +354,11 @@ ODD_nominal = {
     "pitch": {">":-10},
 }
 
-ODD_limit = (
+ODD_limit = [
     {"is_night": 1},
     {"adverse_weather": 1},
     {"pitch": {"<":-10}},
-)
+]
 
 ax_y_labels = ["night", "bad weather", "high-angle shot"]
 
@@ -395,12 +397,43 @@ norm = BoundaryNorm(bounds, len(cmap))
 cmap = "gist_rainbow_r"
 
 fig, ax = plt.subplots(1,1)
-sns.heatmap(100*df_odd_model, cmap=cmap, center=0, vmax=80, ax=ax)#, norm=norm)
-ax.collections[0].colorbar.set_label('% Decrease in performance')
+sns.heatmap(100*df_odd_model, annot=True,
+            cmap=cmap, center=0, vmax=80, ax=ax, fmt=".0f", cbar_kws={'format': '%.0f%%'})#, norm=norm)
+ax.collections[0].colorbar.set_label('Decrease in performance')
+plt.title(f"Impact of parameters on {metric}")
 plt.tight_layout()
 plt.show()
 
-#todo statisticals significance ? Barplot + color plot ?
+#%% Also do the nominal case vs others in barplots
+
+
+fig, ax = plt.subplots(2,1, figsize=(4,8))
+for i, metric in enumerate(metrics):
+    df_odd_model_list = []
+    for model_name in model_names:
+        val_list = []
+        for limit in [{}]+ODD_limit:
+            condition = ODD_nominal.copy()
+            condition.update(limit)
+            # condition.update({"model_name": model_name})
+            df_subset = subset_dataframe(df_analysis, condition)
+            df_subset = df_subset[df_subset["model_name"] == model_name]  # todo do it with subset
+            val_list.append(df_subset[metric].mean())
+
+        df_odd_model_list.append(pd.DataFrame(val_list, index=["Nominal"]+ODD_limit, columns=[model_name]))
+
+    df_odd_model = pd.concat(df_odd_model_list, axis=1)
+    df_odd_model.index = ["Nominal"]+ax_y_labels
+
+    df_odd_model.plot.bar(ax=ax[i])
+    ax[i].set_title(f"Performance for metric {metric}")
+plt.tight_layout()
+plt.show()
+
+#todo statisticals significance ? violinplot ? std ? We miss this information
+#todo also need to get the best trade-off for each of the models !!!!
+# (depending on ODD) but too important because it is more the part of the
+# solution provider
 
 ###########################################################################################
 #%% Zoom on one model
