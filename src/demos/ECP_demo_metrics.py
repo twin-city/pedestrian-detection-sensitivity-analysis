@@ -1,8 +1,6 @@
 import pandas as pd
 # from src.utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
-
 from src.detection.metrics import filter_gt_bboxes, compute_fp_missratio2
-
 import os.path as osp
 import numpy as np
 

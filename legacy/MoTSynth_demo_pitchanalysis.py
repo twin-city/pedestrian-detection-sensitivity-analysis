@@ -238,10 +238,10 @@ values_lasts = df_frame_metadata.sort_values(criteria).iloc[-5:][criteria]
 
 fig, axs = plt.subplots(nrows=2, ncols=5, figsize=(10, 5))
 for i, (path1, path2) in enumerate(zip(firsts, lasts)):
-    axs[0, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../../../", path1)))
+    axs[0, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../../", path1)))
     axs[0, i].axis('off')
     axs[0, i].set_title(values_firsts.iloc[i])
-    axs[1, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../../../", path2)))
+    axs[1, i].imshow(plt.imread(osp.join(motsynth_processor.frames_dir, "../../", path2)))
     axs[1, i].axis('off')
     axs[1, i].set_title(values_lasts.iloc[i])
 plt.show()

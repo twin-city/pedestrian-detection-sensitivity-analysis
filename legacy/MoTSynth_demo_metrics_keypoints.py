@@ -23,7 +23,7 @@ df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata[keypoints_label_names]
 
 #Todo https://github.com/cocodataset/cocoapi/issues/130
 #tidi 0 is truncation, 1 is occluded 2 is visible
-df_gtbbox_metadata["occlusion_rate"] = 1-df_gtbbox_metadata["occlusion_rate"]
+# df_gtbbox_metadata["occlusion_rate"] = 1-df_gtbbox_metadata["occlusion_rate"]
 
 
 #todo seems there is a bug on pitch/roll/yaw. We assume a mistake of MoTSynth authors, and the referenced "yaw" is in fact "pitch"
@@ -86,7 +86,7 @@ import matplotlib.pyplot as plt
 from src.utils import add_bboxes_to_img
 
 gtbbox_filtering = {"occlusion_rate": (0.9, "min"),
-                    #"area": (2000, "min")
+                    "area": (500, "min")
 }
 
 if gtbbox_filtering is not {}:

@@ -105,10 +105,20 @@ class ECPProcessing(DatasetProcessing):
                     tags = [c["tags"] for c in annot_ECP["children"] if c["identity"] in ["pedestrian", "rider"]]
                     areas = [(c["x1"] - c["x0"]) * (c["y1"] - c["y0"]) for c in annot_ECP["children"] if
                              c["identity"] in ["pedestrian", "rider"]]
+
+                    heights = [(c["y1"] - c["y0"]) for c in annot_ECP["children"] if
+                             c["identity"] in ["pedestrian", "rider"]]
+
+                    widths = [(c["x1"] - c["x0"]) for c in annot_ECP["children"] if
+                             c["identity"] in ["pedestrian", "rider"]]
+
+                    aspect_ratio = [h/w for h,w in zip(heights, widths)]
+
                     iscrowd = [1 * ("group" in c["identity"]) for c in annot_ECP["children"] if
                                c["identity"] in ["pedestrian", "rider"]]
 
-                    targets_metadata[frame_id] = (annot_ECP["tags"], tags, areas, iscrowd)
+                    targets_metadata[frame_id] = (annot_ECP["tags"], tags,
+                                                  areas, heights, widths, aspect_ratio, iscrowd)
 
         frame_id_list = list(targets.keys())
         img_path_list = []
@@ -170,6 +180,10 @@ class ECPProcessing(DatasetProcessing):
                         df_frames_metadata_folder["file_name"] = img_path_list_folder
                         df_frames_metadata_folder["id"] = frame_id_list_folder
                         df_frames_metadata_folder["seq_name"] = city + " "+luminosity
+
+                        df_frames_metadata_folder["weather"] = "dry"
+                        df_frames_metadata_folder[df_frames_metadata_folder["rainy"]]["weather"] = "rainy"
+
                         # df_frames_metadata_folder["file_name"] = img_path_list_folder
                         # media/raphael/Projects/datasets/EuroCityPerson/ECP/
 
@@ -195,7 +209,11 @@ class ECPProcessing(DatasetProcessing):
                             for criteria in ['sitting-lying', 'behind-glass', 'unsure_orientation']:
                                 df_gt_bbox_frame[criteria] = [syntax_criteria_ECP(x, criteria) for x in val[1]]
 
-                            df_gt_bbox_frame.rename(columns={1: "area", 2: "iscrowd"}, inplace=True)
+                            df_gt_bbox_frame.rename(columns={1: "area",
+                                                             2: "height",
+                                                             3: "width",
+                                                             4: "aspect_ratio",
+                                                             5: "is_crowd"}, inplace=True)
 
                             df_gt_bbox_folder = pd.concat([df_gt_bbox_folder, df_gt_bbox_frame])
 
