@@ -105,12 +105,18 @@ def filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering):
     if gtbbox_filtering is not {}:
         excluded = set()
         for key, val in gtbbox_filtering.items():
-            if val[1] == "min":
-                excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] < val[0]].index)
-            elif val[1] == "max":
-                excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] > val[0]].index)
+
+            if type(val) in [int, float]:
+                excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] != val].index)
+
             else:
-                raise ValueError("Nor minimal nor maximal filtering proposed.")
+
+                if val[1] == "min":
+                    excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] < val[0]].index)
+                elif val[1] == "max":
+                    excluded |= set(df_gtbbox_metadata_frame[df_gtbbox_metadata_frame[key] > val[0]].index)
+                else:
+                    raise ValueError("Nor minimal nor maximal filtering proposed.")
         excluded_gt = list(excluded)
     else:
         excluded_gt = []
