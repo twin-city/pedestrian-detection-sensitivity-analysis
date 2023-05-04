@@ -506,6 +506,7 @@ plt.title(f"Impact of parameters on {metric}")
 plt.tight_layout()
 plt.show()
 
+
 #%% Also do the nominal case vs others in barplots
 
 
@@ -536,6 +537,67 @@ plt.show()
 #todo also need to get the best trade-off for each of the models !!!!
 # (depending on ODD) but too important because it is more the part of the
 # solution provider
+
+#%% Decrease in perf versus all --> mode simple
+
+#todo keep Victor
+
+metric = "FPPI"
+threshold = 0.5
+
+ODD_limit = [
+    {"is_night": 1},
+    {"adverse_weather": 1},
+    {"pitch": {"<":-10}},
+]
+ax_y_labels = ["night", "bad weather", "high-angle shot"]
+
+df_analysis_50 = df_analysis[df_analysis["threshold"]==threshold]
+
+mean_metric_values = df_analysis_50.groupby("model_name").apply(lambda x: x[metric].mean())
+
+
+df_odd_model_list = []
+for model_name in model_names:
+    perc_increase_list = []
+    for limit in ODD_limit:
+        condition = {}
+        condition.update({"model_name": model_name})
+        condition.update(limit)
+        df_subset = subset_dataframe(df_analysis_50, condition)
+        df_subset = df_subset[df_subset["model_name"] == model_name]
+        perc_increase_list.append(df_subset[metric].mean()-mean_metric_values.loc[model_name])
+    df_odd_model_list.append(pd.DataFrame(perc_increase_list, index=ODD_limit, columns=[model_name]))
+
+df_odd_model = pd.concat(df_odd_model_list, axis=1)
+df_odd_model.index = ax_y_labels
+
+import seaborn as sns
+from matplotlib.colors import BoundaryNorm
+
+# Define the boundaries of each zone
+bounds = [0, 0.1, 0.2, 0.5]
+# Define a unique color for each zone
+colors = ['green', 'yellow', 'red']
+# Create a colormap with discrete colors
+cmap = sns.color_palette(colors, n_colors=len(bounds)-1).as_hex()
+# Create a BoundaryNorm object to define the colormap
+norm = BoundaryNorm(bounds, len(cmap))
+
+#cmap = "YlOrRd"
+cmap = "RdYlGn_r"
+
+fig, ax = plt.subplots(1,1)
+sns.heatmap(df_odd_model, annot=True,
+            cmap=cmap, center=0,
+            ax=ax, fmt=".2f", cbar_kws={'format': '%.2f'})
+ax.collections[0].colorbar.set_label('Decrease in performance')
+plt.title(f"Impact of parameters on {metric}")
+plt.tight_layout()
+plt.show()
+
+
+
 
 ###########################################################################################
 #%% Zoom on one model

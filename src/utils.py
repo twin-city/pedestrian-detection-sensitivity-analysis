@@ -10,7 +10,7 @@ from scipy.stats import pearsonr
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import RidgeCV
-
+import matplotlib.patches as patches
 
 def plot_importance(model_names, metrics, df_analysis, features, importance_method="linear"):
     # from https://inria.github.io/scikit-learn-mooc/python_scripts/dev_features_importance.html#linear-model-inspection
@@ -219,3 +219,30 @@ def plot_fp_fn_img(frame_id_list, img_path_list, preds, targets, index_frame, th
     plt.imshow(img)
     plt.show()
 
+def plot_ffpi_mr_on_ax(df_metrics_criteria, cat, ax, odd=None):
+
+    min_x, max_x = 0.01, 100 # 0.01 false positive per image to 100
+    min_y, max_y = 0.05, 1 # 5% to 100% Missing Rate
+
+    df_metrics = df_metrics_criteria[df_metrics_criteria["gtbbox_filtering_cat"] == cat]
+
+    for model, df_analysis_model in df_metrics.groupby("model_name"):
+        metrics_model = df_analysis_model.groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
+        ax.plot(metrics_model["FPPI"], metrics_model["MR"], label=model)
+        ax.scatter(metrics_model["FPPI"], metrics_model["MR"])
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_ylim(min_y, max_y)
+    ax.set_xlim(min_x, max_x)
+    ax.set_title(cat)
+    ax.legend()
+
+    if odd is not None:
+        x = min_x
+        y = min_y
+        width = odd["FPPI"] - min_x
+        height = odd["MR"] - min_y
+        #Add the grey square patch to the axes
+        grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
+        ax.add_patch(grey_square)
+        ax.text(min_x+width/2/10, min_y+height/2/10, s="ODD")

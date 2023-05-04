@@ -5,6 +5,7 @@ import numpy as np
 import torchvision
 import torch
 from .detector import Detector
+
 def compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_filtering, device="cuda"):
 
     # dataset info
@@ -29,12 +30,18 @@ def get_df_matched_gtbbox(results, frame_id, threshold, gtbbox_ids):
     df_matched_gtbbox["threshold"] = threshold
     df_matched_gtbbox["id"] = gtbbox_ids
     df_matched_gtbbox = df_matched_gtbbox.rename(columns={0: 'matched'})
+
+    df_matched_gtbbox.iloc[results[threshold][6],0] = -1
+
     return df_matched_gtbbox
 
 
 def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
 
     num_gtbbox = len(target_bbox[0]["boxes"])
+
+    if len(excluded_gt) == num_gtbbox:
+        print("coucou")
 
     score_sorted = np.argsort(pred_bbox[0]["scores"].numpy())[::-1]
 
@@ -93,9 +100,12 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[])
     # False negatives
     # fn_image = max(0, len(target_bbox[0]["boxes"]) - len(matched_target_bbox_list))
     fn_image = max(0, len(incl_possible_target_bboxs_ids) - len(matched_target_bbox_list))
-    miss_ratio_image = fn_image / num_gtbbox
 
-    return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox
+
+
+    miss_ratio_image = fn_image / (num_gtbbox - len(excluded_gt))
+
+    return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox, excluded_gt
 
 
 
@@ -145,7 +155,7 @@ class detection_metric:
 
         # thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
 
-        thresholds = [0.1, 0.5, 0.9]
+        thresholds = [0, 0.5, 0.9, 0.99, 0.999, 0.9999]
 
 
         df_root = f"data/preds/{dataset_name}_{model_name}"
@@ -178,45 +188,50 @@ class detection_metric:
 
         for i, frame_id in enumerate(frame_ids):
 
-            # todo here to compute few for now. At random ?
-            if i > max_frames:
-                break
-
-            # If image not already parsed
-            if str(frame_id) in df_mr_fppi.index and str(frame_id) in df_matched_gtbbox.index:
-                print(f"{frame_id}  {gtbbox_filtering} Already done")
+            if len(pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T) == 1:
+                df_gtbbox_metadata_frame = pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T.reset_index()
             else:
-                print(f"{frame_id}  {gtbbox_filtering} Not already done")
+                df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id].reset_index()
+            excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
 
-                results = {}
-                for threshold in thresholds:
+            #todo handle case no one to predict in image
+            if len(excluded_gt) < len(targets[frame_id][0]["boxes"]):
 
-                        #todo handle only 1 ???
-                        if len(pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T) == 1:
-                            df_gtbbox_metadata_frame = pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T.reset_index()
-                        else:
-                            df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id].reset_index()
-                        #todo delay here was removed for ECP df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+3].reset_index()
+                # todo here to compute few for now. At random ?
+                if i > max_frames:
+                    break
 
-                        excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
+                # If image not already parsed
+                if str(frame_id) in df_mr_fppi.index and str(frame_id) in df_matched_gtbbox.index:
+                    print(f"{frame_id}  {gtbbox_filtering} Already done")
+                else:
+                    print(f"{frame_id}  {gtbbox_filtering} Not already done")
 
-                        results[threshold] = compute_fp_missratio2(preds[frame_id], targets[frame_id],
-                                                                  threshold=threshold, excluded_gt=excluded_gt)
+                    results = {}
+                    for threshold in thresholds:
+
+                            #todo handle only 1 ???
+
+                            #todo delay here was removed for ECP df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+3].reset_index()
+
+
+                            results[threshold] = compute_fp_missratio2(preds[frame_id], targets[frame_id],
+                                                                      threshold=threshold, excluded_gt=excluded_gt)
 
 
 
+                    #todo change this name !!!! there is a conflict
+                    df_matched_gtbbox = pd.concat([get_df_matched_gtbbox(results, frame_id, threshold, df_gtbbox_metadata_frame["id"]) for threshold in thresholds])
+                    df_matched_gtbbox = df_matched_gtbbox.set_index(["frame_id", "id"])
 
-                df_matched_gtbbox = pd.concat([get_df_matched_gtbbox(results, frame_id, threshold, df_gtbbox_metadata_frame["id"]) for threshold in thresholds])
-                df_matched_gtbbox = df_matched_gtbbox.set_index(["frame_id", "id"])
+                    # df = matched_gtbbox = pd.DataFrame({key:val[3] for key,val in results.items()})
 
-                # df = matched_gtbbox = pd.DataFrame({key:val[3] for key,val in results.items()})
+                    df_results_threshold = pd.DataFrame({key:val[:2] for key,val in results.items()}).T.rename(columns={0: "FPPI", 1: "MR"})
+                    df_results_threshold.index.name = "threshold"
+                    df_results_threshold["frame_id"] = str(frame_id)
+                    df_mr_fppi_list.append(df_results_threshold.reset_index().set_index(["frame_id", "threshold"]))
 
-                df_results_threshold = pd.DataFrame({key:val[:2] for key,val in results.items()}).T.rename(columns={0: "FPPI", 1: "MR"})
-                df_results_threshold.index.name = "threshold"
-                df_results_threshold["frame_id"] = str(frame_id)
-                df_mr_fppi_list.append(df_results_threshold.reset_index().set_index(["frame_id", "threshold"]))
-
-                df_matched_gtbbox_list.append(df_matched_gtbbox)
+                    df_matched_gtbbox_list.append(df_matched_gtbbox)
 
             # todo output here details for each image as a dataframe ? score threshold x image_id
 
@@ -243,7 +258,11 @@ class detection_metric:
         df_matched_gtbbox["id"] = df_matched_gtbbox["id"].astype(str)
         df_matched_gtbbox = df_matched_gtbbox.set_index(["frame_id", "id"])
 
-        return df_mr_fppi.loc[frame_ids], df_matched_gtbbox.loc[frame_ids]
+        #todo get the intersect of bboxes. Do it on top, would be cleaner
+        set_df_bbox = df_mr_fppi.index.get_level_values(0)
+        frame_id_intersect = set.intersection(set(set_df_bbox), set(frame_ids))
+
+        return df_mr_fppi.loc[frame_id_intersect], df_matched_gtbbox.loc[frame_id_intersect]
 
 
 
