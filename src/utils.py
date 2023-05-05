@@ -181,27 +181,59 @@ def target_2_json(targets):
     }
     ] for key, val in targets.items()}
 
-def plot_results_img(img_path, frame_id, preds=None, targets=None, excl_gt_indices=None, ax=None):
+import matplotlib.patches as patches
+
+
+def add_bboxes_to_img_ax(ax, bboxes, c=(0, 0, 1), s=1, linestyle="solid"):
+    for bbox in bboxes:
+        x1, y1, x2, y2 = [int(v) for v in bbox]
+
+        rect = patches.Rectangle((x1, y1), (x2 - x1), (y2 - y1),
+                                 linewidth=s,
+                                 edgecolor=c,
+                                 facecolor='none',
+                                 linestyle=linestyle,
+                                 alpha=0.5)
+        ax.add_patch(rect)
+
+def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=None, threshold = 0.9):
+
+
+
+    # Read image
     img = plt.imread(img_path)
 
-    num_gt_bbox = len(targets[(frame_id)][0]["boxes"])
+    # Change type if needed from RGBA to RGB
+    if img.dtype == "float32":
+        img = (img*255).astype(np.uint8)
+    if img.shape[2] == 4:
+        img = img[:,:,:3]
 
-    incl_gt_indices = np.setdiff1d(list(range(num_gt_bbox)), excl_gt_indices)
+    # Create fig, ax
+    fig, ax = plt.subplots(1,1, figsize=(16,10))
+
+    # Show RGB image
+    ax.imshow(img)
 
     if preds is not None:
-        img = add_bboxes_to_img(img, preds[(frame_id)][0]["boxes"], c=(0, 0, 255), s=3)
-    if targets is not None:
-        if excl_gt_indices is None:
-            img = add_bboxes_to_img(img, targets[(frame_id)][0]["boxes"], c=(0, 255, 0), s=6)
-        else:
-            img = add_bboxes_to_img(img, targets[(frame_id)][0]["boxes"][incl_gt_indices], c=(0, 255, 0), s=6)
-            img = add_bboxes_to_img(img, targets[(frame_id)][0]["boxes"][excl_gt_indices], c=(255, 255, 0), s=6)
+        # Check the matched bboxes
+        df_gt_bbox_frame = df_gt_bbox.loc[frame_id]
+        df_gt_bbox_frame = df_gt_bbox_frame[df_gt_bbox_frame["threshold"] == threshold].reset_index()
+        idx_matched = (df_gt_bbox_frame[df_gt_bbox_frame["matched"] == 1]).index
+        idx_ignored = (df_gt_bbox_frame[df_gt_bbox_frame["matched"] == -1]).index
+        idx_missed = (df_gt_bbox_frame[df_gt_bbox_frame["matched"] == 0]).index
+        # Plot
+        idx_pred_abovethreshold = torch.nonzero(preds[(frame_id)][0]["scores"] > threshold).squeeze()
+        idx_pred_belowthreshold = torch.nonzero(preds[(frame_id)][0]["scores"] < threshold).squeeze()
+        add_bboxes_to_img_ax(ax, preds[(frame_id)][0]["boxes"][idx_pred_abovethreshold], c=(0, 0, 1), s=1)
+        add_bboxes_to_img_ax(ax, preds[(frame_id)][0]["boxes"][idx_pred_belowthreshold], c=(0, 0, 1), s=1, linestyle="dotted")
 
-    if ax is None:
-        plt.imshow(img)
-        plt.show()
-    else:
-        ax.imshow(img)
+    if targets is not None and df_gt_bbox is not None:
+        add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_matched], c=(0, 1, 0), s=2)
+        add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_missed], c=(1, 0, 0), s=2)
+        add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_ignored], c=(1, 1, 0), s=2)
+
+    plt.show()
 
 
 def plot_fp_fn_img(frame_id_list, img_path_list, preds, targets, index_frame, threshold=0.5):

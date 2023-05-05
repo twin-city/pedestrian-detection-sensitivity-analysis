@@ -260,7 +260,9 @@ class detection_metric:
 
         #todo get the intersect of bboxes. Do it on top, would be cleaner
         set_df_bbox = df_mr_fppi.index.get_level_values(0)
+        set_df_matched = set(np.unique(np.array(df_matched_gtbbox.index.get_level_values(level=0))))
         frame_id_intersect = set.intersection(set(set_df_bbox), set(frame_ids))
+        frame_id_intersect = set.intersection(set(frame_id_intersect), set(set_df_matched))
 
         return df_mr_fppi.loc[frame_id_intersect], df_matched_gtbbox.loc[frame_id_intersect]
 

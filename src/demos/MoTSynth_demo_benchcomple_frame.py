@@ -237,5 +237,33 @@ for metric in ["MR", "FPPI"]:
 
 
 
+#%%
+i = 30
+
+img_path = osp.join(root, df_frame_metadata["file_name"].iloc[i])
+frame_id = df_frame_metadata.index[i]
+
+
+
+from src.detection.metrics import filter_gt_bboxes
+
+gtbbox_filtering = gtbbox_filtering_all["Overall"]
+
+if len(pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T) == 1:
+    df_gtbbox_metadata_frame = pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T.reset_index()
+else:
+    df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id].reset_index()
+excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
+
+
+from src.detection.detector import Detector
+
+detector = Detector(model_name, device="cpu")
+preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
+
+from src.utils import plot_results_img
+plot_results_img(img_path, frame_id, preds=preds, targets=targets,
+                 excl_gt_indices=excluded_gt, ax=None)
+
 
 

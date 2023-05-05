@@ -109,18 +109,19 @@ def get_twincity_boxes(img, metadata):
 
     return boxes, df
 
-def get_dataset_from_folder(folder, max_samples_per_seq=100):
+def get_dataset_from_folder(folder, max_samples_per_seq=101):
 
-    version = "v4"
+    version = "v4bis"
     folder_name = folder.split(version+"/")[1]
     root = f'/home/raphael/work/datasets/twincity-Unreal/{version}/'
 
     save_folder = f"/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/src/demos/data/preprocessing/motsynth/twincity/{version}/{folder_name}"
+    os.makedirs(save_folder, exist_ok=True)
 
-    path_df_gtbbox_metadata = osp.join(folder, f"df_gtbbox_{max_samples_per_seq}.csv")
-    path_df_frame_metadata = osp.join(folder, f"df_frame_{max_samples_per_seq}.csv")
-    path_df_sequence_metadata = osp.join(folder, f"df_sequence_{max_samples_per_seq}.csv")
-    path_target = osp.join(folder, f"targets_{max_samples_per_seq}.json")
+    path_df_gtbbox_metadata = osp.join(save_folder, f"df_gtbbox_{max_samples_per_seq}.csv")
+    path_df_frame_metadata = osp.join(save_folder, f"df_frame_{max_samples_per_seq}.csv")
+    path_df_sequence_metadata = osp.join(save_folder, f"df_sequence_{max_samples_per_seq}.csv")
+    path_target = osp.join(save_folder, f"targets_{max_samples_per_seq}.json")
 
     try:
         print("Try")
@@ -166,6 +167,11 @@ def get_dataset_from_folder(folder, max_samples_per_seq=100):
 
             img_annot = mpimg.imread(img_annot_path)
             bboxes, df = get_twincity_boxes(img_annot, metadata)
+
+            # filter
+            bboxes = torch.stack([b for a, b in zip(df["width"], bboxes) if a < 250])
+            df = df[df["width"]<250] #todo added a filtering of bboxes
+
             frame_id = img_annot_path.split("/Snapshot-2023-")[-1].split(".png")[0]
             df["frame_id"] = frame_id #todo frame_id should be the one of the rgb
             df["id"] = frame_id #todo have to choose a denomination
@@ -198,7 +204,7 @@ def get_dataset_from_folder(folder, max_samples_per_seq=100):
                 "weather": metadata["weather"],
                 #"frame_id": frame_id,
                 "id": frame_id,
-                "file_name": img_rgb_path_list[i].split("v4/")[1],
+                "file_name": img_rgb_path_list[i].split("v4bis/")[1],
             }
             df_frame_metadata = pd.DataFrame(dict_frame_metadata, index=[frame_id])
             for col in df.mean(numeric_only=True).keys():
@@ -287,7 +293,7 @@ def get_twincity_dataset(root, max_samples_per_seq=100):
 
 
 
-#%% Parameters
+#%% Plot
 
 
 
@@ -312,9 +318,9 @@ drawn_boxes = draw_bounding_boxes(torch.tensor(img_rgb_torch), boxes,
                                   colors="red", width=4)
 show(drawn_boxes)
 plt.show()
-
-#todo remove the sky one
 """
+#todo remove the sky one
+
 
 
 

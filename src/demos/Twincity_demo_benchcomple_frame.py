@@ -8,8 +8,7 @@ import os.path as osp
 #%% params of input dataset
 
 dataset_name = "twincity"
-root = "/home/raphael/work/datasets/twincity-Unreal/v4"
-
+root = "/home/raphael/work/datasets/twincity-Unreal/v4bis"
 
 
 metrics = ["MR", "FPPI"]
@@ -24,10 +23,9 @@ resolution = (1920, 1080)
 
 #%% Get the dataset
 from src.preprocessing.twincity_preprocessing2 import get_twincity_dataset
-dataset = get_twincity_dataset(root, 10)
+dataset = get_twincity_dataset(root, 50)
 root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
 
-df_gtbbox_metadata = df_gtbbox_metadata[df_gtbbox_metadata["area"] < 35000] #todo to handle bug of colors mixed with people
 
 #root, targets, metadatas, frame_id_list, img_path_list = dataset
 #df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = metadatas
@@ -139,8 +137,8 @@ import matplotlib.pyplot as plt
 dict_filter_frames = {
     "Overall": [{}],
     "Day / Night": ({"is_night": 0}, {"is_night": 1}),
-    "Adverse Weather": ({"weather": ["Partially cloudy"]}, {"weather": ["Foggy"]}),
-    "Camera Angle": ({"pitch": {"<": -10}}, {"pitch": 0}),
+    #"Adverse Weather": ({"weather": ["Partially cloudy"]}, {"weather": ["Foggy"]}),
+    #"Camera Angle": ({"pitch": {"<": -10}}, {"pitch": 0}),
 }
 
 min_x, max_x = 0.01, 100  # 0.01 false positive per image to 100
@@ -184,13 +182,47 @@ plt.show()
 
 
 
+
 #%%
 
-img_path = osp.join(root, df_frame_metadata["file_name"].iloc[0])
-frame_id = df_frame_metadata.index[0]
+i = 30
+
+img_path = osp.join(root, df_frame_metadata["file_name"].iloc[i])
+frame_id = df_frame_metadata.index[i]
+
+
+#%%
+
+gtbbox_filtering_all = {
+    "Overall": {
+        #"occlusion_rate": (0.99, "max"),  # Not fully occluded
+        "height": (200, "min"),
+    },
+}
+from src.detection.metrics import filter_gt_bboxes
+
+gtbbox_filtering = gtbbox_filtering_all["Overall"]
+
+if len(pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T) == 1:
+    df_gtbbox_metadata_frame = pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T.reset_index()
+else:
+    df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id].reset_index()
+excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
+
+
+from src.detection.detector import Detector
+
+detector = Detector(model_name, device="cpu")
+preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
+
+from src.detection.metrics import detection_metric
+metric = detection_metric(gtbbox_filtering)
+df_mr_fppi, df_gt_bbox = metric.compute(dataset_name, model_name, preds, targets, df_gtbbox_metadata,
+                                        gtbbox_filtering)
+#todo add threshold to 1 in data
 from src.utils import plot_results_img
-plot_results_img(img_path, frame_id, preds=None, targets=targets,
-                 excl_gt_indices=None, ax=None)
+plot_results_img(img_path, frame_id, preds=preds, targets=targets,
+             df_gt_bbox=df_gt_bbox, threshold=0.9999) #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
 
 
 """
