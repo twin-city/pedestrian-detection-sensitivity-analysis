@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import json
+from src.utils import xywh2xyxy, target_2_json, target_2_torch
 
 
 #todo make only once the conversion
@@ -108,112 +109,144 @@ def get_twincity_boxes(img, metadata):
 
     return boxes, df
 
-def get_dataset_from_folder(folder):
+def get_dataset_from_folder(folder, max_samples_per_seq=100):
+
+    version = "v4"
+    folder_name = folder.split(version+"/")[1]
+    root = f'/home/raphael/work/datasets/twincity-Unreal/{version}/'
+
+    save_folder = f"/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/src/demos/data/preprocessing/motsynth/twincity/{version}/{folder_name}"
+
+    path_df_gtbbox_metadata = osp.join(folder, f"df_gtbbox_{max_samples_per_seq}.csv")
+    path_df_frame_metadata = osp.join(folder, f"df_frame_{max_samples_per_seq}.csv")
+    path_df_sequence_metadata = osp.join(folder, f"df_sequence_{max_samples_per_seq}.csv")
+    path_target = osp.join(folder, f"targets_{max_samples_per_seq}.json")
+
+    try:
+        print("Try")
+        df_gtbbox_metadata = pd.read_csv(path_df_gtbbox_metadata)#.set_index(["frame_id", "id"])
+        df_frame_metadata = pd.read_csv(path_df_frame_metadata)#.set_index("frame_id")
+        df_sequence_metadata = pd.read_csv(path_df_sequence_metadata)
+        with open(path_target) as jsonFile:
+            targets = target_2_torch(json.load(jsonFile))
+        print("End Try")
+
+    except:
+
+        metadata_path = glob.glob(osp.join(folder, "Metadata*"))[0]
+        images_path_list = glob.glob(osp.join(folder, "*.png"))
+
+        with open(metadata_path) as file:
+            metadata = json.load(file)
+
+        ordering = np.argsort([creation_date(x) for x in images_path_list])
+
+        #%%
 
 
-    metadata_path = glob.glob(osp.join(folder, "*.json"))[0]
-    images_path_list = glob.glob(osp.join(folder, "*.png"))
+        img_annot_path_list = np.array(images_path_list)[ordering[::2]]
+        img_rgb_path_list = np.array(images_path_list)[ordering[1::2]]
 
-    with open(metadata_path) as file:
-        metadata = json.load(file)
+        #img_rgb = mpimg.imread(img_rgb_path_list[0])
+        img_annot = mpimg.imread(img_annot_path_list[0])
 
-    ordering = np.argsort([creation_date(x) for x in images_path_list])
+        #%% for a tuple (img_rgb, img_annot) get all the bounding boxes
 
-    #%%
+        img = img_annot
 
+        df_gtbbox_list = []
+        targets = {}
+        frame_id_list = []
+        df_frame_list = []
 
-    img_annot_path_list = np.array(images_path_list)[ordering[::2]]
-    img_rgb_path_list = np.array(images_path_list)[ordering[1::2]]
+        for i, img_annot_path in enumerate(img_annot_path_list):
 
-    #img_rgb = mpimg.imread(img_rgb_path_list[0])
-    img_annot = mpimg.imread(img_annot_path_list[0])
+            if i>max_samples_per_seq:
+                break
 
-    #%% for a tuple (img_rgb, img_annot) get all the bounding boxes
+            img_annot = mpimg.imread(img_annot_path)
+            bboxes, df = get_twincity_boxes(img_annot, metadata)
+            frame_id = img_annot_path.split("/Snapshot-2023-")[-1].split(".png")[0]
+            df["frame_id"] = frame_id #todo frame_id should be the one of the rgb
+            df["id"] = frame_id #todo have to choose a denomination
 
-    img = img_annot
+            target = [
+                dict(
+                    boxes=
+                        bboxes)
+                ]
+            target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
+            targets[frame_id] = target
+            frame_id_list.append(frame_id)
 
-    df_gtbbox_list = []
-    targets = {}
-    frame_id_list = []
-    df_frame_list = []
-
-    for i, img_annot_path in enumerate(img_annot_path_list):
-        img_annot = mpimg.imread(img_annot_path)
-        bboxes, df = get_twincity_boxes(img_annot, metadata)
-        frame_id = img_annot_path.split("/Snapshot-2023-")[-1].split(".png")[0]
-        df["frame_id"] = frame_id #todo frame_id should be the one of the rgb
-        df["id"] = frame_id #todo have to choose a denomination
-
-        target = [
-            dict(
-                boxes=
-                    bboxes)
-            ]
-        target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
-        targets[frame_id] = target
-        frame_id_list.append(frame_id)
-
-        #%% Check if everything OK
-        """
-        from torchvision.utils import draw_bounding_boxes
-        img_rgb = mpimg.imread(img_rgb_path_list[0])
-        img_rgb_torch = torch.tensor(img_rgb * 255, dtype=torch.uint8)[:, :, :3]
-        img_rgb_torch = torch.swapaxes(img_rgb_torch, 0, 1)
-        img_rgb_torch = torch.swapaxes(img_rgb_torch, 0, 2)
-        drawn_boxes = draw_bounding_boxes(torch.tensor(img_rgb_torch), bboxes, colors="red")
-        show(drawn_boxes)
-        plt.show()
-        """
+            #%% Check if everything OK
+            """
+            from torchvision.utils import draw_bounding_boxes
+            img_rgb = mpimg.imread(img_rgb_path_list[0])
+            img_rgb_torch = torch.tensor(img_rgb * 255, dtype=torch.uint8)[:, :, :3]
+            img_rgb_torch = torch.swapaxes(img_rgb_torch, 0, 1)
+            img_rgb_torch = torch.swapaxes(img_rgb_torch, 0, 2)
+            drawn_boxes = draw_bounding_boxes(torch.tensor(img_rgb_torch), bboxes, colors="red")
+            show(drawn_boxes)
+            plt.show()
+            """
 
 
-        #df_frame_metadata = df_gtbbox_metadata.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True))
+            #df_frame_metadata = df_gtbbox_metadata.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True))
 
-        dict_frame_metadata = {
-            "weather": metadata["weather"],
-            #"frame_id": frame_id,
-            "id": frame_id,
-            "file_name": img_rgb_path_list[i].split("v4/")[1],
-        }
-        df_frame_metadata = pd.DataFrame(dict_frame_metadata, index=[frame_id])
-        for col in df.mean(numeric_only=True).keys():
-            df_frame_metadata[col] = df[col].mean()
-        df_frame_metadata.index.name = "frame_id"
+            dict_frame_metadata = {
+                "weather": metadata["weather"],
+                #"frame_id": frame_id,
+                "id": frame_id,
+                "file_name": img_rgb_path_list[i].split("v4/")[1],
+            }
+            df_frame_metadata = pd.DataFrame(dict_frame_metadata, index=[frame_id])
+            for col in df.mean(numeric_only=True).keys():
+                df_frame_metadata[col] = df[col].mean()
+            df_frame_metadata.index.name = "frame_id"
 
 
 
 
 
-        df_gtbbox_list.append(df)
-        df_frame_list.append(df_frame_metadata)
+            df_gtbbox_list.append(df)
+            df_frame_list.append(df_frame_metadata)
 
-    df_frame_metadata = pd.concat(df_frame_list, axis=0)
+        df_frame_metadata = pd.concat(df_frame_list, axis=0)
 
-    df_frame_metadata["pitch"] = metadata["cameraRotation"]["pitch"]
-    df_frame_metadata["num_peds"] = len(metadata["peds"])
-    df_frame_metadata["num_vehicles"] = metadata["vehiclesNb"]
-    df_frame_metadata["hour"] = metadata["hour"]
-    df_frame_metadata["is_night"] = metadata["hour"] > 21 or metadata[
-        "hour"] < 6  # todo pas ouf, dépend du jour de l'année ...
+        df_frame_metadata["pitch"] = metadata["cameraRotation"]["pitch"]
+        df_frame_metadata["num_peds"] = len(metadata["peds"])
+        df_frame_metadata["num_vehicles"] = metadata["vehiclesNb"]
+        df_frame_metadata["hour"] = metadata["hour"]
+        df_frame_metadata["is_night"] = metadata["hour"] > 21 or metadata[
+            "hour"] < 6  # todo pas ouf, dépend du jour de l'année ...
 
-    df_gtbbox_metadata = pd.concat(df_gtbbox_list, axis=0)
-    df_sequence_metadata = None #todo for now
+        df_gtbbox_metadata = pd.concat(df_gtbbox_list, axis=0)
+        df_sequence_metadata = pd.DataFrame() #todo for now
 
 
-    img_path_list = img_rgb_path_list
-    root = '/home/raphael/work/datasets/twincity-Unreal/v4/'
+        img_path_list = img_rgb_path_list
+
+
+        img_path = osp.join(root, df_frame_metadata["file_name"].iloc[0])
+        frame_id = df_frame_metadata.index[0]
+        from src.utils import plot_results_img
+        plot_results_img(img_path, frame_id, preds=None, targets=targets,
+                         excl_gt_indices=None, ax=None)
+
+        #%% Save folder files
+        df_gtbbox_metadata.to_csv(path_df_gtbbox_metadata)
+        df_frame_metadata.to_csv(path_df_frame_metadata)
+        df_sequence_metadata.to_csv(path_df_sequence_metadata)
+        with open(path_target, 'w') as f:
+            json.dump(target_2_json(targets), f)
 
     metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
-
-    img_path = osp.join(root, df_frame_metadata["file_name"].iloc[0])
-    frame_id = df_frame_metadata.index[0]
-    from src.utils import plot_results_img
-    plot_results_img(img_path, frame_id, preds=None, targets=targets,
-                     excl_gt_indices=None, ax=None)
 
     return root, targets, metadatas#, frame_id_list, img_path_list
 
 
-def get_twincity_dataset(root):
+def get_twincity_dataset(root, max_samples_per_seq=100):
 
     folders = glob.glob(osp.join(root, "*"))
 
@@ -226,7 +259,7 @@ def get_twincity_dataset(root):
 
     for folder in folders:
         print(f"Reading folder {folder}")
-        _, targets_folder, metadatas_folder = get_dataset_from_folder(folder)
+        _, targets_folder, metadatas_folder = get_dataset_from_folder(folder, max_samples_per_seq)
 
         df_gtbbox_metadata_folder, df_frame_metadata_folder, df_sequence_metadata_folder = metadatas_folder
 
@@ -245,6 +278,8 @@ def get_twincity_dataset(root):
     df_sequence_metadata = pd.DataFrame()
 
     df_gtbbox_metadata = df_gtbbox_metadata.set_index(["frame_id", "id"])
+    if df_frame_metadata.index.name != "frame_id":
+        df_frame_metadata = df_frame_metadata.set_index("frame_id")
 
     return root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 

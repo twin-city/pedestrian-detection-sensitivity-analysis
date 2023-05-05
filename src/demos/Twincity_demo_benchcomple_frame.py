@@ -24,8 +24,10 @@ resolution = (1920, 1080)
 
 #%% Get the dataset
 from src.preprocessing.twincity_preprocessing2 import get_twincity_dataset
-dataset = get_twincity_dataset(root)
+dataset = get_twincity_dataset(root, 10)
 root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
+
+df_gtbbox_metadata = df_gtbbox_metadata[df_gtbbox_metadata["area"] < 35000] #todo to handle bug of colors mixed with people
 
 #root, targets, metadatas, frame_id_list, img_path_list = dataset
 #df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = metadatas
@@ -35,7 +37,7 @@ root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dat
 mu = 0.4185
 std = 0.12016
 df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu+std,  df_gtbbox_metadata["aspect_ratio"] > mu-std)
-df_frame_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
+#df_frame_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
 
 #%% Plot example
 
@@ -63,13 +65,14 @@ ax[0].axvline(height_thresh[0], c="red")
 ax[0].axvline(height_thresh[1], c="red")
 ax[0].axvline(height_thresh[2], c="red")
 
-"""
-df_gtbbox_metadata.hist("occlusion_rate", bins=22, ax=ax[1])
+
+df_gtbbox_metadata.hist("area", bins=100, ax=ax[1])
 #ax[0].set_xlim(0, 300)
-ax[1].axvline(occl_thresh[0], c="red")
-ax[1].axvline(occl_thresh[1], c="red")
+#ax[1].axvline(occl_thresh[0], c="red")
+#ax[1].axvline(occl_thresh[1], c="red")
+#ax[1].set_xlim(500)
 #ax[0].axvline(height_thresh[2], c="red")
-"""
+
 plt.show()
 
 #%% What cases do we study ?
@@ -123,9 +126,6 @@ plt.tight_layout()
 plt.show()
 
 
-
-
-
 #%% After bench, do the plot value difference (simplified, each metric)
 
 #%% Model performance :  Plots MR vs FPPI on frame filtering
@@ -139,8 +139,8 @@ import matplotlib.pyplot as plt
 dict_filter_frames = {
     "Overall": [{}],
     "Day / Night": ({"is_night": 0}, {"is_night": 1}),
-    #"Adverse Weather": ({"adverse_weather": 0}, {"adverse_weather": 1}),
-    #"Camera Angle": ({"pitch": {"<": -10}}, {"pitch": {">": -10}}),
+    "Adverse Weather": ({"weather": ["Partially cloudy"]}, {"weather": ["Foggy"]}),
+    "Camera Angle": ({"pitch": {"<": -10}}, {"pitch": 0}),
 }
 
 min_x, max_x = 0.01, 100  # 0.01 false positive per image to 100

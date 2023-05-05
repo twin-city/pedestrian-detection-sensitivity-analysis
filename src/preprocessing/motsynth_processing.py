@@ -4,7 +4,7 @@ import torch
 import os.path as osp
 import pandas as pd
 import os
-from src.utils import xywh2xyxy
+from src.utils import xywh2xyxy, target_2_json, target_2_torch
 
 from .processing import DatasetProcessing
 
@@ -13,20 +13,8 @@ Explore :
 - blurred
 """
 
-def target_2_json(targets):
-    return {key: [{
-        "boxes": val[0]["boxes"].numpy().tolist(),
-        "labels": val[0]["labels"].numpy().tolist(),
-    }
-    ] for key, val in targets.items()}
 
 
-def target_2_torch(targets):
-    return {key: [{
-        "boxes": torch.tensor(val[0]["boxes"]),
-        "labels": torch.tensor(val[0]["labels"]),
-    }
-    ] for key, val in targets.items()}
 
 
 class MotsynthProcessing(DatasetProcessing):
@@ -201,8 +189,6 @@ class MotsynthProcessing(DatasetProcessing):
             df_gtbbox_metadata = pd.read_csv(path_df_gtbbox_metadata).set_index(["image_id", "id"])
             df_frame_metadata = pd.read_csv(path_df_frame_metadata).set_index("Unnamed: 0")
             df_sequence_metadata = pd.read_csv(path_df_sequence_metadata).set_index("Unnamed: 0")
-
-
             with open(path_target) as jsonFile:
                 targets = target_2_torch(json.load(jsonFile))
             print("End Try")

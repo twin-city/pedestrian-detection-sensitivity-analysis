@@ -165,6 +165,22 @@ def add_bboxes_to_img(img, bboxes, c=(0,0,255), s=1):
         img = cv2.rectangle(img, (x1, y1), (x2, y2), c, s)
     return img
 
+def target_2_torch(targets):
+    return {key: [{
+        "boxes": torch.tensor(val[0]["boxes"]),
+        "labels": torch.tensor(val[0]["labels"]),
+    }
+    ] for key, val in targets.items()}
+
+
+
+def target_2_json(targets):
+    return {key: [{
+        "boxes": val[0]["boxes"].numpy().tolist(),
+        "labels": val[0]["labels"].numpy().tolist(),
+    }
+    ] for key, val in targets.items()}
+
 def plot_results_img(img_path, frame_id, preds=None, targets=None, excl_gt_indices=None, ax=None):
     img = plt.imread(img_path)
 
