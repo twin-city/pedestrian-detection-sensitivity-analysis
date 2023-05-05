@@ -12,14 +12,34 @@ from torchvision.utils import draw_bounding_boxes
 import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import json
+
+
+#todo make only once the conversion
+
+"""
+TODO : 
+
+
+Important
+- add multiple criterias or range of criterias to study, not necessarily fixed (API ?)
+- FIX colors that match background
+
+Bonus
+- add day/night in metadata ???
+- FIX people's hair being black
+"""
 
 """
 from https://pytorch.org/vision/main/auto_examples/plot_repurposing_annotations.html
 """
 
-root = "/home/raphael/work/datasets/twincity-Unreal/v4/"
-cases = glob.glob(osp.join(root, "*"))
+import pandas as pd
 
+excl_colors = [
+    '(R=0.160640,G=0.000000,B=1.000000,A=1.000000)',
+    '(R=0.143117,G=1.000000,B=0.000000,A=1.000000)',
+]
 
 #%% Functions
 
@@ -60,39 +80,7 @@ def show(imgs):
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
 
 
-case = cases[0]
-
-metadata_path = glob.glob(osp.join(case, "*.json"))[0]
-images_path_list = glob.glob(osp.join(case, "*.png"))
-
-import json
-with open(metadata_path) as file:
-    metadata = json.load(file)
-
-ordering = np.argsort([creation_date(x) for x in images_path_list])
-
-
-#%%
-
-
-img_annot_list = np.array(images_path_list)[ordering[::2]]
-img_rgb_list = np.array(images_path_list)[ordering[1::2]]
-
-img_rgb = mpimg.imread(img_rgb_list[0])
-img_annot = mpimg.imread(img_annot_list[0])
-
-#%% for a tuple (img_rgb, img_annot) get all the bounding boxes
-
-import pandas as pd
-
-excl_colors = [
-    '(R=0.160640,G=0.000000,B=1.000000,A=1.000000)',
-    '(R=0.143117,G=1.000000,B=0.000000,A=1.000000)',
-]
-
-img = img_annot
-
-def get_twincity_boxes(img):
+def get_twincity_boxes(img, metadata):
 
     num_pedestrian_in_scene = len(metadata["peds"])
 
@@ -109,30 +97,172 @@ def get_twincity_boxes(img):
 
     # Calculate the heights and areas of the boxes
     heights = boxes[:, 3] - boxes[:, 1]
-    areas = (boxes[:, 2] - boxes[:, 0]) * heights
+    widths = boxes[:, 2] - boxes[:, 0]
+    areas = widths * heights
 
     # Create a DataFrame with the heights and areas
-    data = {'Height': heights, 'Area': areas}
+    data = {'height': heights.numpy().tolist(), "width":widths.numpy().tolist(),
+            "aspect_ratio": (widths/heights).numpy().tolist(),
+            'area': areas.numpy().tolist()}
     df = pd.DataFrame(data)
 
     return boxes, df
 
+def get_dataset_from_folder(folder):
 
 
-for img in img_annot_list:
-    boxes, df = get_twincity_boxes(img)
+    metadata_path = glob.glob(osp.join(folder, "*.json"))[0]
+    images_path_list = glob.glob(osp.join(folder, "*.png"))
 
-#todo rename
+    with open(metadata_path) as file:
+        metadata = json.load(file)
 
-#%% Return
+    ordering = np.argsort([creation_date(x) for x in images_path_list])
 
-img_path_list = img_rgb_list
-root = '/home/raphael/work/datasets/twincity-Unreal/v4/'
+    #%%
 
 
-#metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
-#root, targets, metadatas, frame_id_list, img_path_list
+    img_annot_path_list = np.array(images_path_list)[ordering[::2]]
+    img_rgb_path_list = np.array(images_path_list)[ordering[1::2]]
 
+    #img_rgb = mpimg.imread(img_rgb_path_list[0])
+    img_annot = mpimg.imread(img_annot_path_list[0])
+
+    #%% for a tuple (img_rgb, img_annot) get all the bounding boxes
+
+    img = img_annot
+
+    df_gtbbox_list = []
+    targets = {}
+    frame_id_list = []
+    df_frame_list = []
+
+    for i, img_annot_path in enumerate(img_annot_path_list):
+        img_annot = mpimg.imread(img_annot_path)
+        bboxes, df = get_twincity_boxes(img_annot, metadata)
+        frame_id = img_annot_path.split("/Snapshot-2023-")[-1].split(".png")[0]
+        df["frame_id"] = frame_id #todo frame_id should be the one of the rgb
+        df["id"] = frame_id #todo have to choose a denomination
+
+        target = [
+            dict(
+                boxes=
+                    bboxes)
+            ]
+        target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
+        targets[frame_id] = target
+        frame_id_list.append(frame_id)
+
+        #%% Check if everything OK
+        """
+        from torchvision.utils import draw_bounding_boxes
+        img_rgb = mpimg.imread(img_rgb_path_list[0])
+        img_rgb_torch = torch.tensor(img_rgb * 255, dtype=torch.uint8)[:, :, :3]
+        img_rgb_torch = torch.swapaxes(img_rgb_torch, 0, 1)
+        img_rgb_torch = torch.swapaxes(img_rgb_torch, 0, 2)
+        drawn_boxes = draw_bounding_boxes(torch.tensor(img_rgb_torch), bboxes, colors="red")
+        show(drawn_boxes)
+        plt.show()
+        """
+
+
+        #df_frame_metadata = df_gtbbox_metadata.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True))
+
+        dict_frame_metadata = {
+            "weather": metadata["weather"],
+            #"frame_id": frame_id,
+            "id": frame_id,
+            "file_name": img_rgb_path_list[i].split("v4/")[1],
+        }
+        df_frame_metadata = pd.DataFrame(dict_frame_metadata, index=[frame_id])
+        for col in df.mean(numeric_only=True).keys():
+            df_frame_metadata[col] = df[col].mean()
+        df_frame_metadata.index.name = "frame_id"
+
+
+
+
+
+        df_gtbbox_list.append(df)
+        df_frame_list.append(df_frame_metadata)
+
+    df_frame_metadata = pd.concat(df_frame_list, axis=0)
+
+    df_frame_metadata["pitch"] = metadata["cameraRotation"]["pitch"]
+    df_frame_metadata["num_peds"] = len(metadata["peds"])
+    df_frame_metadata["num_vehicles"] = metadata["vehiclesNb"]
+    df_frame_metadata["hour"] = metadata["hour"]
+    df_frame_metadata["is_night"] = metadata["hour"] > 21 or metadata[
+        "hour"] < 6  # todo pas ouf, dépend du jour de l'année ...
+
+    df_gtbbox_metadata = pd.concat(df_gtbbox_list, axis=0)
+    df_sequence_metadata = None #todo for now
+
+
+    img_path_list = img_rgb_path_list
+    root = '/home/raphael/work/datasets/twincity-Unreal/v4/'
+
+    metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+
+    img_path = osp.join(root, df_frame_metadata["file_name"].iloc[0])
+    frame_id = df_frame_metadata.index[0]
+    from src.utils import plot_results_img
+    plot_results_img(img_path, frame_id, preds=None, targets=targets,
+                     excl_gt_indices=None, ax=None)
+
+    return root, targets, metadatas#, frame_id_list, img_path_list
+
+
+def get_twincity_dataset(root):
+
+    folders = glob.glob(osp.join(root, "*"))
+
+    targets = {}
+    frame_id_list = []
+    img_path_list = []
+    df_gtbbox_metadata_list = []
+    df_frame_metadata_list = []
+    df_sequence_metadata_list = []
+
+    for folder in folders:
+        print(f"Reading folder {folder}")
+        _, targets_folder, metadatas_folder = get_dataset_from_folder(folder)
+
+        df_gtbbox_metadata_folder, df_frame_metadata_folder, df_sequence_metadata_folder = metadatas_folder
+
+        # add outputs to their respective structures
+        targets.update(targets_folder)
+        #frame_id_list += frame_id_list_folder
+        #img_path_list += img_path_list_folder.tolist()
+        df_gtbbox_metadata_list.append(df_gtbbox_metadata_folder)
+        df_frame_metadata_list.append(df_frame_metadata_folder)
+        df_sequence_metadata_list.append(df_sequence_metadata_folder)
+
+
+    df_gtbbox_metadata = pd.concat(df_gtbbox_metadata_list, axis=0)
+    df_frame_metadata = pd.concat(df_frame_metadata_list, axis=0)
+    #df_sequence_metadata = pd.concat(df_sequence_metadata_list, axis=0)
+    df_sequence_metadata = pd.DataFrame()
+
+    df_gtbbox_metadata = df_gtbbox_metadata.set_index(["frame_id", "id"])
+
+    return root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+
+
+
+
+
+#%% Parameters
+
+
+
+
+
+
+
+
+
+"""
 #%%
 img = img_annot
 img_rgb_torch = torch.tensor(img_rgb*255, dtype=torch.uint8)[:,:,:3]
@@ -149,7 +279,7 @@ show(drawn_boxes)
 plt.show()
 
 #todo remove the sky one
-
+"""
 
 
 

@@ -64,9 +64,8 @@ class MotsynthProcessing(DatasetProcessing):
 
 
     def get_dataset(self):
-        targets, metadatas, frame_id_list, img_path_list = self.get_MoTSynth_annotations_and_imagepaths()
-        return self.root, targets, metadatas, frame_id_list, img_path_list
-
+        targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata= self.get_MoTSynth_annotations_and_imagepaths()
+        return self.root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 
     def get_MoTSynth_annotations_and_imagepaths_video(self, video_id="004", max_samples=100000, random_sampling=True, delay=3):
 
