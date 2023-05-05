@@ -25,13 +25,18 @@ def compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_f
     return df_mr_fppi, df_gt_bbox
 
 def get_df_matched_gtbbox(results, frame_id, threshold, gtbbox_ids):
-    df_matched_gtbbox = 1 * pd.DataFrame([i in results[threshold][3] for i in range(results[threshold][5])])
+    # 2 --> mached
+    # 3 (other) --> missed
+
+    df_matched_gtbbox = 1 * pd.DataFrame([i in results[threshold][2] for i in range(results[threshold][5])])
     df_matched_gtbbox["frame_id"] = frame_id
     df_matched_gtbbox["threshold"] = threshold
     df_matched_gtbbox["id"] = gtbbox_ids
     df_matched_gtbbox = df_matched_gtbbox.rename(columns={0: 'matched'})
 
-    df_matched_gtbbox.iloc[results[threshold][6],0] = -1
+    df_matched_gtbbox.iloc[results[threshold][6], 0] = -1
+
+
 
     return df_matched_gtbbox
 
@@ -107,6 +112,74 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[])
 
     return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox, excluded_gt
 
+def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
+    num_gtbbox = len(target_bbox[0]["boxes"])
+    score_sorted = np.argsort(pred_bbox[0]["scores"].numpy())[::-1]
+    gt_bboxes = target_bbox[0]["boxes"]
+    #gt_bboxes_scores = target_bbox[0]["scores"]
+
+    # All target bboxes
+    set_unmatched_target_bboxs_ids = set(list(range(num_gtbbox))) #includes excl
+    set_excl_target_bboxs_ids = set(excluded_gt)
+    set_matched_target_bboxs_ids = set()
+
+    # Matching dict
+    matching_dict = {key: "missed" for key in range(num_gtbbox)}
+    for key in set_excl_target_bboxs_ids:
+        matching_dict[key] = "excluded"
+
+    # Results
+    num_fp = 0
+    #set_fn = set()
+
+
+    # For each pred bbox in decreasing probability score order
+    for i in score_sorted:
+        """
+        At each iter match a pred with an idx of the unmatched_target_bbox 
+        """
+
+        pred_score = pred_bbox[0]["scores"][i]
+
+        if len(set_unmatched_target_bboxs_ids) == 0 or pred_score < threshold:
+            break #todo should it be incl_possible here ?
+
+        bbox = pred_bbox[0]["boxes"][i]
+
+        # Compute IoU of selected pred bbox and all unmatched gt_bboxes, filter with IoUs being above 0.5
+        IoUs = [torchvision.ops.box_iou(bbox.unsqueeze(0), gt_box.unsqueeze(0)) for gt_box in gt_bboxes]
+        IoUs_index = [i for i, IoU in enumerate(IoUs) if IoU > 0.5]
+
+        # If no target bbox overlap with IoU>=0.5, set as false positive
+        if len(IoUs_index) == 0:
+            num_fp += 1
+        # All matches are to excluded bboxes --> nothing happens, ignore region
+        elif np.all([x in excluded_gt for x in IoUs_index]):
+            pass
+        # Else there exist at least an overlap with an included bounding box
+        else:
+            # Sort the IoUs
+            target_idx_by_decreasing_IoU = torch.stack(IoUs).reshape(-1).argsort(descending=True).numpy()
+            # Keep only those in "incl_unmatched_target_bboxs_ids"
+            target_idx_by_decreasing_IoU_inclpossible = [i for i in target_idx_by_decreasing_IoU if i in set_unmatched_target_bboxs_ids]
+            # Match it best with target boxes, included and still unmatched
+            matched_target_idx = target_idx_by_decreasing_IoU_inclpossible[0] #todo should be non empty
+
+            # Append to matched and remove for possible Remove
+            set_matched_target_bboxs_ids.add(matched_target_idx)
+            set_unmatched_target_bboxs_ids.remove(matched_target_idx)
+
+            matching_dict[matched_target_idx] = i
+
+    num_fn = len(set_unmatched_target_bboxs_ids-set_excl_target_bboxs_ids)
+    miss_ratio_image = num_fn / (num_gtbbox - len(excluded_gt))
+
+    #todo might not be needed
+    matched_target_bbox_list = list(set_matched_target_bboxs_ids)
+    target_bbox_missed = list(set_unmatched_target_bboxs_ids-set_excl_target_bboxs_ids)
+    unmatched_preds = None #ballec
+
+    return num_fp, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox, excluded_gt
 
 
 def filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering):
@@ -215,7 +288,7 @@ class detection_metric:
                             #todo delay here was removed for ECP df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+3].reset_index()
 
 
-                            results[threshold] = compute_fp_missratio2(preds[frame_id], targets[frame_id],
+                            results[threshold] = compute_fp_missratio(preds[frame_id], targets[frame_id],
                                                                       threshold=threshold, excluded_gt=excluded_gt)
 
 

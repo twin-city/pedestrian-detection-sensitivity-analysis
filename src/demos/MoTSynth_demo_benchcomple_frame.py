@@ -243,8 +243,12 @@ i = 30
 img_path = osp.join(root, df_frame_metadata["file_name"].iloc[i])
 frame_id = df_frame_metadata.index[i]
 
-
-
+gtbbox_filtering_all = {
+    "Overall": {
+        "occlusion_rate": (0.99, "max"),  # Not fully occluded
+        "height": (height_thresh[1], "min"),
+    },
+}
 from src.detection.metrics import filter_gt_bboxes
 
 gtbbox_filtering = gtbbox_filtering_all["Overall"]
@@ -261,9 +265,20 @@ from src.detection.detector import Detector
 detector = Detector(model_name, device="cpu")
 preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
 
+from src.detection.metrics import detection_metric
+metric = detection_metric(gtbbox_filtering)
+df_mr_fppi, df_gt_bbox = metric.compute(dataset_name, model_name, preds, targets, df_gtbbox_metadata,
+                                        gtbbox_filtering)
+#todo add threshold to 1 in data
 from src.utils import plot_results_img
 plot_results_img(img_path, frame_id, preds=preds, targets=targets,
-                 excl_gt_indices=excluded_gt, ax=None)
+             df_gt_bbox=df_gt_bbox, threshold=0.9999) #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
 
+#%%
+plot_results_img(img_path, frame_id, preds=preds, targets=None,
+             df_gt_bbox=df_gt_bbox, threshold=0.99) #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
 
+#%%
+plot_results_img(img_path, frame_id, preds=None, targets=targets,
+             df_gt_bbox=df_gt_bbox, threshold=0.99) #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
 
