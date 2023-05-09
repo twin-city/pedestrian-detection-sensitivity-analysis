@@ -312,6 +312,7 @@ def plot_gtbbox_matched_correlations(model_names, dataset, features_bbox, thresh
         df_metrics_gtbbox_study = df_metrics_gtbbox_study[df_metrics_gtbbox_study["threshold"]==threshold]
 
         # Append the metadata
+        features_bbox_plot = np.intersect1d(features_bbox, df_gtbbox_metadata.columns)
         df_metrics_gtbbox_study.loc[:,features_bbox] = df_gtbbox_metadata.loc[df_metrics_gtbbox_study.index, features_bbox]
         # If there are attributes, dummify them
         if "attributes_0" in df_gtbbox_metadata.columns:

@@ -12,14 +12,16 @@ model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
 # Dataset
 dataset_name, max_sample = "motsynth", 600
 #dataset_name, max_sample = "EuroCityPerson", 30
-dataset_name, max_sample = "twincity", 50
+#dataset_name, max_sample = "twincity", 50
 
-
+dataset_names = ["motsynth", "twincity"]
+max_samples = [600, 50]
 #%%
 from src.dataset.dataset_factory import DatasetFactory
-dataset = DatasetFactory.get_dataset(dataset_name, max_sample)
-dataset_tuple = dataset.get_dataset_as_tuple()
-root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset_tuple
+for dataset_name, max_sample in zip(dataset_names, max_samples):
+    dataset = DatasetFactory.get_dataset(dataset_name, max_sample)
+    dataset_tuple = dataset.get_dataset_as_tuple()
+    root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset_tuple
 
 
 #%% See Dataset Characteristics ==============================

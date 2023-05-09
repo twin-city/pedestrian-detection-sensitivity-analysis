@@ -61,6 +61,8 @@ class MotsynthProcessing(DatasetProcessing):
         df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
                                                                        df_gtbbox_metadata["aspect_ratio"] > mu - std)
 
+        df_frame_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
+
         return self.root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 
     def get_MoTSynth_annotations_and_imagepaths_video(self, video_id="004", max_samples=100000, random_sampling=True, delay=3):
@@ -182,6 +184,7 @@ class MotsynthProcessing(DatasetProcessing):
 
         # todo this info ? as a dict of additional dataset parameters I would say
         resolution = (1920, 1080)
+
 
         return targets, metadatas, frame_id_list, img_path_list
 

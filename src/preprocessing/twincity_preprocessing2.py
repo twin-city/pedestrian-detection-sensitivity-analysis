@@ -293,6 +293,8 @@ def get_twincity_dataset(root, max_samples_per_seq=100):
     df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
                                                                    df_gtbbox_metadata["aspect_ratio"] > mu - std)
 
+    df_frame_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
+
     return root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 
 
