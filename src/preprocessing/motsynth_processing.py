@@ -4,7 +4,8 @@ import torch
 import os.path as osp
 import pandas as pd
 import os
-from src.utils import xywh2xyxy, target_2_json, target_2_torch
+from src.utils import target_2_json, target_2_torch
+from src.plot_utils import xywh2xyxy
 
 from .processing import DatasetProcessing
 
@@ -178,6 +179,9 @@ class MotsynthProcessing(DatasetProcessing):
         df_gtbbox_metadata["seq_name"] = df_frame_metadata["seq_name"].iloc[0]
 
         metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+
+        # todo this info ? as a dict of additional dataset parameters I would say
+        resolution = (1920, 1080)
 
         return targets, metadatas, frame_id_list, img_path_list
 

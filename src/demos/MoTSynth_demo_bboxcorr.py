@@ -103,7 +103,7 @@ df_metrics_frame["gtbbox_filtering_cat"] = "Overall"
 
 #%% Plot one plot to check it
 
-from src.utils import plot_ffpi_mr_on_ax
+from src.plot_utils import plot_ffpi_mr_on_ax
 fig, ax = plt.subplots(1, 1, figsize=(10,10), sharey=True)
 plot_ffpi_mr_on_ax(df_metrics_frame, "Overall", ax, odd=ODD_criterias)
 plt.tight_layout()

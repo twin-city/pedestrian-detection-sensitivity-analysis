@@ -1,38 +1,75 @@
 import os
+
 import pandas as pd
-import setuptools.errors
-import numpy as np
+# from src.utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
+from src.detection.metrics import filter_gt_bboxes, compute_fp_missratio2
 import os.path as osp
+import numpy as np
+import matplotlib.pyplot as plt
 from src.utils import plot_heatmap_metrics
+import matplotlib.pyplot as plt
 
-#%% params of input dataset
+#%% params
 
-dataset_name = "motsynth"
-root_motsynth = "/home/raphael/work/datasets/MOTSynth/"
-max_sample = 600  # Uniform sampled in dataset
+dataset_name = "EuroCityPerson"
+model_name = "faster-rcnn_cityscapes"
+max_sample = 30 # Uniform sampled in dataset
 
-
+model_name = "faster-rcnn_cityscapes"
+seq_cofactors = ["adverse_weather", "is_night"]# , "pitch"]
 metrics = ["MR", "FPPI"]
+
+gtbbox_filtering = {
+    "occlusion_rate": (0.9, "max"),# At least 1 keypoint visible
+    "truncation_rate": (0.9, "max"),
+    "area": (20, "min")
+}
+
 ODD_criterias = {
     "MR": 0.5,
     "FPPI": 5,
 }
 
+model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
+
 occl_thresh = [0.35, 0.8]
 height_thresh = [20, 50, 120]
-resolution = (1920, 1080)
+resolution = (1920, 1024)
+
+param_heatmap_metrics = {
+    "MR": {
+        "vmin": -0.15,
+        "vmax": 0.2,
+        "center": 0.,
+        "cmap": "RdYlGn_r",
+    },
+    "FPPI": {
+        "vmin": -0.15,
+        "vmax": 0.2,
+        "center": 0.,
+        "cmap": "RdYlGn_r",
+    },
+}
+
+metrics = ["MR", "FPPI"]
+
+ODD_limit = [
+    ({"is_night": 1}, "Night"),
+    ({"adverse_weather": 1}, "Adverse Weather"),
+    ({"pitch": {"<":-10}}, "High-angle shot"),
+]
 
 import os
-results_dir = osp.join("../../","results", "MoTSynth", f"MoTSynth_{max_sample}")
+results_dir = osp.join("../", "results", "ECP", f"ECP_{max_sample}")
 os.makedirs(results_dir, exist_ok=True)
 
-#%% Get the dataset
-from src.preprocessing.motsynth_processing import MotsynthProcessing
-motsynth_processor = MotsynthProcessing(root_motsynth, max_samples=max_sample, video_ids=None)
-dataset = motsynth_processor.get_dataset() #todo as class
-root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
+#%%
+from src.preprocessing.ecp_processing import ECPProcessing
 
-#todo in processing
+root_ecp = "/media/raphael/Projects/datasets/EuroCityPerson/ECP/"
+ecp_processor = ECPProcessing(root_ecp, max_samples=max_sample)
+dataset = ecp_processor.get_dataset()
+root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
 
 
 
@@ -41,14 +78,9 @@ from src.utils import compute_correlations, plot_correlations
 #corr_matrix, p_matrix = compute_correlations(df_frame_metadata.groupby("seq_name").apply(lambda x: x.mean()), seq_cofactors)
 #plot_correlations(corr_matrix, p_matrix, title="Correlations between metadatas at sequence level")
 
+#%%
 
-#%% Now plot the multiple cases !!!!!!
-from src.detection.metrics import compute_model_metrics_on_dataset
-model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
-
-#%% Height
-
-import matplotlib.pyplot as plt
+df_gtbbox_metadata["height"] = df_gtbbox_metadata["height"].astype(int)
 
 fig, ax = plt.subplots(1,2)
 
@@ -67,6 +99,12 @@ ax[1].set_xlim(0,1)
 
 plt.show()
 
+#%% Now plot the multiple cases !!!!!!
+from src.detection.metrics import compute_model_metrics_on_dataset
+
+
+
+
 #%% What cases do we study ?
 
 #todo filter truncated in MoTSynth those out of the image --> exluded in Caltech for boundary effects
@@ -78,9 +116,55 @@ gtbbox_filtering_all = {
     },
 }
 
+gtbbox_filtering_height_cats = {
+    "No occlusion": {
+        "occlusion_rate": (0.01, "max"),  # Unoccluded
+        "height": (height_thresh[1], "min"),
+    },
+    "Partial occlusion": {
+        "occlusion_rate": (0.01, "min"),
+        "occlusion_rate": (occl_thresh[0], "max"),
+        "height": (height_thresh[1], "min"),
+    },
+    "Heavy occlusion": {
+        "occlusion_rate": (0.01, "max"),  # Unoccluded
+        "occlusion_rate": (occl_thresh[0], "min"),
+        "occlusion_rate": (occl_thresh[1], "max"),
+        "height": (height_thresh[1], "min"),
+    },
+}
+
+gtbbox_filtering_aspectratio_cats = {
+    "Typical aspect ratios": {
+        "aspect_ratio_is_typical": 1,  #
+        "occlusion_rate": (0.01, "max"),  # Unoccluded
+    },
+    "Atypical aspect ratios": {
+        "aspect_ratio_is_typical": 0,  #
+        "occlusion_rate": (0.01, "max"),  # Unoccluded
+    },
+}
+
+gtbbox_filtering_occlusion_cats = {
+    "near": {
+        "occlusion_rate": (0.01, "max"),  # Unoccluded
+        "height": (height_thresh[2], "min"),
+    },
+    "medium": {
+        "occlusion_rate": (0.01, "max"),  # Unoccluded
+        "height": (height_thresh[2], "max"),
+        "height": (height_thresh[1], "min"),
+    },
+    "far": {
+        "occlusion_rate": (0.01, "max"),  # Unoccluded
+        "height": (height_thresh[1], "max"),
+        "height": (height_thresh[0], "min"),
+    },
+}
 
 gtbbox_filtering_cats = {}
 gtbbox_filtering_cats.update(gtbbox_filtering_all)
+
 
 
 #%% Do we have biases toward people ??? Compute which bounding box were successfully classified as box !!!!
@@ -89,12 +173,8 @@ gtbbox_filtering_cats.update(gtbbox_filtering_all)
 model_name = model_names[0]
 gt_bbox_filtering = gtbbox_filtering_cats["Overall"]
 threshold = 0.5
-
 df_metrics_frame, df_metrics_gtbbox = compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gt_bbox_filtering, device="cuda")
 df_metrics_gtbbox = df_metrics_gtbbox[df_metrics_gtbbox["threshold"]==threshold]
-
-
-
 
 
 #%% Compute for multiple criterias
@@ -109,6 +189,7 @@ for key, val in gtbbox_filtering_cats.items():
 df_metrics_criteria = pd.concat(df_metrics_criteria_list, axis=0)
 
 #%%
+
 from src.utils import plot_ffpi_mr_on_ax
 import matplotlib.pyplot as plt
 
@@ -118,13 +199,7 @@ plt.tight_layout()
 plt.show()
 
 
-
-
-
-#%% After bench, do the plot value difference (simplified, each metric)
-
-#%% Model performance :  Plots MR vs FPPI on frame filtering
-
+#%%
 
 df_analysis = df_analysis = pd.merge(df_metrics_criteria.reset_index(), df_frame_metadata, on="frame_id")
 
@@ -135,7 +210,7 @@ dict_filter_frames = {
     "Overall": [{}],
     "Day / Night": ({"is_night": 0}, {"is_night": 1}),
     "Adverse Weather": ({"adverse_weather": 0}, {"adverse_weather": 1}),
-    "Camera Angle": ({"pitch": {"<": -10}}, {"pitch": {">": -10}}),
+    #"pitch": ({"pitch": {"<": -10}}, {"pitch": {">": -10}}),
 }
 
 min_x, max_x = 0.01, 100  # 0.01 false positive per image to 100
@@ -178,82 +253,9 @@ plt.tight_layout()
 plt.show()
 
 
-#%%
-
-param_heatmap_metrics = {
-    "MR": {
-        "vmin": -0.15,
-        "vmax": 0.2,
-        "center": 0.,
-        "cmap": "RdYlGn_r",
-    },
-    "FPPI": {
-        "vmin": -0.15,
-        "vmax": 0.2,
-        "center": 0.,
-        "cmap": "RdYlGn_r",
-    },
-}
-
-metrics = ["MR", "FPPI"]
-
-ODD_limit = [
-    ({"is_night": 1}, "Night"),
-    ({"adverse_weather": 1}, "Adverse Weather"),
-    ({"pitch": {"<":-10}}, "High-angle shot"),
-]
-
-
+#%% Plot the heatmap
 
 thresholds = [0.5, 0.9, 0.99]
 df_analysis_heatmap = df_analysis[np.isin(df_analysis["threshold"], thresholds)]
 plot_heatmap_metrics(df_analysis_heatmap, model_names, metrics, ODD_limit,
                      param_heatmap_metrics=param_heatmap_metrics, results_dir=results_dir)
-
-
-
-#%%
-i = 30
-
-img_path = osp.join(root, df_frame_metadata["file_name"].iloc[i])
-frame_id = df_frame_metadata.index[i]
-
-gtbbox_filtering_all = {
-    "Overall": {
-        "occlusion_rate": (0.99, "max"),  # Not fully occluded
-        "height": (height_thresh[1], "min"),
-    },
-}
-from src.detection.metrics import filter_gt_bboxes
-
-gtbbox_filtering = gtbbox_filtering_all["Overall"]
-
-if len(pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T) == 1:
-    df_gtbbox_metadata_frame = pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T.reset_index()
-else:
-    df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id].reset_index()
-excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
-
-
-from src.detection.detector import Detector
-
-detector = Detector(model_name, device="cpu")
-preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
-
-from src.detection.metrics import detection_metric
-metric = detection_metric(gtbbox_filtering)
-df_mr_fppi, df_gt_bbox = metric.compute(dataset_name, model_name, preds, targets, df_gtbbox_metadata,
-                                        gtbbox_filtering)
-#todo add threshold to 1 in data
-from src.utils import plot_results_img
-plot_results_img(img_path, frame_id, preds=preds, targets=targets,
-             df_gt_bbox=df_gt_bbox, threshold=0.9999) #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
-
-#%%
-plot_results_img(img_path, frame_id, preds=preds, targets=None,
-             df_gt_bbox=df_gt_bbox, threshold=0.99) #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
-
-#%%
-plot_results_img(img_path, frame_id, preds=None, targets=targets,
-             df_gt_bbox=df_gt_bbox, threshold=0.99) #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
-

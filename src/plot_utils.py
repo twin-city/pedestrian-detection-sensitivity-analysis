@@ -16,49 +16,7 @@ from src.detection.metrics import compute_model_metrics_on_dataset
 from src.utils import subset_dataframe
 
 from src.utils import get_linear_importance, get_permuation_importance
-
-def plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criterias, results_dir=""):
-    min_x, max_x = 0.01, 100  # 0.01 false positive per image to 100
-    min_y, max_y = 0.05, 1  # 5% to 100% Missing Rate
-
-    n_col = max([len(val) for _, val in dict_filter_frames.items()])
-    n_row = len(dict_filter_frames)
-
-    fig, ax = plt.subplots(n_row, n_col, figsize=(8,14))
-    for i, (key, filter_frames) in enumerate(dict_filter_frames.items()):
-
-        ax[i, 0].set_ylabel(key, fontsize=20)
-
-        for j, filter_frame in enumerate(filter_frames):
-
-            for model, df_analysis_model in df_analysis.groupby("model_name"):
-                df_analysis_subset = subset_dataframe(df_analysis_model, filter_frame)
-                metrics_model = df_analysis_subset.groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
-                ax[i, j].plot(metrics_model["FPPI"], metrics_model["MR"], label=model)
-                ax[i, j].scatter(metrics_model["FPPI"], metrics_model["MR"])
-
-            ax[i,j].set_xscale('log')
-            ax[i,j].set_yscale('log')
-            ax[i,j].set_ylim(min_y, max_y)
-            ax[i,j].set_xlim(min_x, max_x)
-            ax[i,j].set_title(filter_frame)
-            ax[i, j].legend()
-
-            import matplotlib.patches as patches
-            x = min_x
-            y = min_y
-            width = ODD_criterias["FPPI"] - min_x
-            height = ODD_criterias["MR"] - min_y
-            # Add the grey square patch to the axes
-            grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
-            ax[i,j].add_patch(grey_square)
-            ax[i,j].text(min_x+width/2/10, min_y+height/2/10, s="ODD")
-
-    plt.tight_layout()
-    plt.savefig(osp.join(results_dir, "frame_cofactor_fppi_mr.png"))
-    plt.show()
-
-
+import matplotlib.patches as patches
 
 
 
@@ -236,34 +194,6 @@ def plot_fp_fn_img(frame_id_list, img_path_list, preds, targets, index_frame, th
     plt.imshow(img)
     plt.show()
 
-def plot_ffpi_mr_on_ax(df_metrics_criteria, cat, ax, odd=None):
-
-    min_x, max_x = 0.01, 100 # 0.01 false positive per image to 100
-    min_y, max_y = 0.05, 1 # 5% to 100% Missing Rate
-
-    df_metrics = df_metrics_criteria[df_metrics_criteria["gtbbox_filtering_cat"] == cat]
-
-    for model, df_analysis_model in df_metrics.groupby("model_name"):
-        metrics_model = df_analysis_model.groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
-        ax.plot(metrics_model["FPPI"], metrics_model["MR"], label=model)
-        ax.scatter(metrics_model["FPPI"], metrics_model["MR"])
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-    ax.set_ylim(min_y, max_y)
-    ax.set_xlim(min_x, max_x)
-    ax.set_title(cat)
-    ax.legend()
-
-    if odd is not None:
-        x = min_x
-        y = min_y
-        width = odd["FPPI"] - min_x
-        height = odd["MR"] - min_y
-        #Add the grey square patch to the axes
-        grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
-        ax.add_patch(grey_square)
-        ax.text(min_x+width/2/10, min_y+height/2/10, s="ODD")
-
 
 def xywh2xyxy(bbox):
     x, y, w, h = bbox
@@ -353,3 +283,96 @@ def plot_image_with_detections(dataset, dataset_name, model_name, plot_threshold
         ax[i].axis("off")
     plt.tight_layout()
     plt.show()
+
+
+
+#%% Plot metrics
+
+def plot_ffpi_mr_on_ax(df_metrics_criteria, cat, ax, odd=None):
+
+    min_x, max_x = 0.01, 100 # 0.01 false positive per image to 100
+    min_y, max_y = 0.05, 1 # 5% to 100% Missing Rate
+
+    df_metrics = df_metrics_criteria[df_metrics_criteria["gtbbox_filtering_cat"] == cat]
+
+    for model, df_analysis_model in df_metrics.groupby("model_name"):
+        metrics_model = df_analysis_model.groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
+        ax.plot(metrics_model["FPPI"], metrics_model["MR"], label=model)
+        ax.scatter(metrics_model["FPPI"], metrics_model["MR"])
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_ylim(min_y, max_y)
+    ax.set_xlim(min_x, max_x)
+    ax.set_title(cat)
+    ax.legend()
+
+    if odd is not None:
+        x = min_x
+        y = min_y
+        width = odd["FPPI"] - min_x
+        height = odd["MR"] - min_y
+        #Add the grey square patch to the axes
+        grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
+        ax.add_patch(grey_square)
+        ax.text(min_x+width/2/10, min_y+height/2/10, s="ODD")
+
+
+
+def plot_fppi_mr_vs_gtbbox_cofactor(df_analysis_cats, ODD_criterias=None):
+
+    fig, ax = plt.subplots(3, 3, figsize=(10,10), sharey=True)
+    plot_ffpi_mr_on_ax(df_analysis_cats, "Overall", ax[0,0], odd=ODD_criterias)
+    plot_ffpi_mr_on_ax(df_analysis_cats, "Typical aspect ratios", ax[0,1])
+    plot_ffpi_mr_on_ax(df_analysis_cats, "Atypical aspect ratios", ax[0,2])
+    plot_ffpi_mr_on_ax(df_analysis_cats, "near", ax[1,0])
+    plot_ffpi_mr_on_ax(df_analysis_cats, "medium", ax[1,1])
+    plot_ffpi_mr_on_ax(df_analysis_cats, "far", ax[1,2])
+    plot_ffpi_mr_on_ax(df_analysis_cats, "No occlusion", ax[2,0])
+    plot_ffpi_mr_on_ax(df_analysis_cats, "Partial occlusion", ax[2,1])
+    plot_ffpi_mr_on_ax(df_analysis_cats, "Heavy occlusion", ax[2,2])
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criterias, results_dir=""):
+    min_x, max_x = 0.01, 100  # 0.01 false positive per image to 100
+    min_y, max_y = 0.05, 1  # 5% to 100% Missing Rate
+
+    n_col = max([len(val) for _, val in dict_filter_frames.items()])
+    n_row = len(dict_filter_frames)
+
+    fig, ax = plt.subplots(n_row, n_col, figsize=(8,14))
+    for i, (key, filter_frames) in enumerate(dict_filter_frames.items()):
+
+        ax[i, 0].set_ylabel(key, fontsize=20)
+
+        for j, filter_frame in enumerate(filter_frames):
+
+            for model, df_analysis_model in df_analysis.groupby("model_name"):
+                df_analysis_subset = subset_dataframe(df_analysis_model, filter_frame)
+                metrics_model = df_analysis_subset.groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
+                ax[i, j].plot(metrics_model["FPPI"], metrics_model["MR"], label=model)
+                ax[i, j].scatter(metrics_model["FPPI"], metrics_model["MR"])
+
+            ax[i,j].set_xscale('log')
+            ax[i,j].set_yscale('log')
+            ax[i,j].set_ylim(min_y, max_y)
+            ax[i,j].set_xlim(min_x, max_x)
+            ax[i,j].set_title(filter_frame)
+            ax[i, j].legend()
+
+
+            x = min_x
+            y = min_y
+            width = ODD_criterias["FPPI"] - min_x
+            height = ODD_criterias["MR"] - min_y
+            # Add the grey square patch to the axes
+            grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
+            ax[i,j].add_patch(grey_square)
+            ax[i,j].text(min_x+width/2/10, min_y+height/2/10, s="ODD")
+
+    plt.tight_layout()
+    plt.savefig(osp.join(results_dir, "frame_cofactor_fppi_mr.png"))
+    plt.show()
+
+

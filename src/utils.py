@@ -85,6 +85,10 @@ def subset_dataframe(df, conditions):
             new_mask = df.iloc[:,0] == df.iloc[:,0] #todo ugly hack
         else:
             if isinstance(values, dict):
+                if 'between' in values: #todo might do it better ?
+                    new_mask1 = df[column] >= values['between'][0]
+                    new_mask2 = df[column] <= values['between'][1]
+                    new_mask = new_mask1*new_mask2
                 if '>' in values:
                     new_mask = df[column] >= values['>']
                 if '<' in values:
@@ -152,13 +156,16 @@ import matplotlib.patches as patches
 
 
 
-def compute_models_metrics_from_gtbbox_criteria(dataset_name, dataset, df_frame_metadata, gtbbox_filtering_cats, model_names):
+def compute_models_metrics_from_gtbbox_criteria(dataset, gtbbox_filtering_cats, model_names):
+
+
+    df_frame_metadata = dataset.df_frame_metadata
 
     # Compute for multiple criteria
     df_metrics_criteria_list = []
-    for key, val in gtbbox_filtering_cats.items():
+    for key, gtbbox_filtering in gtbbox_filtering_cats.items():
         df_results_aspectratio = pd.concat(
-            [compute_model_metrics_on_dataset(model_name, dataset_name, dataset, val, device="cuda")[0] for
+            [compute_model_metrics_on_dataset(model_name, dataset, gtbbox_filtering, device="cuda")[0] for
              model_name in model_names])
         df_results_aspectratio["gtbbox_filtering_cat"] = key
         df_metrics_criteria_list.append(df_results_aspectratio)

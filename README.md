@@ -5,7 +5,7 @@ TODO
   - classe dataset
 - ignore regions of twincity that bug (bbox too big or multiple colors)
 
-
+#todo df_analysis as a result object ?
 
 Download motsynth
 Download eurocityperson

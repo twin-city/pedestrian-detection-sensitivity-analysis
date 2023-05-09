@@ -240,4 +240,6 @@ class ECPProcessing(DatasetProcessing):
         df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
                                                                        df_gtbbox_metadata["aspect_ratio"] > mu - std)
 
+        df_gtbbox_metadata["height"] = df_gtbbox_metadata["height"].astype(int)
+
         return targets, df_gtbbox_metadata, df_frame_metadata, None

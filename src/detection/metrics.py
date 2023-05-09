@@ -6,10 +6,11 @@ import torchvision
 import torch
 from .detector import Detector
 
-def compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gtbbox_filtering, device="cuda"):
+def compute_model_metrics_on_dataset(model_name, dataset, gtbbox_filtering, device="cuda"):
 
     # dataset info
-    root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
+    dataset_name = dataset.dataset_name
+    root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset.get_dataset_as_tuple()
 
     detector = Detector(model_name, device=device)
     preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
