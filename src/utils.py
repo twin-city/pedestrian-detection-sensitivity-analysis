@@ -389,7 +389,7 @@ def plot_dataset_statistics(df_gtbbox_metadata, results_dir=""):
 
 
 
-def compute_models_metrics_from_gtbbox_criteria(dataset_name, dataset, df_frame_metadata, gtbbox_filtering_cats, model_names)
+def compute_models_metrics_from_gtbbox_criteria(dataset_name, dataset, df_frame_metadata, gtbbox_filtering_cats, model_names):
 
     # Compute for multiple criteria
     df_metrics_criteria_list = []
