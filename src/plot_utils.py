@@ -286,6 +286,56 @@ def plot_image_with_detections(dataset, dataset_name, model_name, plot_threshold
 
 
 
+#%% Plot correlation of metrics with params
+
+
+def plot_gtbbox_matched_correlations(model_names, dataset, features_bbox, threshold, gtbbox_filtering):
+
+    df_gtbbox_metadata = dataset.df_gtbbox_metadata
+
+    #todo handle this exception
+    if dataset.dataset_name == "motsynth":
+        attributes = ['attributes_0', 'attributes_1', 'attributes_2',
+                      'attributes_3', 'attributes_4', 'attributes_5', 'attributes_6',
+                      'attributes_7', 'attributes_8', 'attributes_9', 'attributes_10']
+
+    df_gtbbox_corr_list = []
+    for model_name in model_names:
+
+        # Compute metrics and get matched gtbboxes
+        _, df_metrics_gtbbox = compute_model_metrics_on_dataset(
+            model_name, dataset, gtbbox_filtering["Overall"], device="cuda")
+        df_metrics_gtbbox = df_metrics_gtbbox[df_metrics_gtbbox["threshold"]==threshold]
+        # Keep only non-ignored boxes
+        df_metrics_gtbbox_study = df_metrics_gtbbox[np.isin(df_metrics_gtbbox, [0,1])]
+        # Keep only for a given threshold
+        df_metrics_gtbbox_study = df_metrics_gtbbox_study[df_metrics_gtbbox_study["threshold"]==threshold]
+
+        # Append the metadata
+        df_metrics_gtbbox_study.loc[:,features_bbox] = df_gtbbox_metadata.loc[df_metrics_gtbbox_study.index, features_bbox]
+        # If there are attributes, dummify them
+        if "attributes_0" in df_gtbbox_metadata.columns:
+            df_metrics_gtbbox_study.loc[:,attributes] = df_gtbbox_metadata.loc[df_metrics_gtbbox_study.index, attributes]
+            att_list = []
+            num_attributes = len([x for x in df_gtbbox_metadata.columns if "attribute" in x])-1 #todo harmonize this. Minus 1 because one of the columns is array
+            for i in range(num_attributes):
+                df_att = pd.get_dummies(df_metrics_gtbbox_study[f"attributes_{i}"], prefix=f"att{i}")
+                df_metrics_gtbbox_study[df_att.columns] = df_att
+                att_list += list(df_att.columns)
+
+        corr_matrix = df_metrics_gtbbox_study.corr()
+        df_gtbbox_corr_model = pd.DataFrame(corr_matrix["matched"][features_bbox+att_list])
+        df_gtbbox_corr_model = df_gtbbox_corr_model.rename(columns={"matched": model_name})
+        df_gtbbox_corr_list.append(df_gtbbox_corr_model)
+
+    df_gtbbox_corr = pd.concat(df_gtbbox_corr_list, axis=1)
+
+    fig, ax = plt.subplots(figsize=(2*len(model_names), min(6, len(features_bbox+att_list)//10)))
+    sns.heatmap(df_gtbbox_corr, center=0, cmap="PiYG", vmax=1, vmin=-1, ax=ax)
+    plt.tight_layout()
+    plt.show()
+
+
 #%% Plot metrics
 
 def plot_ffpi_mr_on_ax(df_metrics_criteria, cat, ax, odd=None):

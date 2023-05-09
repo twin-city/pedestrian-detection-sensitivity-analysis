@@ -52,12 +52,12 @@ gtbbox_filtering_all = {
 
 gtbbox_filtering_height_cats = {
     "near": {
-        "occlusion_rate": {"<": 0.99},
+        "occlusion_rate": {"<": 0.01},
         "height": {">": height_thresh[2]},
     },
 
     "medium": {
-        "occlusion_rate": {"<": 0.99},
+        "occlusion_rate": {"<": 0.01},
         "height": {"between": (height_thresh[1], height_thresh[2])},
     },
 }

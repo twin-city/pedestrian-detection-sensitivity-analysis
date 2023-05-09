@@ -6,6 +6,7 @@ TODO
 - ignore regions of twincity that bug (bbox too big or multiple colors)
 
 #todo df_analysis as a result object ?
+#todo filter functions in the dataset ?
 
 Download motsynth
 Download eurocityperson
