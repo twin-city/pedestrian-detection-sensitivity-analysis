@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import json
-from src.utils import xywh2xyxy, target_2_json, target_2_torch
-
+from src.utils import target_2_json, target_2_torch
+from src.plot_utils import xywh2xyxy
 
 #todo make only once the conversion
 
