@@ -11,6 +11,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import RidgeCV
 import matplotlib.patches as patches
+import os.path as osp
 
 def plot_importance(model_names, metrics, df_analysis, features, importance_method="linear"):
     # from https://inria.github.io/scikit-learn-mooc/python_scripts/dev_features_importance.html#linear-model-inspection
@@ -237,6 +238,8 @@ def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=No
         for i, bbox in enumerate(targets[(frame_id)][0]["boxes"]):
             ax.text(bbox[0], bbox[1], i)
 
+    plt.axis('off')
+    plt.tight_layout()
     plt.show()
 
 
@@ -298,3 +301,49 @@ def plot_ffpi_mr_on_ax(df_metrics_criteria, cat, ax, odd=None):
         grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
         ax.add_patch(grey_square)
         ax.text(min_x+width/2/10, min_y+height/2/10, s="ODD")
+
+
+
+def plot_heatmap_metrics(df_analysis_heatmap, model_names, metrics, ODD_limit, param_heatmap_metrics={}, results_dir=None):
+    for metric in metrics:
+        mean_metric_values = df_analysis_heatmap.groupby("model_name").apply(lambda x: x[metric].mean())
+        df_odd_model_list = []
+        for model_name in model_names:
+            perc_increase_list = []
+            for limit, limit_name in ODD_limit:
+                if list(limit.keys())[0] in df_analysis_heatmap.columns:
+                    condition = {}
+                    condition.update({"model_name": model_name})
+                    condition.update(limit)
+                    df_subset = subset_dataframe(df_analysis_heatmap, condition)
+                    df_subset = df_subset[df_subset["model_name"] == model_name]
+
+                    perc_increase_list.append(df_subset[metric].mean()-mean_metric_values.loc[model_name])
+                else:
+                    # Add nothing if param is not present, in order to highlight in the plot that it is indeed missing
+                    perc_increase_list.append(np.nan)
+            df_odd_model_list.append(pd.DataFrame(perc_increase_list, index=[x[1] for x in ODD_limit], columns=[model_name]))
+        df_odd_model = pd.concat(df_odd_model_list, axis=1)
+
+
+        """ If boundaries cmap
+        # Define the boundaries of each zone
+        bounds = [0, 0.1, 0.2, 0.5]
+        # Define a unique color for each zone
+        colors = ['green', 'yellow', 'red']
+        # Create a colormap with discrete colors
+        cmap = sns.color_palette(colors, n_colors=len(bounds)-1).as_hex()
+        # Create a BoundaryNorm object to define the colormap
+        norm = BoundaryNorm(bounds, len(cmap))
+        """
+
+        fig, ax = plt.subplots(1,1)
+        sns.heatmap(df_odd_model, annot=True,
+                    ax=ax, fmt=".2f", cbar_kws={'format': '%.2f'},
+                    **param_heatmap_metrics[metric])
+        ax.collections[0].colorbar.set_label('Difference in performance')
+        plt.title(f"Impact of parameters on {metric}")
+        plt.tight_layout()
+        if results_dir is not None:
+            plt.savefig(osp.join(results_dir, f"Performance_difference_{metric}_{model_names}.png"))
+        plt.show()

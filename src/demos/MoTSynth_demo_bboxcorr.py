@@ -76,7 +76,7 @@ plt.show()
 
 gtbbox_filtering_all = {
     "Overall": {
-        "occlusion_rate": (0.96, "max"),  # Not fully occluded
+        "occlusion_rate": (0.99, "max"),  # Not fully occluded
         "height": (height_thresh[1], "min"),
     },
 }
@@ -131,20 +131,35 @@ attributes = ['attributes_0', 'attributes_1', 'attributes_2',
 df_metrics_gtbbox_study.loc[:,features_bbox+attributes] = df_gtbbox_metadata.loc[df_metrics_gtbbox_study.index, features_bbox+attributes]
 
 
-criteria = "attributes_0"
+criteria = "occlusion_rate"
 
 fig, ax = plt.subplots(1,1)
-ax.hist(df_metrics_gtbbox_study[df_metrics_gtbbox_study["matched"]==1][criteria], density=True, alpha=0.5, bins=200)
-ax.hist(df_metrics_gtbbox_study[df_metrics_gtbbox_study["matched"]==0][criteria], density=True, alpha=0.5, bins=200)
+ax.hist(df_metrics_gtbbox_study[df_metrics_gtbbox_study["matched"]==1][criteria],
+        density=True, alpha=0.5, bins=200, label="matched")
+ax.hist(df_metrics_gtbbox_study[df_metrics_gtbbox_study["matched"]==0][criteria],
+        density=True, alpha=0.5, bins=200, label="unmatched")
 #ax.set_xlim(0,400)
+plt.legend()
 plt.show()
 
 
 #%%
 
+att_list = []
 
+for i in range(11):
+    df_att = pd.get_dummies(df_metrics_gtbbox_study[f"attributes_{i}"], prefix=f"att{i}")
+    df_metrics_gtbbox_study[df_att.columns] = df_att
+    att_list += list(df_att.columns)
 
+#%%
 
+import seaborn as sns
+corr_matrix = df_metrics_gtbbox_study.corr()
+fig, ax = plt.subplots(figsize=(3,12))
+sns.heatmap(pd.DataFrame(corr_matrix["matched"][att_list]), center=0, cmap="PiYG")
+plt.tight_layout()
+plt.show()
 #%%
 
 df_analysis = pd.merge(df_metrics_frame.reset_index(), df_frame_metadata, on="frame_id")

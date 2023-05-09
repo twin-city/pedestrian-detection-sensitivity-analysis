@@ -111,7 +111,7 @@ def get_twincity_boxes(img, metadata):
 
 def get_dataset_from_folder(folder, max_samples_per_seq=101):
 
-    version = "v4bis"
+    version = "v5"
     folder_name = folder.split(version+"/")[1]
     root = f'/home/raphael/work/datasets/twincity-Unreal/{version}/'
 
@@ -204,7 +204,7 @@ def get_dataset_from_folder(folder, max_samples_per_seq=101):
                 "weather": metadata["weather"],
                 #"frame_id": frame_id,
                 "id": frame_id,
-                "file_name": img_rgb_path_list[i].split("v4bis/")[1],
+                "file_name": img_rgb_path_list[i].split("v5/")[1],
             }
             df_frame_metadata = pd.DataFrame(dict_frame_metadata, index=[frame_id])
             for col in df.mean(numeric_only=True).keys():

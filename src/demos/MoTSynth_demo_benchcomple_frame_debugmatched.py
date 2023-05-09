@@ -47,10 +47,10 @@ from src.utils import compute_correlations, plot_correlations
 #%% Now plot the multiple cases !!!!!!
 from src.detection.metrics import compute_model_metrics_on_dataset
 model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
-i = 30
+
 model_name = model_names[0]
-img_path = osp.join(root, df_frame_metadata["file_name"].iloc[i])
-frame_id = df_frame_metadata.index[i]
+
+
 
 gtbbox_filtering_all = {
     "Overall": {
@@ -84,6 +84,17 @@ from src.utils import plot_results_img
 #             df_gt_bbox=df_gt_bbox, threshold=0.9999) #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
 
 #%%
+
+i = 500
+img_path = osp.join(root, df_frame_metadata["file_name"].iloc[i])
+frame_id = df_frame_metadata.index[i]
+
+plot_results_img(img_path, frame_id, preds=preds, targets=targets,
+             df_gt_bbox=df_gt_bbox, threshold=0.99) #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
+
+
+#%%
+
 plot_results_img(img_path, frame_id, preds=preds, targets=targets,
              df_gt_bbox=None, threshold=0.99) #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
 

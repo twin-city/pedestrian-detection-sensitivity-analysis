@@ -3,7 +3,7 @@ import pandas as pd
 import setuptools.errors
 import numpy as np
 import os.path as osp
-
+from src.utils import plot_heatmap_metrics
 
 #%% params of input dataset
 
@@ -21,6 +21,10 @@ ODD_criterias = {
 occl_thresh = [0.35, 0.8]
 height_thresh = [20, 50, 120]
 resolution = (1920, 1080)
+
+import os
+results_dir = osp.join("../../","results", "MoTSynth", f"MoTSynth_{max_sample}")
+os.makedirs(results_dir, exist_ok=True)
 
 #%% Get the dataset
 from src.preprocessing.motsynth_processing import MotsynthProcessing
@@ -62,6 +66,7 @@ df_gtbbox_metadata.hist("occlusion_rate", bins=22, ax=ax[1])
 #ax[0].set_xlim(0, 300)
 ax[1].axvline(occl_thresh[0], c="red")
 ax[1].axvline(occl_thresh[1], c="red")
+ax[1].set_xlim(0,1)
 #ax[0].axvline(height_thresh[2], c="red")
 
 plt.show()
@@ -179,61 +184,35 @@ plt.show()
 
 #%%
 
+param_heatmap_metrics = {
+    "MR": {
+        "vmin": -0.15,
+        "vmax": 0.2,
+        "center": 0.,
+        "cmap": "RdYlGn_r",
+    },
+    "FPPI": {
+        "vmin": -0.15,
+        "vmax": 0.2,
+        "center": 0.,
+        "cmap": "RdYlGn_r",
+    },
+}
 
-import seaborn as sns
-from matplotlib.colors import BoundaryNorm
-
-threshold = 0.9
+metrics = ["MR", "FPPI"]
 
 ODD_limit = [
-    {"is_night": 1},
-    {"adverse_weather": 1},
-    # {"pitch": {"<":-10}},
+    ({"is_night": 1}, "Night"),
+    ({"adverse_weather": 1}, "Adverse Weather"),
+    ({"pitch": {"<":-10}}, "High-angle shot"),
 ]
-ax_y_labels = ["night", "bad weather"]  # , "high-angle shot"]
-df_analysis_50 = df_analysis[df_analysis["threshold"] == threshold]
-
-for metric in ["MR", "FPPI"]:
-
-    mean_metric_values = df_analysis_50.groupby("model_name").apply(lambda x: x[metric].mean())
-
-    df_odd_model_list = []
-    for model_name in model_names:
-        perc_increase_list = []
-        for limit in ODD_limit:
-            condition = {}
-            condition.update({"model_name": model_name})
-            condition.update(limit)
-            df_subset = subset_dataframe(df_analysis_50, condition)
-            df_subset = df_subset[df_subset["model_name"] == model_name]
-            perc_increase_list.append(df_subset[metric].mean()-mean_metric_values.loc[model_name])
-        df_odd_model_list.append(pd.DataFrame(perc_increase_list, index=ODD_limit, columns=[model_name]))
-
-    df_odd_model = pd.concat(df_odd_model_list, axis=1)
-    df_odd_model.index = ax_y_labels
 
 
 
-    # Define the boundaries of each zone
-    bounds = [0, 0.1, 0.2, 0.5]
-    # Define a unique color for each zone
-    colors = ['green', 'yellow', 'red']
-    # Create a colormap with discrete colors
-    cmap = sns.color_palette(colors, n_colors=len(bounds)-1).as_hex()
-    # Create a BoundaryNorm object to define the colormap
-    norm = BoundaryNorm(bounds, len(cmap))
-
-    #cmap = "YlOrRd"
-    cmap = "RdYlGn_r"
-
-    fig, ax = plt.subplots(1,1)
-    sns.heatmap(df_odd_model, annot=True,
-                cmap=cmap, center=0,
-                ax=ax, fmt=".2f", cbar_kws={'format': '%.2f'})
-    ax.collections[0].colorbar.set_label('Decrease in performance')
-    plt.title(f"Impact of parameters on {metric}")
-    plt.tight_layout()
-    plt.show()
+thresholds = [0.5, 0.9, 0.99]
+df_analysis_heatmap = df_analysis[np.isin(df_analysis["threshold"], thresholds)]
+plot_heatmap_metrics(df_analysis_heatmap, model_names, metrics, ODD_limit,
+                     param_heatmap_metrics=param_heatmap_metrics, results_dir=results_dir)
 
 
 

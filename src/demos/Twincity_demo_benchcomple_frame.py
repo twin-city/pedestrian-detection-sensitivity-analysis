@@ -3,58 +3,51 @@ import pandas as pd
 import setuptools.errors
 import numpy as np
 import os.path as osp
-
+import os
+from src.detection.metrics import compute_model_metrics_on_dataset
+import matplotlib.pyplot as plt
 
 #%% params of input dataset
 
+# Parameters for results generation
+from src.demos.configs import ODD_limit, ODD_criterias, param_heatmap_metrics, metrics, occl_thresh, height_thresh, model_names
+
+# Dataset
+max_sample = 50
 dataset_name = "twincity"
-root = "/home/raphael/work/datasets/twincity-Unreal/v4bis"
-
-
-metrics = ["MR", "FPPI"]
-ODD_criterias = {
-    "MR": 0.5,
-    "FPPI": 5,
-}
-
-occl_thresh = [0.35, 0.8]
-height_thresh = [20, 50, 120]
+root = "/home/raphael/work/datasets/twincity-Unreal/v5"
 resolution = (1920, 1080)
+results_dir = osp.join("../../","results", dataset_name, f"{dataset_name}{max_sample}")
+os.makedirs(results_dir, exist_ok=True)
+
+# Which models to study
+model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
+
 
 #%% Get the dataset
 from src.preprocessing.twincity_preprocessing2 import get_twincity_dataset
-dataset = get_twincity_dataset(root, 50)
+dataset = get_twincity_dataset(root, max_sample)
 root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
-
-
-#root, targets, metadatas, frame_id_list, img_path_list = dataset
-#df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = metadatas
-
-#todo in processing
-#df_gtbbox_metadata["aspect_ratio"] = 1/df_gtbbox_metadata["aspect_ratio"]
+#todo in abstract dataset class
 mu = 0.4185
 std = 0.12016
 df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu+std,  df_gtbbox_metadata["aspect_ratio"] > mu-std)
-#df_frame_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
 
-#%% Plot example
 
-df_frame_metadata[df_frame_metadata["is_night"]==1]["file_name"]
 
-#%% Multiple plots
+
+
+
+#%% See Dataset Characteristics ==============================
+
+
+#%% Correlations
 from src.utils import compute_correlations, plot_correlations
 #corr_matrix, p_matrix = compute_correlations(df_frame_metadata.groupby("seq_name").apply(lambda x: x.mean()), seq_cofactors)
 #plot_correlations(corr_matrix, p_matrix, title="Correlations between metadatas at sequence level")
 
 
-#%% Now plot the multiple cases !!!!!!
-from src.detection.metrics import compute_model_metrics_on_dataset
-model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
-
-#%% Height
-
-import matplotlib.pyplot as plt
-
+#%% Height & Occlusion
 fig, ax = plt.subplots(1,2)
 
 df_gtbbox_metadata.hist("height", bins=200, ax=ax[0])
@@ -62,20 +55,18 @@ ax[0].set_xlim(0, 300)
 ax[0].axvline(height_thresh[0], c="red")
 ax[0].axvline(height_thresh[1], c="red")
 ax[0].axvline(height_thresh[2], c="red")
+ax[0].set_title("Bounding Box Height")
 
-
-df_gtbbox_metadata.hist("area", bins=100, ax=ax[1])
-#ax[0].set_xlim(0, 300)
-#ax[1].axvline(occl_thresh[0], c="red")
-#ax[1].axvline(occl_thresh[1], c="red")
-#ax[1].set_xlim(500)
-#ax[0].axvline(height_thresh[2], c="red")
-
+if "occlusion_rate" in df_gtbbox_metadata.columns:
+    df_gtbbox_metadata.hist("occlusion_rate", bins=100, ax=ax[1])
+    ax[1].axvline(occl_thresh[0], c="red")
+    ax[1].axvline(occl_thresh[1], c="red")
+else:
+    ax[1].set_xlim(0,1)
+ax[1].set_title("Occlusion rate")
 plt.show()
 
 #%% What cases do we study ?
-
-#todo filter truncated in MoTSynth those out of the image --> exluded in Caltech for boundary effects
 
 gtbbox_filtering_all = {
     "Overall": {
@@ -125,9 +116,7 @@ plt.show()
 
 
 #%% After bench, do the plot value difference (simplified, each metric)
-
 #%% Model performance :  Plots MR vs FPPI on frame filtering
-
 
 df_analysis = df_analysis = pd.merge(df_metrics_criteria.reset_index(), df_frame_metadata, on="frame_id")
 
@@ -138,7 +127,7 @@ dict_filter_frames = {
     "Overall": [{}],
     "Day / Night": ({"is_night": 0}, {"is_night": 1}),
     #"Adverse Weather": ({"weather": ["Partially cloudy"]}, {"weather": ["Foggy"]}),
-    #"Camera Angle": ({"pitch": {"<": -10}}, {"pitch": 0}),
+    "Camera Angle": ({"pitch": {"<": -10}}, {"pitch": 0}),
 }
 
 min_x, max_x = 0.01, 100  # 0.01 false positive per image to 100
@@ -184,6 +173,26 @@ plt.show()
 
 
 #%%
+from src.utils import plot_heatmap_metrics
+thresholds = [0.5, 0.9, 0.99]
+df_analysis_heatmap = df_analysis[np.isin(df_analysis["threshold"], thresholds)]
+plot_heatmap_metrics(df_analysis_heatmap, model_names, metrics, ODD_limit,
+                     param_heatmap_metrics=param_heatmap_metrics, results_dir=results_dir)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#%% Plot an image in particular =========================
 
 i = 30
 
@@ -225,66 +234,52 @@ plot_results_img(img_path, frame_id, preds=preds, targets=targets,
              df_gt_bbox=df_gt_bbox, threshold=0.9999) #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
 
 
-"""
+
+#%%
+
+from src.detection.metrics import compute_model_metrics_on_dataset
+model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
+model_name = model_names[0]
+
+
+gtbbox_filtering_all = {
+    "Overall": {
+        #"occlusion_rate": (0.99, "max"),  # Not fully occluded
+        "height": (height_thresh[1], "min"),
+    },
+}
+from src.detection.metrics import filter_gt_bboxes
+
+gtbbox_filtering = gtbbox_filtering_all["Overall"]
+
+if len(pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T) == 1:
+    df_gtbbox_metadata_frame = pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T.reset_index()
+else:
+    df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id].reset_index()
+excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
+
+
+from src.detection.detector import Detector
+
+detector = Detector(model_name, device="cuda")
+preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
+
+from src.detection.metrics import detection_metric
+metric = detection_metric(gtbbox_filtering)
+_, df_gt_bbox = metric.compute(dataset_name, model_name, preds, targets, df_gtbbox_metadata,
+                                        gtbbox_filtering)
+
+
+from src.utils import plot_results_img
+
 #%%
 
 
-import seaborn as sns
-from matplotlib.colors import BoundaryNorm
+i = 18
+img_path = osp.join(root, df_frame_metadata["file_name"].iloc[i])
+frame_id = df_frame_metadata.index[i]
 
-threshold = 0.9
-
-ODD_limit = [
-    {"is_night": 1},
-    #{"adverse_weather": 1},
-    # {"pitch": {"<":-10}},
-]
-ax_y_labels = ["night", "bad weather"]  # , "high-angle shot"]
-df_analysis_50 = df_analysis[df_analysis["threshold"] == threshold]
-
-for metric in ["MR", "FPPI"]:
-
-    mean_metric_values = df_analysis_50.groupby("model_name").apply(lambda x: x[metric].mean())
-
-    df_odd_model_list = []
-    for model_name in model_names:
-        perc_increase_list = []
-        for limit in ODD_limit:
-            condition = {}
-            condition.update({"model_name": model_name})
-            condition.update(limit)
-            df_subset = subset_dataframe(df_analysis_50, condition)
-            df_subset = df_subset[df_subset["model_name"] == model_name]
-            perc_increase_list.append(df_subset[metric].mean()-mean_metric_values.loc[model_name])
-        df_odd_model_list.append(pd.DataFrame(perc_increase_list, index=ODD_limit, columns=[model_name]))
-
-    df_odd_model = pd.concat(df_odd_model_list, axis=1)
-    df_odd_model.index = ax_y_labels
-
-
-
-    # Define the boundaries of each zone
-    bounds = [0, 0.1, 0.2, 0.5]
-    # Define a unique color for each zone
-    colors = ['green', 'yellow', 'red']
-    # Create a colormap with discrete colors
-    cmap = sns.color_palette(colors, n_colors=len(bounds)-1).as_hex()
-    # Create a BoundaryNorm object to define the colormap
-    norm = BoundaryNorm(bounds, len(cmap))
-
-    #cmap = "YlOrRd"
-    cmap = "RdYlGn_r"
-
-    fig, ax = plt.subplots(1,1)
-    sns.heatmap(df_odd_model, annot=True,
-                cmap=cmap, center=0,
-                ax=ax, fmt=".2f", cbar_kws={'format': '%.2f'})
-    ax.collections[0].colorbar.set_label('Decrease in performance')
-    plt.title(f"Impact of parameters on {metric}")
-    plt.tight_layout()
-    plt.show()
-"""
-
-
+plot_results_img(img_path, frame_id, preds=None, targets=targets,
+             df_gt_bbox=df_gt_bbox, threshold=0.9) #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
 
 
