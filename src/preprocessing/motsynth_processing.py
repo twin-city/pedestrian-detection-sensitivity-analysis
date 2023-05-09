@@ -53,6 +53,13 @@ class MotsynthProcessing(DatasetProcessing):
 
     def get_dataset(self):
         targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata= self.get_MoTSynth_annotations_and_imagepaths()
+
+        df_gtbbox_metadata["aspect_ratio"] = 1 / df_gtbbox_metadata["aspect_ratio"]
+        mu = 0.4185
+        std = 0.12016
+        df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
+                                                                       df_gtbbox_metadata["aspect_ratio"] > mu - std)
+
         return self.root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 
     def get_MoTSynth_annotations_and_imagepaths_video(self, video_id="004", max_samples=100000, random_sampling=True, delay=3):

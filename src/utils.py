@@ -12,6 +12,7 @@ from sklearn.inspection import permutation_importance
 from sklearn.linear_model import RidgeCV
 import matplotlib.patches as patches
 import os.path as osp
+from src.detection.metrics import compute_model_metrics_on_dataset
 
 def plot_importance(model_names, metrics, df_analysis, features, importance_method="linear"):
     # from https://inria.github.io/scikit-learn-mooc/python_scripts/dev_features_importance.html#linear-model-inspection
@@ -94,6 +95,10 @@ def get_permuation_importance(df, metric, features):
     return forest_importances.values
 
 
+def filter_gt_bboxes(df, gt_bbox_filtering):
+    df_subset = subset_dataframe(df, gt_bbox_filtering)
+    excluded_gt = list(set(range(len(df))) - set(df_subset.index))
+    return excluded_gt
 
 def subset_dataframe(df, conditions):
     """
@@ -107,19 +112,31 @@ def subset_dataframe(df, conditions):
 
     # Iterate over each condition in the dictionary and update the mask accordingly
     for column, values in conditions.items():
-        if isinstance(values, dict):
-            if '>' in values:
-                mask &= df[column] >= values['>']
-            if '<' in values:
-                mask &= df[column] <= values['<']
-            if 'value' in values:
-                mask &= df[column] == values['value']
-            if 'set_values' in values:
-                mask &= df[column].isin(values['set_values'])
-        elif isinstance(values, (list, set, np.ndarray)):
-            mask &= df[column].isin(values)
-        elif isinstance(values, (int, float)):
-            mask &= df[column] == values
+
+        if column not in df.columns:
+            print(f"Warning, column {column} was not found in dataframe to subset, disgarding.")
+            new_mask = df.iloc[:,0] == df.iloc[:,0] #todo ugly hack
+        else:
+            if isinstance(values, dict):
+                if '>' in values:
+                    new_mask = df[column] >= values['>']
+                if '<' in values:
+                    new_mask = df[column] <= values['<']
+                if 'value' in values:
+                    new_mask = df[column] == values['value']
+                if 'set_values' in values:
+                    new_mask = df[column].isin(values['set_values'])
+            elif isinstance(values, (list, set, np.ndarray)):
+                new_mask = df[column].isin(values)
+            elif isinstance(values, (int, float, str)):
+                new_mask = df[column] == values
+            else:
+                raise NotImplementedError("The subset condition was not set according to subset_dataframe inputs.")
+
+        if new_mask.sum() == 0:
+            print(f"Warning, the condition {column} did not change the subset.")
+
+        mask &= new_mask
 
     # Apply the mask to the DataFrame to get the subset
     subset_df = df[mask]
@@ -347,3 +364,42 @@ def plot_heatmap_metrics(df_analysis_heatmap, model_names, metrics, ODD_limit, p
         if results_dir is not None:
             plt.savefig(osp.join(results_dir, f"Performance_difference_{metric}_{model_names}.png"))
         plt.show()
+
+
+from src.demos.configs import height_thresh, occl_thresh
+def plot_dataset_statistics(df_gtbbox_metadata, results_dir=""):
+
+    fig, ax = plt.subplots(1,2)
+    df_gtbbox_metadata.hist("height", bins=200, ax=ax[0])
+    ax[0].set_xlim(0, 300)
+    ax[0].axvline(height_thresh[0], c="red")
+    ax[0].axvline(height_thresh[1], c="red")
+    ax[0].axvline(height_thresh[2], c="red")
+    ax[0].set_title("Bounding Box Height")
+
+    if "occlusion_rate" in df_gtbbox_metadata.columns:
+        df_gtbbox_metadata.hist("occlusion_rate", bins=100, ax=ax[1])
+        ax[1].axvline(occl_thresh[0], c="red")
+        ax[1].axvline(occl_thresh[1], c="red")
+    else:
+        ax[1].set_xlim(0,1)
+    ax[1].set_title("Occlusion rate")
+    plt.savefig(osp.join(results_dir, "dataset_statistics.png"))
+    plt.show()
+
+
+
+def compute_models_metrics_from_gtbbox_criteria(dataset_name, dataset, df_frame_metadata, gtbbox_filtering_cats, model_names)
+
+    # Compute for multiple criteria
+    df_metrics_criteria_list = []
+    for key, val in gtbbox_filtering_cats.items():
+        df_results_aspectratio = pd.concat(
+            [compute_model_metrics_on_dataset(model_name, dataset_name, dataset, val, device="cuda")[0] for
+             model_name in model_names])
+        df_results_aspectratio["gtbbox_filtering_cat"] = key
+        df_metrics_criteria_list.append(df_results_aspectratio)
+    df_metrics_criteria = pd.concat(df_metrics_criteria_list, axis=0)
+    df_analysis = pd.merge(df_metrics_criteria.reset_index(), df_frame_metadata, on="frame_id")
+
+    return df_analysis

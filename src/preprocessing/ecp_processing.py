@@ -60,6 +60,9 @@ class ECPProcessing(DatasetProcessing):
 
     def get_dataset(self):
         targets, metadatas, frame_id_list, img_path_list = self.get_annotations_and_imagepaths()
+
+
+
         return self.root, targets, metadatas, frame_id_list, img_path_list
 
     def get_ECP_annotations_and_imagepaths_folder(self, time, set, city):
@@ -228,5 +231,13 @@ class ECPProcessing(DatasetProcessing):
             lambda x: pd.Series(list(range(0, len(x))))).values
         df_gtbbox_metadata["id"] = df_gtbbox_metadata["frame_id"] + "_" + df_gtbbox_metadata["id_in_frame"].astype(str)
         df_gtbbox_metadata = df_gtbbox_metadata.set_index(["frame_id", "id"])
+
+
+        #todo factorize
+        df_gtbbox_metadata["aspect_ratio"] = 1 / df_gtbbox_metadata["aspect_ratio"]
+        mu = 0.4185
+        std = 0.12016
+        df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
+                                                                       df_gtbbox_metadata["aspect_ratio"] > mu - std)
 
         return targets, df_gtbbox_metadata, df_frame_metadata, None

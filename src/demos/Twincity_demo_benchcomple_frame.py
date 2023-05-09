@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 #%% params of input dataset
 
 # Parameters for results generation
-from src.demos.configs import ODD_limit, ODD_criterias, param_heatmap_metrics, metrics, occl_thresh, height_thresh, model_names
+from src.demos.configs import ODD_limit, ODD_criterias, param_heatmap_metrics, metrics, occl_thresh, height_thresh, gtbbox_filtering_all
 
 # Dataset
 max_sample = 50
@@ -29,9 +29,10 @@ from src.preprocessing.twincity_preprocessing2 import get_twincity_dataset
 dataset = get_twincity_dataset(root, max_sample)
 root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
 #todo in abstract dataset class
-mu = 0.4185
-std = 0.12016
-df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu+std,  df_gtbbox_metadata["aspect_ratio"] > mu-std)
+
+
+
+
 
 
 
@@ -41,47 +42,32 @@ df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadat
 #%% See Dataset Characteristics ==============================
 
 
+
+
 #%% Correlations
+seq_cofactors = ["is_night"] #todo virrer d'ici
 from src.utils import compute_correlations, plot_correlations
-#corr_matrix, p_matrix = compute_correlations(df_frame_metadata.groupby("seq_name").apply(lambda x: x.mean()), seq_cofactors)
-#plot_correlations(corr_matrix, p_matrix, title="Correlations between metadatas at sequence level")
+corr_matrix, p_matrix = compute_correlations(df_frame_metadata.groupby("seq_name").apply(lambda x: x.mean()), seq_cofactors)
+plot_correlations(corr_matrix, p_matrix, title="Correlations between metadatas at sequence level")
 
 
 #%% Height & Occlusion
-fig, ax = plt.subplots(1,2)
-
-df_gtbbox_metadata.hist("height", bins=200, ax=ax[0])
-ax[0].set_xlim(0, 300)
-ax[0].axvline(height_thresh[0], c="red")
-ax[0].axvline(height_thresh[1], c="red")
-ax[0].axvline(height_thresh[2], c="red")
-ax[0].set_title("Bounding Box Height")
-
-if "occlusion_rate" in df_gtbbox_metadata.columns:
-    df_gtbbox_metadata.hist("occlusion_rate", bins=100, ax=ax[1])
-    ax[1].axvline(occl_thresh[0], c="red")
-    ax[1].axvline(occl_thresh[1], c="red")
-else:
-    ax[1].set_xlim(0,1)
-ax[1].set_title("Occlusion rate")
-plt.show()
+#todo set dataset plot in dataset object
+from src.utils import plot_dataset_statistics
+plot_dataset_statistics(df_gtbbox_metadata, results_dir)
 
 #%% What cases do we study ?
 
-gtbbox_filtering_all = {
-    "Overall": {
-        #"occlusion_rate": (0.99, "max"),  # Not fully occluded
-        "height": (height_thresh[1], "min"),
-    },
-}
-
-
+from src.utils import compute_models_metrics_from_gtbbox_criteria
 gtbbox_filtering_cats = {}
 gtbbox_filtering_cats.update(gtbbox_filtering_all)
+df_analysis = compute_models_metrics_from_gtbbox_criteria(dataset_name, dataset, df_frame_metadata, gtbbox_filtering_cats, model_names)
 
 
-#%% Do we have biases toward people ??? Compute which bounding box were successfully classified as box !!!!
-# function of other parameters ...
+
+
+
+""" Legacy
 
 model_name = model_names[0]
 gt_bbox_filtering = gtbbox_filtering_cats["Overall"]
@@ -89,36 +75,25 @@ threshold = 0.5
 
 df_metrics_frame, df_metrics_gtbbox = compute_model_metrics_on_dataset(model_name, dataset_name, dataset, gt_bbox_filtering, device="cuda")
 df_metrics_gtbbox = df_metrics_gtbbox[df_metrics_gtbbox["threshold"]==threshold]
+"""
 
 
+""" Legacy
 
-
-
-#%% Compute for multiple criterias
-
-df_metrics_criteria_list = []
-for key, val in gtbbox_filtering_cats.items():
-    df_results_aspectratio = pd.concat(
-        [compute_model_metrics_on_dataset(model_name, dataset_name, dataset, val, device="cuda")[0] for
-         model_name in model_names])
-    df_results_aspectratio["gtbbox_filtering_cat"] = key
-    df_metrics_criteria_list.append(df_results_aspectratio)
-df_metrics_criteria = pd.concat(df_metrics_criteria_list, axis=0)
-
-#%%
 from src.utils import plot_ffpi_mr_on_ax
 import matplotlib.pyplot as plt
-
 fig, ax = plt.subplots(1, 1, figsize=(10,10), sharey=True)
 plot_ffpi_mr_on_ax(df_metrics_criteria, "Overall", ax, odd=ODD_criterias)
 plt.tight_layout()
 plt.show()
+"""
+
 
 
 #%% After bench, do the plot value difference (simplified, each metric)
 #%% Model performance :  Plots MR vs FPPI on frame filtering
 
-df_analysis = df_analysis = pd.merge(df_metrics_criteria.reset_index(), df_frame_metadata, on="frame_id")
+
 
 from src.utils import subset_dataframe
 import matplotlib.pyplot as plt
@@ -202,13 +177,8 @@ frame_id = df_frame_metadata.index[i]
 
 #%%
 
-gtbbox_filtering_all = {
-    "Overall": {
-        #"occlusion_rate": (0.99, "max"),  # Not fully occluded
-        "height": (200, "min"),
-    },
-}
-from src.detection.metrics import filter_gt_bboxes
+
+from src.utils import filter_gt_bboxes
 
 gtbbox_filtering = gtbbox_filtering_all["Overall"]
 
@@ -238,17 +208,9 @@ plot_results_img(img_path, frame_id, preds=preds, targets=targets,
 #%%
 
 from src.detection.metrics import compute_model_metrics_on_dataset
-model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
 model_name = model_names[0]
 
 
-gtbbox_filtering_all = {
-    "Overall": {
-        #"occlusion_rate": (0.99, "max"),  # Not fully occluded
-        "height": (height_thresh[1], "min"),
-    },
-}
-from src.detection.metrics import filter_gt_bboxes
 
 gtbbox_filtering = gtbbox_filtering_all["Overall"]
 

@@ -273,6 +273,7 @@ def get_twincity_dataset(root, max_samples_per_seq=100):
         targets.update(targets_folder)
         #frame_id_list += frame_id_list_folder
         #img_path_list += img_path_list_folder.tolist()
+        df_frame_metadata_folder["seq_name"] = folder.split("/")[-1]
         df_gtbbox_metadata_list.append(df_gtbbox_metadata_folder)
         df_frame_metadata_list.append(df_frame_metadata_folder)
         df_sequence_metadata_list.append(df_sequence_metadata_folder)
@@ -286,6 +287,11 @@ def get_twincity_dataset(root, max_samples_per_seq=100):
     df_gtbbox_metadata = df_gtbbox_metadata.set_index(["frame_id", "id"])
     if df_frame_metadata.index.name != "frame_id":
         df_frame_metadata = df_frame_metadata.set_index("frame_id")
+
+    mu = 0.4185
+    std = 0.12016
+    df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
+                                                                   df_gtbbox_metadata["aspect_ratio"] > mu - std)
 
     return root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 

@@ -181,7 +181,8 @@ def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
 
     return num_fp, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox, excluded_gt
 
-
+"""
+legacy
 def filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering):
     # replace by subset_dataframe
 
@@ -205,6 +206,7 @@ def filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering):
         excluded_gt = []
 
     return excluded_gt
+"""
 
 class detection_metric:
     def __init__(self, gt_bbox_filter):
@@ -265,7 +267,19 @@ class detection_metric:
                 df_gtbbox_metadata_frame = pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T.reset_index()
             else:
                 df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[frame_id].reset_index()
+
+
+            #%% Compare the 2
+
+            """ Legacy
             excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
+            """
+            from src.utils import subset_dataframe, filter_gt_bboxes
+
+
+
+            excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
+
 
             #todo handle case no one to predict in image
             if len(excluded_gt) < len(targets[frame_id][0]["boxes"]):

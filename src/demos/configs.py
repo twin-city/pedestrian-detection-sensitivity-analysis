@@ -30,3 +30,11 @@ ODD_criterias = {
 
 occl_thresh = [0.35, 0.8]
 height_thresh = [20, 50, 120]
+
+
+gtbbox_filtering_all = {
+    "Overall": {
+        "occlusion_rate": {"<": 0.99},
+        "height": {">": height_thresh[1]},
+    },
+}

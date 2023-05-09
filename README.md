@@ -1,4 +1,11 @@
 
+TODO
+- master avec MoTSynth et Twincity
+- factoriser code
+  - classe dataset
+- ignore regions of twincity that bug (bbox too big or multiple colors)
+
+
 
 Download motsynth
 Download eurocityperson
