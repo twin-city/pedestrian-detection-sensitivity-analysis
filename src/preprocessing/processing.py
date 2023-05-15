@@ -18,3 +18,6 @@ class DatasetProcessing:
         :return:
         """
         raise NotImplementedError
+
+    def add_dummy_columns(self):
+        pass

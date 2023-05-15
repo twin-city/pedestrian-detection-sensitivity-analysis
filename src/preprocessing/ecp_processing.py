@@ -265,7 +265,7 @@ class ECPProcessing(DatasetProcessing):
                                                                        df_gtbbox_metadata["aspect_ratio"] > mu - std)
 
         df_gtbbox_metadata["height"] = df_gtbbox_metadata["height"].astype(int)
-        df_frame_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
+        df_frame_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
 
         df_gtbbox_metadata["ignore-region"] = 0
 

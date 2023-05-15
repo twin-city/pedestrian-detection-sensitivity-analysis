@@ -8,12 +8,16 @@ from src.demos.configs import ODD_limit, ODD_criterias, param_heatmap_metrics, m
 
 # Which models to study
 model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
-
 dataset_names = ["motsynth", "twincity", "EuroCityPerson"]
 max_samples = [600, 50, 30]
 
 # Dataset
 
+
+dataset_name = "coco_Fudan"
+max_samples = 200
+root = "/home/raphael/work/datasets/PennFudanPed"
+coco_json_path = "/home/raphael/work/datasets/PennFudanPed/coco.json"
 
 
 #dataset_name, max_sample = "motsynth", 600
@@ -23,11 +27,12 @@ max_samples = [600, 50, 30]
 from src.dataset.dataset_factory import DatasetFactory
 #for dataset_name, max_sample in zip(dataset_names, max_samples):
 
-dataset_name, max_sample = "twincity", 50
-#dataset_name, max_sample = "motsynth", 600
-#dataset_name, max_sample = "EuroCityPerson", 30
 
-dataset = DatasetFactory.get_dataset(dataset_name, max_sample)
+# dataset_name, max_sample = "motsynth", 600
+#dataset_name, max_sample = "EuroCityPerson", 30
+# dataset_name, max_sample = "twincity", 50
+
+dataset = DatasetFactory.get_dataset(dataset_name, max_samples, root=root, coco_json_path=coco_json_path)
 dataset_tuple = dataset.get_dataset_as_tuple()
 root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset_tuple
 

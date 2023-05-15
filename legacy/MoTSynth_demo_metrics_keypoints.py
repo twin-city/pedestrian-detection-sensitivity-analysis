@@ -16,7 +16,7 @@ from src.preprocessing.motsynth_processing import MotsynthProcessing
 motsynth_processor = MotsynthProcessing(root_motsynth, max_samples=max_sample, video_ids=None)
 targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = motsynth_processor.get_dataset()
 df_gtbbox_metadata.index = df_gtbbox_metadata.index.rename({"image_id": "frame_id"})
-df_gtbbox_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len)
+df_gtbbox_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").apply(len)
 keypoints_label_names = [f"keypoints_label_{i}" for i in range(22)]
 df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata[keypoints_label_names].apply(lambda x: (2-x)).mean(axis=1)
 

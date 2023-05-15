@@ -29,17 +29,36 @@ class Dataset():
     # I/O
 
     def create_markdown_description_table(self, folder_path="../../results"):
-        n_images = self.df_frame_metadata.groupby("is_night").apply(len)
-        n_seqs = self.df_frame_metadata.groupby("is_night").apply(lambda x: len(x["seq_name"].unique()))
-        n_person = self.df_frame_metadata.groupby("is_night").apply(lambda x: x["num_person"].sum())
-        weathers = self.df_frame_metadata["weather"].unique()
+
+        df_frame = self.df_frame_metadata.copy(deep=True)
+        if "is_night" not in df_frame.columns:
+            df_frame["is_night"] = 0
+
+        n_images = df_frame.groupby("is_night").apply(len)
+        n_seqs = df_frame.groupby("is_night").apply(lambda x: len(x["seq_name"].unique()))
+        n_person = df_frame.groupby("is_night").apply(lambda x: x["num_pedestrian"].sum())
+        weathers = df_frame["weather"].unique()
 
         dataset_version_name = f"{self.dataset_name}_{self.max_sample}"
 
+        def print_stat(df_stat):
+
+            stat_day = 0 in df_stat.keys()
+            stat_night = 1 in df_stat.keys()
+
+            if stat_day and stat_night > 0:
+                return f"{df_stat[0]}/{df_stat[1]}"
+            elif stat_night == 0:
+                return f"{df_stat[0]}/"
+            elif stat_day == 0:
+                return f"/{df_stat[1]}"
+            else:
+                raise ValueError("Cannot print in df_descr.md due to unknown error")
+
         df_descr = pd.DataFrame({
-            "sequences (day/night)": f"{n_seqs[0]}/{n_seqs[1]}",
-            "images (day/night)": f"{n_images[0]}/{n_images[1]}",
-            "person (day/night)": f"{n_person[0]}/{n_person[1]}",
+            "sequences (day/night)": f"{print_stat(n_seqs)}",
+            "images (day/night)": f"{print_stat(n_images)}",
+            "person (day/night)": f"{print_stat(n_person)}",
             "weather": ", ".join(list(weathers)),
         }, index=[dataset_version_name]).T
         df_descr.index.name = "characteristics"

@@ -16,7 +16,7 @@ from src.preprocessing.motsynth_processing import MotsynthProcessing
 motsynth_processor = MotsynthProcessing(root_motsynth, max_samples=max_sample, video_ids=None)
 targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = motsynth_processor.get_dataset()
 df_gtbbox_metadata.index = df_gtbbox_metadata.index.rename({"image_id": "frame_id"})
-df_gtbbox_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len)
+df_gtbbox_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").apply(len)
 keypoints_label_names = [f"keypoints_label_{i}" for i in range(22)]
 df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata[keypoints_label_names].apply(lambda x: (2-x)).mean(axis=1)
 
@@ -272,7 +272,7 @@ df_analysis_50_gtbbox = pd.merge(df_gtbbox_metadata_frame, df_analysis_50, on="f
 
 #%%
 import matplotlib.pyplot as plt
-seq_cofactors = ["is_night","occl2","pitch", "adverse_weather", "occlusion_rate", "area", "is_crowd", "is_blurred", "num_person"]
+seq_cofactors = ["is_night","occl2","pitch", "adverse_weather", "occlusion_rate", "area", "is_crowd", "is_blurred", "num_pedestrian"]
 metrics = ["MR", "FPPI"]
 from scipy.stats import pearsonr
 corr_matrix = df_analysis_50_gtbbox[metrics+seq_cofactors].corr(method=lambda x, y: pearsonr(x, y)[0])
@@ -293,7 +293,7 @@ plt.show()
 
 #%% Distribution each one
 
-feat = "num_person"
+feat = "num_pedestrian"
 metric = "MR"
 
 fig, ax = plt.subplots(1,1, figsize=(10,6))

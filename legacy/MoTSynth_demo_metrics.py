@@ -43,7 +43,7 @@ df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadat
 
 #%%
 
-df_frame_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
+df_frame_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
 #%% Correlation / Tables / Distributions
 
 
@@ -83,7 +83,7 @@ Give details : resolution ...
 
 n_images = df_frame_metadata.groupby("is_night").apply(len)
 n_seqs = df_frame_metadata.groupby("is_night").apply(lambda x: len(x["seq_name"].unique()))
-n_person = df_frame_metadata.groupby("is_night").apply(lambda x: x["num_person"].sum())
+n_person = df_frame_metadata.groupby("is_night").apply(lambda x: x["num_pedestrian"].sum())
 weathers = df_frame_metadata["weather"].unique()
 
 df_descr = pd.DataFrame({

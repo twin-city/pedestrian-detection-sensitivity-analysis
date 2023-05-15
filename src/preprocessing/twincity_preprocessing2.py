@@ -16,6 +16,7 @@ import json
 from src.utils import target_2_json, target_2_torch
 from src.plot_utils import xywh2xyxy
 from collections import defaultdict
+from src.plot_utils import plot_results_img
 
 #todo make only once the conversion
 
@@ -269,7 +270,7 @@ def get_dataset_from_folder(folder, max_samples_per_seq=101):
 
         img_path = osp.join(root, df_frame_metadata["file_name"].iloc[0])
         frame_id = df_frame_metadata.index[0]
-        from src.utils import plot_results_img
+
         plot_results_img(img_path, frame_id, preds=None, targets=targets,
                          excl_gt_indices=None, ax=None)
 
@@ -328,7 +329,7 @@ def get_twincity_dataset(root, max_samples_per_seq=100):
     df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
                                                                    df_gtbbox_metadata["aspect_ratio"] > mu - std)
 
-    df_frame_metadata["num_person"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
+    df_frame_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
 
     return root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 
