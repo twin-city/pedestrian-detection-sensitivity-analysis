@@ -5,6 +5,7 @@ import numpy as np
 import torchvision
 import torch
 from .detector import Detector
+from configs_path import ROOT_DIR
 
 def compute_model_metrics_on_dataset(model_name, dataset, gtbbox_filtering, device="cuda"):
 
@@ -234,7 +235,7 @@ class detection_metric:
         thresholds = [0, 0.5, 0.9, 0.99, 0.999, 0.9999]
 
 
-        df_root = f"data/preds/{dataset_name}_{model_name}"
+        df_root = f"{ROOT_DIR}/data/preds/{dataset_name}_{model_name}"
         os.makedirs(df_root, exist_ok=True)
         df_file = f"{df_root}/metrics-{json.dumps(gtbbox_filtering)}.json"
         df_matched_file = f"{df_root}/matched-{json.dumps(gtbbox_filtering)}.json"

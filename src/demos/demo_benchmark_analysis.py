@@ -9,19 +9,27 @@ from src.demos.configs import ODD_limit, ODD_criterias, param_heatmap_metrics, m
 # Which models to study
 model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
 
-# Dataset
-dataset_name, max_sample = "motsynth", 600
-#dataset_name, max_sample = "EuroCityPerson", 30
-#dataset_name, max_sample = "twincity", 50
+dataset_names = ["motsynth", "twincity", "EuroCityPerson"]
+max_samples = [600, 50, 30]
 
-dataset_names = ["motsynth", "twincity"]
-max_samples = [600, 50]
+# Dataset
+
+
+
+#dataset_name, max_sample = "motsynth", 600
+#
+
 #%%
 from src.dataset.dataset_factory import DatasetFactory
-for dataset_name, max_sample in zip(dataset_names, max_samples):
-    dataset = DatasetFactory.get_dataset(dataset_name, max_sample)
-    dataset_tuple = dataset.get_dataset_as_tuple()
-    root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset_tuple
+#for dataset_name, max_sample in zip(dataset_names, max_samples):
+
+dataset_name, max_sample = "twincity", 50
+#dataset_name, max_sample = "motsynth", 600
+#dataset_name, max_sample = "EuroCityPerson", 30
+
+dataset = DatasetFactory.get_dataset(dataset_name, max_sample)
+dataset_tuple = dataset.get_dataset_as_tuple()
+root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset_tuple
 
 
 #%% See Dataset Characteristics ==============================
@@ -48,10 +56,10 @@ plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criterias, r
 
 #%% Model performance : Plot MR vs FPPI on gtbbox filtering
 
-gtbbox_filtering = gtbbox_filtering_cats
-df_analysis_cats = compute_models_metrics_from_gtbbox_criteria(dataset, gtbbox_filtering, model_names)
+#gtbbox_filtering = gtbbox_filtering_cats
+#df_analysis_cats = compute_models_metrics_from_gtbbox_criteria(dataset, gtbbox_filtering, model_names)
 from src.plot_utils import plot_fppi_mr_vs_gtbbox_cofactor
-plot_fppi_mr_vs_gtbbox_cofactor(df_analysis_cats, ODD_criterias=None)
+#plot_fppi_mr_vs_gtbbox_cofactor(df_analysis_cats, ODD_criterias=None)
 
 
 #%% do the plot value difference (simplified, each metric)
@@ -64,18 +72,18 @@ plot_heatmap_metrics(df_analysis_heatmap, model_names, metrics, ODD_limit,
 
 #%% Study the Ground Truth Bounding Boxes : does their detection (matched) is correlated with their metadata ? (bheight, occlusion ?)
 
-from src.plot_utils import plot_gtbbox_matched_correlations
-threshold = 0.9
-features_bbox = ['height', "occlusion_rate", "aspect_ratio_is_typical"]
-plot_gtbbox_matched_correlations(model_names, dataset, features_bbox, threshold, gtbbox_filtering)
+#from src.plot_utils import plot_gtbbox_matched_correlations
+#threshold = 0.9
+#features_bbox = ['height', "occlusion_rate", "aspect_ratio_is_typical"]
+#plot_gtbbox_matched_correlations(model_names, dataset, features_bbox, threshold, gtbbox_filtering)
 
 
 #%% Study a particular image with one of the model ==============================
 
 # Plot an image in particular
 from src.plot_utils import plot_image_with_detections
-frame_idx = 0
+frame_idx = 1
 model_name = model_names[0]
-plot_thresholds = [0, 0.5, 0.9, 0.9999]
+plot_thresholds = [0., 0.9, 0.9999]
 gtbbox_filtering = gtbbox_filtering_all["Overall"]
 plot_image_with_detections(dataset_tuple, dataset_name, model_name, plot_thresholds, gtbbox_filtering, i=frame_idx)

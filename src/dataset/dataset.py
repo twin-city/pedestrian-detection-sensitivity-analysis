@@ -4,6 +4,7 @@ import os
 from src.utils import compute_correlations
 from src.plot_utils import plot_correlations
 from src.plot_utils import plot_dataset_statistics
+from configs_path import ROOT_DIR
 
 class Dataset():
     def __init__(self, dataset_name, max_sample, root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata):
@@ -20,15 +21,14 @@ class Dataset():
         os.makedirs(self.results_dir, exist_ok=True)
 
         # Show descriptive statistics
-        self.create_markdown_description_table()
+        # self.create_markdown_description_table()
 
     def get_dataset_as_tuple(self):
         return self.root, self.targets, self.df_gtbbox_metadata, self.df_frame_metadata, self.df_sequence_metadata
 
-
     # I/O
 
-    def create_markdown_description_table(self):
+    def create_markdown_description_table(self, folder_path="../../results"):
         n_images = self.df_frame_metadata.groupby("is_night").apply(len)
         n_seqs = self.df_frame_metadata.groupby("is_night").apply(lambda x: len(x["seq_name"].unique()))
         n_person = self.df_frame_metadata.groupby("is_night").apply(lambda x: x["num_person"].sum())
@@ -42,15 +42,18 @@ class Dataset():
             "person (day/night)": f"{n_person[0]}/{n_person[1]}",
             "weather": ", ".join(list(weathers)),
         }, index=[dataset_version_name]).T
+        df_descr.index.name = "characteristics"
 
         # Save in a common dataframe to compare the datasets
-        save_csv_path = osp.join('../../results/df_descr.csv')
-        save_md_path = osp.join('../../results/df_descr.csv')
+        save_csv_path = osp.join(folder_path, 'df_descr.csv')
+        save_md_path = osp.join(folder_path, 'df_descr.md')
         if not os.path.exists(save_csv_path):
             df_descr_all = df_descr
+            df_descr_all.index.name = "characteristics"
         else:
-            df_descr_all = pd.read_csv(save_csv_path)
-            df_descr_all[dataset_version_name] = df_descr[dataset_version_name]
+            df_descr_all = pd.read_csv(save_csv_path).set_index("characteristics")
+            if dataset_version_name not in df_descr_all.columns:
+                df_descr_all = pd.concat([df_descr_all, df_descr], axis=1)
         df_descr_all.to_csv(save_csv_path)
 
         with open(osp.join(self.results_dir, f'descr_{self.dataset_name}.md'), 'w') as f:

@@ -4,9 +4,7 @@ from tqdm import tqdm
 import json
 from mmdet.apis import init_detector, inference_detector
 import os.path as osp
-
-MMDET_DIR = "/home/raphael/work/code/mmdetection/"
-CHECKPOINT_DIR = "/home/raphael/work/checkpoints/"
+from configs_path import ROOT_DIR, MMDET_DIR, CHECKPOINT_DIR
 
 class Detector:
     def __init__(self, name, device="cuda", nms=False):
@@ -59,7 +57,7 @@ class Detector:
 
         # todo problem with int / str id
 
-        json_root = f"data/preds/{config_file.split('/')[-1].replace('.py', '')}"
+        json_root = f"{ROOT_DIR}/data/preds/{config_file.split('/')[-1].replace('.py', '')}"
         os.makedirs(json_root, exist_ok=True)
         json_file = f"{json_root}/preds_{dataset_name}.json"
 

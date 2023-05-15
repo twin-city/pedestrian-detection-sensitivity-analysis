@@ -102,7 +102,7 @@ def subset_dataframe(df, conditions):
             elif isinstance(values, (int, float, str)):
                 new_mask = df[column] == values
             else:
-                raise NotImplementedError("The subset condition was not set according to subset_dataframe inputs.")
+                raise NotImplementedError(f"The subset condition {values} was not set according to subset_dataframe inputs.")
 
         if new_mask.sum() == 0:
             print(f"Warning, the condition {column} did not change the subset.")

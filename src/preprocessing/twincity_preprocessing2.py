@@ -15,6 +15,7 @@ import matplotlib.image as mpimg
 import json
 from src.utils import target_2_json, target_2_torch
 from src.plot_utils import xywh2xyxy
+from collections import defaultdict
 
 #todo make only once the conversion
 
@@ -81,17 +82,27 @@ def show(imgs):
         axs[0, i].set(xticklabels=[], yticklabels=[], xticks=[], yticks=[])
 
 
+def find_duplicate_indices(dictionary):
+    value_indices = defaultdict(list)
+    for key, value in dictionary.items():
+        value_indices[value].append(key)
+
+    duplicate_indices = [indices for indices in value_indices.values() if len(indices) > 1]
+    return duplicate_indices
+
 def get_twincity_boxes(img, metadata):
 
     num_pedestrian_in_scene = len(metadata["peds"])
 
     mask_list = []
+    peds_list = []
     for i in range(num_pedestrian_in_scene):
         if metadata["peds"][str(i)] not in excl_colors:
             code = code_rgba_str_2_code_rgba_float(metadata["peds"][str(i)])
             mask = torch.tensor(((img-code)**2).sum(axis=2)<1e-4)
             if mask.sum() > 0:
                 mask_list.append(mask)
+                peds_list.append(i)
 
     masks = torch.stack(mask_list)
     boxes = masks_to_boxes(masks)
@@ -102,10 +113,29 @@ def get_twincity_boxes(img, metadata):
     areas = widths * heights
 
     # Create a DataFrame with the heights and areas
-    data = {'height': heights.numpy().tolist(), "width":widths.numpy().tolist(),
+    data = {'height': heights.numpy().tolist(),
+            "width":widths.numpy().tolist(),
             "aspect_ratio": (widths/heights).numpy().tolist(),
-            'area': areas.numpy().tolist()}
+            'area': areas.numpy().tolist(),
+            'ped': peds_list,
+            }
     df = pd.DataFrame(data)
+
+
+
+    df["ignore-region"] = 0
+
+    # All reasons to ignore boxes
+
+    # bbox width > 250
+    df.loc[df["width"] > 250, "ignore-region"] = 1
+
+    # Get doublons
+    duplicates = find_duplicate_indices(metadata["peds"])
+    if len(duplicates) > 0:
+        print("Warning, doublons in metadata")
+        idx_duplicates = np.unique(np.concatenate(duplicates)).astype(int).tolist()
+        df.loc[np.isin(df["ped"], idx_duplicates), "ignore-region"] = 1
 
     return boxes, df
 
@@ -115,7 +145,11 @@ def get_dataset_from_folder(folder, max_samples_per_seq=101):
     folder_name = folder.split(version+"/")[1]
     root = f'/home/raphael/work/datasets/twincity-Unreal/{version}/'
 
-    save_folder = f"/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/src/demos/data/preprocessing/motsynth/twincity/{version}/{folder_name}"
+    from configs_path import ROOT_DIR
+
+    save_folder = f"{ROOT_DIR}/data/preprocessing/twincity/{version}/{folder_name}"
+
+    #save_folder = f"/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/src/demos/data/preprocessing/motsynth/twincity/{version}/{folder_name}"
     os.makedirs(save_folder, exist_ok=True)
 
     path_df_gtbbox_metadata = osp.join(save_folder, f"df_gtbbox_{max_samples_per_seq}.csv")
@@ -168,9 +202,8 @@ def get_dataset_from_folder(folder, max_samples_per_seq=101):
             img_annot = mpimg.imread(img_annot_path)
             bboxes, df = get_twincity_boxes(img_annot, metadata)
 
-            # filter
-            bboxes = torch.stack([b for a, b in zip(df["width"], bboxes) if a < 250])
-            df = df[df["width"]<250] #todo added a filtering of bboxes
+            #todo hack to set the anomalies as ignore regions
+            # filter anomalies
 
             frame_id = img_annot_path.split("/Snapshot-2023-")[-1].split(".png")[0]
             df["frame_id"] = frame_id #todo frame_id should be the one of the rgb
@@ -283,6 +316,8 @@ def get_twincity_dataset(root, max_samples_per_seq=100):
     df_frame_metadata = pd.concat(df_frame_metadata_list, axis=0)
     #df_sequence_metadata = pd.concat(df_sequence_metadata_list, axis=0)
     df_sequence_metadata = pd.DataFrame()
+
+    df_gtbbox_metadata["id"] = list(range(len(df_gtbbox_metadata))) #todo better gtbbox id (suffix of frame_id ?)
 
     df_gtbbox_metadata = df_gtbbox_metadata.set_index(["frame_id", "id"])
     if df_frame_metadata.index.name != "frame_id":

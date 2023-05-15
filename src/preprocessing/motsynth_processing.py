@@ -8,14 +8,7 @@ from src.utils import target_2_json, target_2_torch
 from src.plot_utils import xywh2xyxy
 
 from .processing import DatasetProcessing
-
-"""
-Explore : 
-- blurred
-"""
-
-
-
+from configs_path import ROOT_DIR
 
 
 class MotsynthProcessing(DatasetProcessing):
@@ -23,13 +16,12 @@ class MotsynthProcessing(DatasetProcessing):
 
     def __init__(self, root, max_samples=200, video_ids=None):
 
+        self.dataset_name = "motsynth"
         super().__init__(root, max_samples)
 
         self.delay = 3
-        self.dataset_name = "motsynth"
         self.frames_dir = f"{root}/frames"
         self.annot_dir = f"{root}/coco annot"
-        self.saves_dir = f"data/preprocessing/{self.dataset_name}"
         os.makedirs(self.saves_dir, exist_ok=True)
         self.video_ids = video_ids
 
@@ -297,6 +289,9 @@ class MotsynthProcessing(DatasetProcessing):
         df_frame_metadata["temp"] = df_frame_metadata["pitch"]
         df_frame_metadata["pitch"] = df_frame_metadata["yaw"]
         df_frame_metadata["yaw"] = df_frame_metadata["temp"]
+
+
+        df_gtbbox_metadata["ignore-region"] = 0
 
         return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 

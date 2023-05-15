@@ -312,8 +312,11 @@ def plot_gtbbox_matched_correlations(model_names, dataset, features_bbox, thresh
         df_metrics_gtbbox_study = df_metrics_gtbbox_study[df_metrics_gtbbox_study["threshold"]==threshold]
 
         # Append the metadata
-        features_bbox_plot = np.intersect1d(features_bbox, df_gtbbox_metadata.columns)
-        df_metrics_gtbbox_study.loc[:,features_bbox] = df_gtbbox_metadata.loc[df_metrics_gtbbox_study.index, features_bbox]
+        #todo subset of features : bug wiht twincity because no annot id
+        features_bbox_plot = list(np.intersect1d(features_bbox, df_gtbbox_metadata.columns))
+        df_metrics_gtbbox_study.loc[:,features_bbox_plot] = df_gtbbox_metadata.loc[df_metrics_gtbbox_study.index, features_bbox_plot]
+
+
         # If there are attributes, dummify them
         if "attributes_0" in df_gtbbox_metadata.columns:
             df_metrics_gtbbox_study.loc[:,attributes] = df_gtbbox_metadata.loc[df_metrics_gtbbox_study.index, attributes]
@@ -325,13 +328,13 @@ def plot_gtbbox_matched_correlations(model_names, dataset, features_bbox, thresh
                 att_list += list(df_att.columns)
 
         corr_matrix = df_metrics_gtbbox_study.corr()
-        df_gtbbox_corr_model = pd.DataFrame(corr_matrix["matched"][features_bbox+att_list])
+        df_gtbbox_corr_model = pd.DataFrame(corr_matrix["matched"][features_bbox_plot+att_list])
         df_gtbbox_corr_model = df_gtbbox_corr_model.rename(columns={"matched": model_name})
         df_gtbbox_corr_list.append(df_gtbbox_corr_model)
 
     df_gtbbox_corr = pd.concat(df_gtbbox_corr_list, axis=1)
 
-    fig, ax = plt.subplots(figsize=(2*len(model_names), min(6, len(features_bbox+att_list)//10)))
+    fig, ax = plt.subplots(figsize=(2*len(model_names), min(6, len(features_bbox_plot+att_list)//10)))
     sns.heatmap(df_gtbbox_corr, center=0, cmap="PiYG", vmax=1, vmin=-1, ax=ax)
     plt.tight_layout()
     plt.show()
@@ -399,28 +402,38 @@ def plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criteria
 
         for j, filter_frame in enumerate(filter_frames):
 
-            for model, df_analysis_model in df_analysis.groupby("model_name"):
-                df_analysis_subset = subset_dataframe(df_analysis_model, filter_frame)
-                metrics_model = df_analysis_subset.groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
-                ax[i, j].plot(metrics_model["FPPI"], metrics_model["MR"], label=model)
-                ax[i, j].scatter(metrics_model["FPPI"], metrics_model["MR"])
+            # todo should be able to get multiple levels of subsetting, check that (in tests ?)
+            # Do not show if not present in dataset characteristics
+            plot_cofactor = False
+            if filter_frame == {}:
+                plot_cofactor = True
+            else:
+                if list(filter_frame.keys())[0] in df_analysis.keys():
+                    plot_cofactor = True
 
-            ax[i,j].set_xscale('log')
-            ax[i,j].set_yscale('log')
-            ax[i,j].set_ylim(min_y, max_y)
-            ax[i,j].set_xlim(min_x, max_x)
-            ax[i,j].set_title(filter_frame)
-            ax[i, j].legend()
+            if plot_cofactor:
 
+                for model, df_analysis_model in df_analysis.groupby("model_name"):
+                    df_analysis_subset = subset_dataframe(df_analysis_model, filter_frame)
+                    metrics_model = df_analysis_subset.groupby("threshold").apply(lambda x: x.mean(numeric_only=True))
+                    ax[i, j].plot(metrics_model["FPPI"], metrics_model["MR"], label=model)
+                    ax[i, j].scatter(metrics_model["FPPI"], metrics_model["MR"])
 
-            x = min_x
-            y = min_y
-            width = ODD_criterias["FPPI"] - min_x
-            height = ODD_criterias["MR"] - min_y
-            # Add the grey square patch to the axes
-            grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
-            ax[i,j].add_patch(grey_square)
-            ax[i,j].text(min_x+width/2/10, min_y+height/2/10, s="ODD")
+                ax[i,j].set_xscale('log')
+                ax[i,j].set_yscale('log')
+                ax[i,j].set_ylim(min_y, max_y)
+                ax[i,j].set_xlim(min_x, max_x)
+                ax[i,j].set_title(filter_frame)
+                ax[i, j].legend()
+
+                x = min_x
+                y = min_y
+                width = ODD_criterias["FPPI"] - min_x
+                height = ODD_criterias["MR"] - min_y
+                # Add the grey square patch to the axes
+                grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
+                ax[i,j].add_patch(grey_square)
+                ax[i,j].text(min_x+width/2/10, min_y+height/2/10, s="ODD")
 
     plt.tight_layout()
     plt.savefig(osp.join(results_dir, "frame_cofactor_fppi_mr.png"))
