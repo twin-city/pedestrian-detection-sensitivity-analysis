@@ -1,75 +1,37 @@
 
-# Must-have
+TODO
+- master avec MoTSynth et Twincity
+- factoriser code
+  - classe dataset
+- ignore regions of twincity that bug (bbox too big or multiple colors)
 
-Analysis at the box level
-- BBox size / distance
-- BBox difficulty (what is it exactly ? Reasonable ?)
-- Occlusions
+#todo df_analysis as a result object ?
+#todo filter functions in the dataset ?
 
+Download motsynth
+Download eurocityperson
 
-Tests
-  - test fonctionels généraux
-  - tests unitaires
+Run `python motsynth_demo.py`
+Run `python ECP_demo.py`
 
-Metrics
-  - mAP
-
-Features ? Visualization (hard examples, specific criteria ...) 
-DebiAI for Visualization
-
-
-# Nice-to-have
-
-Specify ODD for given metrics
-
-Statistical Tests to uncover biases / detect significance
-
-New metrics (seeCode and reasonable !!! https://eurocity-dataset.tudelft.nl/eval/benchmarks/detection)
-
-MotSynth bonuses per bbox
-  - per person attribute
-
-Compare dataset characteristics (anticipate --> so as to identify biases between datasets from their characteristics in advance !!!)
-
-Other Datasets
-  - Synscapes
-  - Cityscapes Fog/Rain
-
-Detailed vizualization
-  - difficult cases
-  - specific parameter cases
-
-More metrics
-    - cf EuroCityPerson
+For more information on MoTSynth and its license see https://aimagelab.ing.unimore.it/imagelab/page.asp?IdPage=42 
+For more information on EuroCityPerson and its license see https://eurocity-dataset.tudelft.nl/ 
 
 
-# Later-to-have
+# Results
 
-Faster
-  - FPPI computation
+Study on a baseline (Faster-RCNN trained on Cityscapes) :
 
-Detailed analysis 
-  - Check reasons for false positives ???? what class is predcited instead ? (synthétique ou alors faire passer un detecteur d'objet)
-
-Uncover novel biases ? With all parameters without filtering ? Or even without knowing the parameters in advance ?
-
-Trying other model
-  - Faster-RCNN (NightOwls, Caltech Pedestrian, Cityscapes-Rain/Fog/Sun, CUHK)
-  - Mask-RCNN
-  - SoTA ??? SSD ??? Pedestron ???
-
-# Reflexion / Biblio
+| Dataset                  | MoTSynth (Synthetic)                                                                            | EuroCityPerson (Real)                                                                                                                              |
+|--------------------------|-------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------| 
+| Img example              | <img src="results/motsynth_img.png" alt="Motsynth example" style="max-width: 150;">             |  |
+| pval or correlation test | <img src="results/motsynth_pval.png" alt="Motsynth pval" style="max-width: 150;">               | <img src="results/ecp_pval.png" alt="Eurocityperson pval" style="max-width: 150;">                                                                 |
+| Day vs Night             | <img src="results/motsynth_dayvsnight.png" alt="Motsynth day vs night" style="max-width: 150;"> | <img src="results/ecp_dayvsnight.png" alt="Eurocityperson pval" style="max-width: 150;">                                                           |
 
 
-Do the biblio
+pval indicates statstical significance for night/day for both MR and FPPI, and weather for MR.
 
-Check ODD principles
-Variety for independance would be nice !
-Motsynth : choice occlusion is computed from keypoints
-other ideas : https://dbcollection.readthedocs.io/en/latest/datasets/inria_ped.html
-Checker si les solutions du privé donnent déjà des specs
-Get a forked mmdet with added datasets (+ add the dataset description such as day and night ?)
-- NMS ?
+We plot an example of performance for the baseline, in either day or night scenes in both datasets. Performance are worse at night.
 
 # Install
 conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
@@ -85,3 +47,4 @@ scikit-learn
 cpu conda install pytorch torchvision torchaudio -c pytorch
 
 See mmdet / mmcv for install
+

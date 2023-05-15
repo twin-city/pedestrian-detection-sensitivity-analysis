@@ -87,7 +87,7 @@ plot_heatmap_metrics(df_analysis_heatmap, model_names, metrics, ODD_limit,
 
 # Plot an image in particular
 from src.plot_utils import plot_image_with_detections
-frame_idx = 1
+frame_idx = 8
 model_name = model_names[0]
 plot_thresholds = [0., 0.9, 0.9999]
 gtbbox_filtering = gtbbox_filtering_all["Overall"]
