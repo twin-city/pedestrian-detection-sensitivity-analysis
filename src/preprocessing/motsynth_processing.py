@@ -57,7 +57,7 @@ class MotsynthProcessing(DatasetProcessing):
 
 
     def get_dataset(self):
-        targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.get_MoTSynth_annotations_and_imagepaths()
+        targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.load_or_preprocess_motsynth()
 
         # Common post-processing
         df_gtbbox_metadata = self.format_gtbbox_metadata(df_gtbbox_metadata)
@@ -101,8 +101,6 @@ class MotsynthProcessing(DatasetProcessing):
 
             frame_id = image["id"]
             bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
-
-
 
             # BBOXES metadata
             annots = [x for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
@@ -190,7 +188,7 @@ class MotsynthProcessing(DatasetProcessing):
 
 
 
-    def get_MoTSynth_annotations_and_imagepaths(self):
+    def load_or_preprocess_motsynth(self):
 
         path_df_gtbbox_metadata = osp.join(self.saves_dir, f"df_gtbbox_{self.max_samples}.csv")
         path_df_frame_metadata = osp.join(self.saves_dir, f"df_frame_{self.max_samples}.csv")
@@ -208,68 +206,7 @@ class MotsynthProcessing(DatasetProcessing):
 
         except:
             print("Did not find precomputed metadatas.")
-            sequence_ids = self.get_usable_sequence_ids()
-            max_samples = self.max_samples
-            df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()]*3
-
-            if sequence_ids is None:
-                folders = os.listdir(self.frames_dir)
-            else:
-                folders = sequence_ids
-
-            num_folders = len(list(folders))
-
-            if max_samples is not None:
-                max_num_sample_per_sequence = int(max_samples/num_folders)
-            else:
-                max_num_sample_per_sequence = 1000 #todo max to 1000 arbirterary
-
-            targets, targets_metadata, frames_metadata, frame_id_list, img_path_list = {}, {}, {}, [], []
-
-            for folder in folders:
-                print(f"Checking folder {folder}")
-
-                #try:
-                targets_folder, targets_metadatas, frame_id_list_folder, img_path_list_folder =\
-                    self.get_MoTSynth_annotations_and_imagepaths_sequence(sequence_id=folder, max_samples=max_num_sample_per_sequence)
-                df_gtbbox_metadata_folder, df_frame_metadata_folder, df_sequence_metadata_folder = targets_metadatas
-                targets.update(targets_folder)
-                df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(df_gtbbox_metadata_folder)], axis=0)
-                df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame(df_frame_metadata_folder)], axis=0)
-                df_sequence_metadata = pd.concat([df_sequence_metadata, pd.DataFrame(df_sequence_metadata_folder)], axis=0)
-                frame_id_list += [str(i) for i in frame_id_list_folder]
-                img_path_list += img_path_list_folder
-                #except:
-                #    print(f"Could not load data from sequence {folder}")
-
-            # compute occlusion rates
-            #df_gtbbox_metadata = df_gtbbox_metadata.reset_index()
-            #df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
-            # -->  0 : visible, 1 : occluded/truncated
-            df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata["keypoints_label"].apply(lambda x: (2-x).mean())
-
-            # Compute specific cofactors
-            adverse_weather = ['THUNDER', 'SMOG', 'FOGGY', 'BLIZZARD', 'RAIN', 'CLOUDS',
-                               'OVERCAST']  # 'CLEAR' 'EXTRASUNNY',
-            df_frame_metadata["adverse_weather"] = 1*df_frame_metadata["weather"].apply(lambda x: x in adverse_weather)
-
-            extreme_weather = ['THUNDER', 'SMOG', 'FOGGY', 'BLIZZARD', 'RAIN']  # 'CLEAR' 'EXTRASUNNY',
-            df_frame_metadata["extreme_weather"] = 1*df_frame_metadata["weather"].apply(lambda x: x in extreme_weather)
-
-            """
-            # Drop and rename too
-            df_frame_metadata.drop(["cam_fov", "frame_n"], inplace=True)
-            new_cam_extr_names = {key: f'cam-extr-{key}' for key in ["x", "y", "z", "yaw", "pitch", "roll"]}
-            #df_frame_metadata = df_frame_metadata.rename(columns=new_cam_extr_names)
-            new_cam_intr_names = {key: f'cam-intr-{key}' for key in ['fx', 'fy', 'cx', 'cy']}
-            #df_frame_metadata = df_frame_metadata.rename(columns=new_cam_intr_names)
-            """
-
-            df_gtbbox_metadata = df_gtbbox_metadata.reset_index()
-            df_gtbbox_metadata["image_id"] = df_gtbbox_metadata["image_id"] - self.delay
-            df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
-
-            #todo : american, synthetic, ... (labels)
+            targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.preprocess_motsynth()
 
             # Save dataframes
             df_gtbbox_metadata.to_csv(path_df_gtbbox_metadata)
@@ -302,11 +239,75 @@ class MotsynthProcessing(DatasetProcessing):
         df_frame_metadata["pitch"] = df_frame_metadata["yaw"]
         df_frame_metadata["yaw"] = df_frame_metadata["temp"]
 
-
-        df_gtbbox_metadata["ignore-region"] = 0
-
         return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 
+
+
+    def preprocess_motsynth(self):
+
+        sequence_ids = self.get_usable_sequence_ids()
+        max_samples = self.max_samples
+        df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()] * 3
+
+        if sequence_ids is None:
+            folders = os.listdir(self.frames_dir)
+        else:
+            folders = sequence_ids
+
+        num_folders = len(list(folders))
+
+        if max_samples is not None:
+            max_num_sample_per_sequence = int(max_samples / num_folders)
+        else:
+            max_num_sample_per_sequence = 1000  # todo max to 1000 arbirterary
+
+        targets, targets_metadata, frames_metadata, frame_id_list, img_path_list = {}, {}, {}, [], []
+
+        for folder in folders:
+            print(f"Checking folder {folder}")
+
+            # try:
+            targets_folder, targets_metadatas, frame_id_list_folder, img_path_list_folder = \
+                self.get_MoTSynth_annotations_and_imagepaths_sequence(sequence_id=folder,
+                                                                      max_samples=max_num_sample_per_sequence)
+            df_gtbbox_metadata_folder, df_frame_metadata_folder, df_sequence_metadata_folder = targets_metadatas
+            targets.update(targets_folder)
+            df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(df_gtbbox_metadata_folder)], axis=0)
+            df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame(df_frame_metadata_folder)], axis=0)
+            df_sequence_metadata = pd.concat([df_sequence_metadata, pd.DataFrame(df_sequence_metadata_folder)], axis=0)
+            frame_id_list += [str(i) for i in frame_id_list_folder]
+            img_path_list += img_path_list_folder
+            # except:
+            #    print(f"Could not load data from sequence {folder}")
+
+        # compute occlusion rates
+        # df_gtbbox_metadata = df_gtbbox_metadata.reset_index()
+        # df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
+        # -->  0 : visible, 1 : occluded/truncated
+        df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata["keypoints_label"].apply(lambda x: (2 - x).mean())
+
+        # Compute specific cofactors
+        adverse_weather = ['THUNDER', 'SMOG', 'FOGGY', 'BLIZZARD', 'RAIN', 'CLOUDS',
+                           'OVERCAST']  # 'CLEAR' 'EXTRASUNNY',
+        df_frame_metadata["adverse_weather"] = 1 * df_frame_metadata["weather"].apply(lambda x: x in adverse_weather)
+
+        extreme_weather = ['THUNDER', 'SMOG', 'FOGGY', 'BLIZZARD', 'RAIN']  # 'CLEAR' 'EXTRASUNNY',
+        df_frame_metadata["extreme_weather"] = 1 * df_frame_metadata["weather"].apply(lambda x: x in extreme_weather)
+
+        """
+        # Drop and rename too
+        df_frame_metadata.drop(["cam_fov", "frame_n"], inplace=True)
+        new_cam_extr_names = {key: f'cam-extr-{key}' for key in ["x", "y", "z", "yaw", "pitch", "roll"]}
+        #df_frame_metadata = df_frame_metadata.rename(columns=new_cam_extr_names)
+        new_cam_intr_names = {key: f'cam-intr-{key}' for key in ['fx', 'fy', 'cx', 'cy']}
+        #df_frame_metadata = df_frame_metadata.rename(columns=new_cam_intr_names)
+        """
+
+        df_gtbbox_metadata = df_gtbbox_metadata.reset_index()
+        df_gtbbox_metadata["image_id"] = df_gtbbox_metadata["image_id"] - self.delay
+        df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
+
+        # todo : american, synthetic, ... (labels)
 
 
 """

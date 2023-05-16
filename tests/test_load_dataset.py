@@ -32,8 +32,8 @@ class TestOutput(unittest.TestCase):
             # dataset_tuple = dataset.get_dataset_as_tuple()
             # root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset_tuple
 
-
-        #df_descr_gt = pd.read_csv(osp.join(output_path, "df_descr_gt.csv")).set_index("characteristics")
-        #df_descr = pd.read_csv(osp.join(output_path, "df_descr.csv")).set_index("characteristics")
-        #self.assertEqual(df_descr_gt.shape, df_descr.shape)
-        #pd.testing.assert_frame_equal(df_descr_gt, df_descr)
+        # Assert we have the same dataset of description
+        df_descr_gt = pd.read_csv(osp.join(output_path, "df_descr_gt.csv")).set_index("characteristics")
+        df_descr = pd.read_csv(osp.join(output_path, "df_descr.csv")).set_index("characteristics")
+        self.assertEqual(df_descr_gt.shape, df_descr.shape)
+        pd.testing.assert_frame_equal(df_descr_gt, df_descr)

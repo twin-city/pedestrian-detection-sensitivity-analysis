@@ -5,44 +5,7 @@ import os.path as osp
 import pandas as pd
 import os
 from .processing import DatasetProcessing
-
-"""
-Check more info https://eurocity-dataset.tudelft.nl/
-For example : ignore regions, snow ...
-"""
-
-def syntax_occl_ECP(x):
-    # keep only occluded
-    x = [x for x in x if "occluded" in x]
-    if x and "occluded" in x[0]:
-        return int(x[0].replace("occluded>", "")) / 100
-    elif x:
-        print(x)
-    else:
-        return 0
-
-def syntax_truncated_ECP(x):
-    # keep only truncated
-    x = [x for x in x if "truncated" in x]
-    if x and "truncated" in x[0]:
-        return int(x[0].replace("truncated>", "")) / 100
-    elif x:
-        print(x)
-    else:
-        return 0
-
-
-def syntax_criteria_ECP(x, criteria):
-    # "sitting-lying"
-    # keep only truncated
-    x = [x for x in x if criteria in x]
-    if x and criteria in x[0]:
-        return 1
-    elif x:
-        print(x, criteria)
-    else:
-        return 0
-
+from .preprocessing_utils import *
 
 
 class ECPProcessing(DatasetProcessing):
@@ -50,21 +13,10 @@ class ECPProcessing(DatasetProcessing):
     Class that handles the preprocessing of (extracted) ECP Dataset in order to get a standardized dataset format.
     """
 
-    def __init__(self, root, max_samples=100): #todo max_samples here is different than from MoTSynth
-
+    def __init__(self, root, max_samples=100):
         self.dataset_name = "ecp"
         super().__init__(root, max_samples)
-        #self.saves_dir = f"data/preprocessing/{self.dataset_name}"
         os.makedirs(self.saves_dir, exist_ok=True)
-
-    def get_dataset(self):
-        targets, df_gtbbox_metadata, df_frame_metadata, df_sequance_metadata = self.get_annotations_and_imagepaths()
-
-        # Common post-processing
-        df_gtbbox_metadata = self.format_gtbbox_metadata(df_gtbbox_metadata)
-        df_frame_metadata = self.format_frame_metadata(df_frame_metadata, df_gtbbox_metadata)
-
-        return self.root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequance_metadata
 
     def get_ECP_annotations_and_imagepaths_folder(self, time, set, city):
 
@@ -149,10 +101,8 @@ class ECPProcessing(DatasetProcessing):
         frame_id_list = list(targets.keys())
         img_path_list = []
         for frame_id in frame_id_list:
-            # print(frame_id)
             img_path = f"{time}/img/val/{city}/{frame_id}.png"
             img_path_list.append(img_path)
-
 
 
         return targets, targets_metadata, frame_id_list, img_path_list
@@ -209,15 +159,8 @@ class ECPProcessing(DatasetProcessing):
 
                         df_frames_metadata_folder["weather"] = "dry"
                         df_frames_metadata_folder.loc[df_frames_metadata_folder["rainy"],"weather"] = "rainy"
-                        df_frames_metadata_folder.loc[df_frames_metadata_folder["wiper"],"weather"] = "rainy" #wiper means rainy
+                        df_frames_metadata_folder.loc[df_frames_metadata_folder["wiper"],"weather"] = "rainy" #todo wiper means rainy
 
-
-
-                        # df_frames_metadata_folder["file_name"] = img_path_list_folder
-                        # media/raphael/Projects/datasets/EuroCityPerson/ECP/
-
-                        # Df bbox_gt
-                        # {key: {key: v for v in val[1]} for key,val in targets_metadata.items()}
                         categories_gtbbox = [f"occluded>{i}0" for i in range(1, 10)] + ["depiction"]
                         df_gt_bbox_folder = pd.DataFrame()
                         for key, val in targets_metadata_folder.items():
@@ -260,16 +203,5 @@ class ECPProcessing(DatasetProcessing):
         df_gtbbox_metadata = df_gtbbox_metadata.set_index(["frame_id", "id"])
 
 
-        #todo factorize
-        df_gtbbox_metadata["aspect_ratio"] = 1 / df_gtbbox_metadata["aspect_ratio"]
-        mu = 0.4185
-        std = 0.12016
-        df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
-                                                                       df_gtbbox_metadata["aspect_ratio"] > mu - std)
-
-        df_gtbbox_metadata["height"] = df_gtbbox_metadata["height"].astype(int)
-        df_frame_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
-
-        df_gtbbox_metadata["ignore-region"] = 0
 
         return targets, df_gtbbox_metadata, df_frame_metadata, None

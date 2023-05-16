@@ -8,9 +8,8 @@ import os.path as osp
 import pandas as pd
 import os
 from .processing import DatasetProcessing
-
 from .twincity_preprocessing2 import get_twincity_boxes, find_duplicate_indices, target_2_torch, creation_date
-
+from configs_path import ROOT_DIR
 
 class TwincityProcessing(DatasetProcessing):
     """
@@ -18,33 +17,18 @@ class TwincityProcessing(DatasetProcessing):
     """
 
     def __init__(self, root, max_samples=100):
-
         self.dataset_name = "twincity"
         super().__init__(root, max_samples)
-        #self.saves_dir = f"data/preprocessing/{self.dataset_name}"
         os.makedirs(self.saves_dir, exist_ok=True)
-
-    def get_dataset(self):
-        targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.get_annotations_and_imagepaths()
-
-        # Common post-processing
-        df_gtbbox_metadata = self.format_gtbbox_metadata(df_gtbbox_metadata)
-        df_frame_metadata = self.format_frame_metadata(df_frame_metadata, df_gtbbox_metadata)
-
-        return self.root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
-
 
 
     def get_annotations_and_imagepaths(self):
 
         root = self.root
         max_samples_per_seq = self.max_samples
-
         folders = glob.glob(osp.join(root, "*"))
 
         targets = {}
-        frame_id_list = []
-        img_path_list = []
         df_gtbbox_metadata_list = []
         df_frame_metadata_list = []
         df_sequence_metadata_list = []
@@ -52,13 +36,10 @@ class TwincityProcessing(DatasetProcessing):
         for folder in folders:
             print(f"Reading folder {folder}")
             _, targets_folder, metadatas_folder = self.get_dataset_from_folder(folder, max_samples_per_seq)
-
             df_gtbbox_metadata_folder, df_frame_metadata_folder, df_sequence_metadata_folder = metadatas_folder
 
             # add outputs to their respective structures
             targets.update(targets_folder)
-            # frame_id_list += frame_id_list_folder
-            # img_path_list += img_path_list_folder.tolist()
             df_frame_metadata_folder["seq_name"] = folder.split("/")[-1]
             df_gtbbox_metadata_list.append(df_gtbbox_metadata_folder)
             df_frame_metadata_list.append(df_frame_metadata_folder)
@@ -66,22 +47,13 @@ class TwincityProcessing(DatasetProcessing):
 
         df_gtbbox_metadata = pd.concat(df_gtbbox_metadata_list, axis=0)
         df_frame_metadata = pd.concat(df_frame_metadata_list, axis=0)
-        # df_sequence_metadata = pd.concat(df_sequence_metadata_list, axis=0)
-        df_sequence_metadata = pd.DataFrame()
 
-        df_gtbbox_metadata["id"] = list(range(len(df_gtbbox_metadata)))  # todo better gtbbox id (suffix of frame_id ?)
+        # todo do better gtbbox id (suffix of frame_id ?)
+        df_gtbbox_metadata["id"] = list(range(len(df_gtbbox_metadata)))
 
         df_gtbbox_metadata = df_gtbbox_metadata.set_index(["frame_id", "id"])
         if df_frame_metadata.index.name != "frame_id":
             df_frame_metadata = df_frame_metadata.set_index("frame_id")
-
-        mu = 0.4185
-        std = 0.12016
-        df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
-                                                                       df_gtbbox_metadata["aspect_ratio"] > mu - std)
-
-        df_frame_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[
-            df_frame_metadata.index]
 
         return targets, df_gtbbox_metadata, df_frame_metadata, None
 
@@ -89,13 +61,9 @@ class TwincityProcessing(DatasetProcessing):
 
     def get_dataset_from_folder(self, folder, max_samples_per_seq=100):
 
-        version = "v5"
-        folder_name = folder.split(version + "/")[1]
-        root = f'/home/raphael/work/datasets/twincity-Unreal/{version}/'
-
-        from configs_path import ROOT_DIR
-
-        save_folder = f"{ROOT_DIR}/data/preprocessing/twincity/{version}/{folder_name}"
+        #todo factorize this
+        root = self.root
+        save_folder = self.saves_dir
 
         # save_folder = f"/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/src/demos/data/preprocessing/motsynth/twincity/{version}/{folder_name}"
         os.makedirs(save_folder, exist_ok=True)
@@ -107,40 +75,29 @@ class TwincityProcessing(DatasetProcessing):
 
         try:
             print("Try")
-            df_gtbbox_metadata = pd.read_csv(path_df_gtbbox_metadata)  # .set_index(["frame_id", "id"])
-            df_frame_metadata = pd.read_csv(path_df_frame_metadata)  # .set_index("frame_id")
+            df_gtbbox_metadata = pd.read_csv(path_df_gtbbox_metadata)
+            df_frame_metadata = pd.read_csv(path_df_frame_metadata)
             df_sequence_metadata = pd.read_csv(path_df_sequence_metadata)
             with open(path_target) as jsonFile:
                 targets = target_2_torch(json.load(jsonFile))
             print("End Try")
 
         except:
-
             metadata_path = glob.glob(osp.join(folder, "Metadata*"))[0]
             images_path_list = glob.glob(osp.join(folder, "*.png"))
-
             with open(metadata_path) as file:
                 metadata = json.load(file)
 
             ordering = np.argsort([creation_date(x) for x in images_path_list])
-
-            # %%
-
             img_annot_path_list = np.array(images_path_list)[ordering[::2]]
             img_rgb_path_list = np.array(images_path_list)[ordering[1::2]]
-
-            # img_rgb = mpimg.imread(img_rgb_path_list[0])
-            img_annot = mpimg.imread(img_annot_path_list[0])
-
-            # %% for a tuple (img_rgb, img_annot) get all the bounding boxes
-
-            img = img_annot
 
             df_gtbbox_list = []
             targets = {}
             frame_id_list = []
             df_frame_list = []
 
+            # For all images in the sequence
             for i, img_annot_path in enumerate(img_annot_path_list):
 
                 if i > max_samples_per_seq:
@@ -150,8 +107,6 @@ class TwincityProcessing(DatasetProcessing):
                 bboxes, df = get_twincity_boxes(img_annot, metadata)
 
                 # todo hack to set the anomalies as ignore regions
-                # filter anomalies
-
                 frame_id = img_annot_path.split("/Snapshot-2023-")[-1].split(".png")[0]
                 df["frame_id"] = frame_id  # todo frame_id should be the one of the rgb
                 df["id"] = frame_id  # todo have to choose a denomination
@@ -177,11 +132,9 @@ class TwincityProcessing(DatasetProcessing):
                 plt.show()
                 """
 
-                # df_frame_metadata = df_gtbbox_metadata.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True))
 
                 dict_frame_metadata = {
                     "weather": metadata["weather"],
-                    # "frame_id": frame_id,
                     "id": frame_id,
                     "file_name": img_rgb_path_list[i].split("v5/")[1],
                 }
@@ -205,12 +158,6 @@ class TwincityProcessing(DatasetProcessing):
             df_gtbbox_metadata = pd.concat(df_gtbbox_list, axis=0)
             df_sequence_metadata = pd.DataFrame()  # todo for now
 
-            img_path_list = img_rgb_path_list
-            img_path = osp.join(root, df_frame_metadata["file_name"].iloc[0])
-            frame_id = df_frame_metadata.index[0]
-            # plot_results_img(img_path, frame_id, preds=None, targets=targets,
-            #                 excl_gt_indices=None, ax=None)
-
             # %% Save folder files
             df_gtbbox_metadata.to_csv(path_df_gtbbox_metadata)
             df_frame_metadata.to_csv(path_df_frame_metadata)
@@ -220,5 +167,5 @@ class TwincityProcessing(DatasetProcessing):
 
         metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 
-        return root, targets, metadatas  # , frame_id_list, img_path_list
+        return root, targets, metadatas
 

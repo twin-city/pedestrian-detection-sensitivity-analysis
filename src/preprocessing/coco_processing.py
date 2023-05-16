@@ -34,7 +34,8 @@ class COCOProcessing(DatasetProcessing):
 
         self.coco_json_path = coco_json_path
 
-    def get_dataset(self):
+
+    def get_annotations_and_imagepaths(self):
 
         # Load coco dataset
         with open(self.coco_json_path) as f:
@@ -58,10 +59,12 @@ class COCOProcessing(DatasetProcessing):
 
         df_frame_metadata.rename_axis('frame_id')
         df_frame_metadata["seq_name"] = 0
-        df_frame_metadata["weather"] = "dry"
         df_frame_metadata["id"] = df_frame_metadata.index
         df_frame_metadata["frame_id"] = df_frame_metadata.index
+
+        # Assumptions
         df_frame_metadata["is_night"] = 0
+        df_frame_metadata["weather"] = "dry"
 
         # Targets in torch format
         targets = {}
@@ -71,10 +74,4 @@ class COCOProcessing(DatasetProcessing):
             target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
             targets[key] = target
 
-        df_gtbbox_metadata["aspect_ratio"] = df_gtbbox_metadata["width"] / df_gtbbox_metadata["height"]
-        mu = 0.4185
-        std = 0.12016
-        df_gtbbox_metadata["aspect_ratio_is_typical"] = 1*np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
-                                                                       df_gtbbox_metadata["aspect_ratio"] > mu - std)
-
-        return self.root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+        return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
