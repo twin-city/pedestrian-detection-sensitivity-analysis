@@ -11,7 +11,10 @@ Given input detection models (RGB --> (x0,y0,x1,y1) it aims at :
 
 ## How to use this project
 
-Run `python src/demos/demo_benchmark_analysis.py`
+Assuming each twincity folder is stored in `/home/raphael/work/datasets/twincity-Unreal/v5` :
+
+
+Run `python main.py -d twincity -r /home/raphael/work/datasets/twincity-Unreal/v5 --max_samples 50 -output results_new -frame -gt --plot_image`
 
 
 ## Datasets used 

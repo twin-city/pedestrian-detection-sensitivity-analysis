@@ -266,13 +266,10 @@ def get_dataset_from_folder(folder, max_samples_per_seq=101):
 
 
         img_path_list = img_rgb_path_list
-
-
         img_path = osp.join(root, df_frame_metadata["file_name"].iloc[0])
         frame_id = df_frame_metadata.index[0]
-
-        plot_results_img(img_path, frame_id, preds=None, targets=targets,
-                         excl_gt_indices=None, ax=None)
+        #plot_results_img(img_path, frame_id, preds=None, targets=targets,
+        #                 excl_gt_indices=None, ax=None)
 
         #%% Save folder files
         df_gtbbox_metadata.to_csv(path_df_gtbbox_metadata)

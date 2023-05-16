@@ -23,6 +23,11 @@ class Dataset():
         # Show descriptive statistics
         # self.create_markdown_description_table()
 
+
+    def get_dataset_dir(self):
+        return f"{self.dataset_name}{self.max_sample}"
+
+
     def get_dataset_as_tuple(self):
         return self.root, self.targets, self.df_gtbbox_metadata, self.df_frame_metadata, self.df_sequence_metadata
 

@@ -3,15 +3,11 @@ import torch
 import pandas as pd
 from .processing import DatasetProcessing
 import os
-dataset_name = "Fudan"
-max_samples = 200
-root = "/home/raphael/work/datasets/PennFudanPed"
-coco_json_path = "/home/raphael/work/datasets/PennFudanPed/coco.json"
 import numpy as np
+
 
 def subset_dict(dictionary, keys):
     return {key: dictionary[key] for key in keys if key in dictionary}
-
 
 def bbox_2_x0y0x1y1(dict):
     dict["x0"] = dict["bbox"][0]
@@ -81,4 +77,4 @@ class COCOProcessing(DatasetProcessing):
         df_gtbbox_metadata["aspect_ratio_is_typical"] = 1*np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
                                                                        df_gtbbox_metadata["aspect_ratio"] > mu - std)
 
-        return root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+        return self.root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
