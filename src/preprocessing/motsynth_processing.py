@@ -75,11 +75,15 @@ class MotsynthProcessing(DatasetProcessing):
         targets_metadata = {}
 
         # Set images to process (subset for ptotyping)
-        if random_sampling:
-            random_set = np.random.choice(len(annot_motsynth["images"][delay:]), max_samples, replace=False)
-            image_set = [x for i, x in enumerate(annot_motsynth["images"][delay:]) if i in random_set]
+
+        if not "small" in self.root:
+            if random_sampling:
+                random_set = np.random.choice(len(annot_motsynth["images"][delay:]), max_samples, replace=False)
+                image_set = [x for i, x in enumerate(annot_motsynth["images"][delay:]) if i in random_set]
+            else:
+                image_set = annot_motsynth["images"][delay:delay+max_samples]
         else:
-            image_set = annot_motsynth["images"][delay:delay+max_samples]
+            image_set = annot_motsynth["images"]
 
         for image in image_set:
 

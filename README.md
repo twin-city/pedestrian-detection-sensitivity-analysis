@@ -45,5 +45,10 @@ For more information on MoTSynth and its license see https://aimagelab.ing.unimo
 | Frame parameter sensitivity : Missing Rate difference between specific scenario and average                                 | ![Performance_difference_MR_['faster-rcnn_cityscapes', 'mask-rcnn_coco'].png](reference_results%2Ftwincity50%2FPerformance_difference_MR_%5B%27faster-rcnn_cityscapes%27%2C%20%27mask-rcnn_coco%27%5D.png) | ![Performance_difference_MR_['faster-rcnn_cityscapes', 'mask-rcnn_coco'].png](reference_results%2Fmotsynth600%2FPerformance_difference_MR_%5B%27faster-rcnn_cityscapes%27%2C%20%27mask-rcnn_coco%27%5D.png)| ![Performance_difference_MR_['faster-rcnn_cityscapes', 'mask-rcnn_coco'].png](reference_results%2FEuroCityPerson30%2FPerformance_difference_MR_%5B%27faster-rcnn_cityscapes%27%2C%20%27mask-rcnn_coco%27%5D.png)|
 
 
+
 Take home message
- - Synthetic 
+ - Synthetic can perform similarly with Real (see MoTSynth and EuroCityPerson columns)
+ - Still work to do on annotations for Twincity which differs from the 2 other datasets (see Twincity column). Effect are similar, but range of values differ.
+ - On frame parameter sensitivity
+   - Day/Night is consistent across all datasets : Night is harder than Day
+   - Camera angle is not consistent across the synthetic datasets : 0° is harder than 45° for mask-RCNN_coco, but effect differ between Twincity and MoTSynth for FasterRCNN_Cityscapes.

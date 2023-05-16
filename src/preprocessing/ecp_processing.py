@@ -58,11 +58,13 @@ class ECPProcessing(DatasetProcessing):
         os.makedirs(self.saves_dir, exist_ok=True)
 
     def get_dataset(self):
-        targets, metadatas, frame_id_list, img_path_list = self.get_annotations_and_imagepaths()
+        targets, df_gtbbox_metadata, df_frame_metadata, df_sequance_metadata = self.get_annotations_and_imagepaths()
 
+        # Common post-processing
+        df_gtbbox_metadata = self.format_gtbbox_metadata(df_gtbbox_metadata)
+        df_frame_metadata = self.format_frame_metadata(df_frame_metadata, df_gtbbox_metadata)
 
-
-        return self.root, targets, metadatas, frame_id_list, img_path_list
+        return self.root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequance_metadata
 
     def get_ECP_annotations_and_imagepaths_folder(self, time, set, city):
 

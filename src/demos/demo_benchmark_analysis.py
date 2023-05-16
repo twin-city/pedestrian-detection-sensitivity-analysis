@@ -96,12 +96,7 @@ if __name__ == "__main__":
     root = "/home/raphael/work/datasets/PennFudanPed"
     coco_json_path = "/home/raphael/work/datasets/PennFudanPed/coco.json"
 
-    # Parameters MoTSynth
-    dataset_name = "motsynth"
-    root = "/home/raphael/work/datasets/MOTSynth"
-    max_samples = 600
-    model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
-    coco_json_path = None
+
 
     # Parameters ECP
     dataset_name = "EuroCityPerson"
@@ -118,9 +113,16 @@ if __name__ == "__main__":
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     coco_json_path = None
 
+    # Parameters MoTSynth
+    dataset_name = "motsynth_small"
+    root = "/home/raphael/work/datasets/MOTSynth_small"
+    max_samples = 1000
+    model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
+    coco_json_path = None
+
     run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, coco_json_path=coco_json_path,
-                                  dataset_analysis=True, frame_analysis=True, gtbbox_analysis=True,
-                                  plot_image=True, output_dir="results/run", show=False)
+                                  dataset_analysis=True, frame_analysis=True, gtbbox_analysis=False,
+                                  plot_image=True, output_dir="results/run_small", show=True)
 
 
 
