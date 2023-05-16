@@ -4,3 +4,7 @@ exps/
 
 .idea/
 out/
+results/
+data_legacy/
+data/
+legacy/
