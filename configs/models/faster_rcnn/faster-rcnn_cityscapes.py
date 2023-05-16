@@ -5,7 +5,7 @@ MMDETECTION_ROOT = "../../../../mmdetection"
 
 _base_ = [
     os.path.join(MMDETECTION_ROOT, 'configs/_base_/models/faster_rcnn_r50_fpn.py'),
-    '../../../configs/datasets/ECP_coco.py',
+    '../../../configs/datasets/ECP_detection.py',
 #    '../../../configs/datasets/CARLA_detection.py',
     os.path.join(MMDETECTION_ROOT, 'configs/_base_/schedules/schedule_1x.py'),
     os.path.join(MMDETECTION_ROOT, 'configs/_base_/default_runtime.py'),
