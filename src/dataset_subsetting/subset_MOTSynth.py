@@ -76,6 +76,6 @@ if __name__ == "__main__":
     # Parameters
     NUM_FRAME_PER_SEQUENCE = 10
     DELAY = 3
-    fulldataset_folder_path = "/home/raphael/work/datasets/MOTSynth/"
-    new_folder_path = "/home/raphael/work/datasets/MOTSynth_small"
+    fulldataset_folder_path = "/home/raphael/work/datasets/OtherDatasets/MOTSynth/"
+    new_folder_path = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/motsynth_small"
     subset_MOTSynth(fulldataset_folder_path, new_folder_path, num_frame_per_sequence=NUM_FRAME_PER_SEQUENCE, delay=DELAY)

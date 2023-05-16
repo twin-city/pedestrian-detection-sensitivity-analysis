@@ -37,7 +37,7 @@ if __name__ == "__main__":
     NUM_FRAME_PER_SEQUENCE = 10
     # Full dataset path
     fulldataset_folder_path = "/media/raphael/Projects/datasets/EuroCityPerson/ECP"
-    newdataset_folder_path = "/home/raphael/work/datasets/ECP_small"
+    newdataset_folder_path = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/ecp_small"
 
     # Subset ECP
     subset_ECP(fulldataset_folder_path, newdataset_folder_path, num_frame_per_sequence=10)

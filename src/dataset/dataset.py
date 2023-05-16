@@ -6,6 +6,20 @@ from src.plot_utils import plot_correlations
 from src.plot_utils import plot_dataset_statistics
 from configs_path import ROOT_DIR
 
+
+def print_stat(df_stat):
+    stat_day = 0 in df_stat.keys()
+    stat_night = 1 in df_stat.keys()
+
+    if stat_day and stat_night > 0:
+        return f"{df_stat[0]}/{df_stat[1]}"
+    elif stat_night == 0:
+        return f"{df_stat[0]}/"
+    elif stat_day == 0:
+        return f"/{df_stat[1]}"
+    else:
+        raise ValueError("Cannot print in df_descr.md due to unknown error")
+
 class Dataset():
     def __init__(self, dataset_name, max_sample, root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata):
         self.dataset_name = dataset_name
@@ -33,6 +47,8 @@ class Dataset():
 
     # I/O
 
+
+
     def create_markdown_description_table(self, folder_path="../../results"):
 
         df_frame = self.df_frame_metadata.copy(deep=True)
@@ -44,21 +60,10 @@ class Dataset():
         n_person = df_frame.groupby("is_night").apply(lambda x: x["num_pedestrian"].sum())
         weathers = df_frame["weather"].unique()
 
-        dataset_version_name = f"{self.dataset_name}_{self.max_sample}"
-
-        def print_stat(df_stat):
-
-            stat_day = 0 in df_stat.keys()
-            stat_night = 1 in df_stat.keys()
-
-            if stat_day and stat_night > 0:
-                return f"{df_stat[0]}/{df_stat[1]}"
-            elif stat_night == 0:
-                return f"{df_stat[0]}/"
-            elif stat_day == 0:
-                return f"/{df_stat[1]}"
-            else:
-                raise ValueError("Cannot print in df_descr.md due to unknown error")
+        if self.max_sample is not None:
+            dataset_version_name = f"{self.dataset_name}_{self.max_sample}"
+        else:
+            dataset_version_name = f"{self.dataset_name}"
 
         df_descr = pd.DataFrame({
             "sequences (day/night)": f"{print_stat(n_seqs)}",

@@ -26,7 +26,9 @@ class MotsynthProcessing(DatasetProcessing):
         self.annot_dir = f"{root}/coco annot"
         os.makedirs(self.saves_dir, exist_ok=True)
         self.sequence_ids = sequence_ids
-        self.max_samples_per_sequence = self.max_samples // len(self.get_usable_sequence_ids())
+
+
+        # self.max_samples_per_sequence = self.max_samples // len(self.get_usable_sequence_ids())
 
         # Additional info
         self.RESOLUTION = (1920, 1080)
@@ -45,8 +47,10 @@ class MotsynthProcessing(DatasetProcessing):
             sequence_ids_json = set([i.replace(".json", "") for i in
                                   os.listdir(self.annot_dir)]) - exclude_ids_frames
             sequence_ids = list(np.sort(list(set.intersection(sequence_ids_frames, sequence_ids_json))))
-            if self.max_samples < len(sequence_ids):
-                sequence_ids = np.random.choice(sequence_ids, self.max_samples, replace=False)
+
+            if self.max_samples is not None:
+                if self.max_samples < len(sequence_ids):
+                    sequence_ids = np.random.choice(sequence_ids, self.max_samples, replace=False)
         else:
             sequence_ids = self.sequence_ids
         return sequence_ids
@@ -214,7 +218,11 @@ class MotsynthProcessing(DatasetProcessing):
                 folders = sequence_ids
 
             num_folders = len(list(folders))
-            max_num_sample_per_sequence = int(max_samples/num_folders)
+
+            if max_samples is not None:
+                max_num_sample_per_sequence = int(max_samples/num_folders)
+            else:
+                max_num_sample_per_sequence = 1000 #todo max to 1000 arbirterary
 
             targets, targets_metadata, frames_metadata, frame_id_list, img_path_list = {}, {}, {}, [], []
 

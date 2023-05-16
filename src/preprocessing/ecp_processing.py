@@ -104,8 +104,9 @@ class ECPProcessing(DatasetProcessing):
         for i, frame_id in enumerate(total_frame_ids):
 
             # set max samples #todo
-            if i > self.max_samples:
-                break
+            if self.max_samples is not None:
+                if i > self.max_samples:
+                    break
 
             # Load ECP annotations
             json_path = f"{self.root}/{time}/labels/{set}/{city}/{frame_id}.json"

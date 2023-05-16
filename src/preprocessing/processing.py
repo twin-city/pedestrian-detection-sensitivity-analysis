@@ -32,6 +32,9 @@ class DatasetProcessing:
     def format_frame_metadata(self, df_frame_metadata, df_gtbbox_metadata):
         df_frame_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[
             df_frame_metadata.index]
+
+        df_frame_metadata["is_night"] = 1* df_frame_metadata["is_night"]
+
         return df_frame_metadata
 
 
