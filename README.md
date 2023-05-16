@@ -46,4 +46,8 @@ For more information on MoTSynth and its license see https://aimagelab.ing.unimo
 
 
 Take home message
- - Synthetic 
+ - Synthetic can perform similarly with Real (see MoTSynth and EuroCityPerson columns)
+ - Still work to do on annotations for Twincity which differs from the 2 other datasets (see Twincity column). Effect are similar, but range of values differ.
+ - On frame parameter sensitivity
+   - Day/Night is consistent across all datasets : Night is harder than Day
+   - Camera angle is not consistent across the synthetic datasets : 0° is harder than 45° for mask-RCNN_coco, but effect differ between Twincity and MoTSynth for FasterRCNN_Cityscapes.
