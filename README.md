@@ -32,18 +32,14 @@ dataset named as : ($name_$max samples)
 - Download motsynth
 - Download eurocityperson (research purpose only) 
 
-For more information on EuroCityPerson and its license see https://eurocity-dataset.tudelft.nl/
-For more information on MoTSynth and its license see https://aimagelab.ing.unimore.it/imagelab/page.asp?IdPage=42
+For more information on EuroCityPerson and its license see https://eurocity-dataset.tudelft.nl/  
+For more information on MoTSynth and its license see https://aimagelab.ing.unimore.it/imagelab/page.asp?IdPage=42  
 
-## Install
-conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
-torchmetrics
-tqdm
-pandas
-seaborn
-conda install -c conda-forge opencv
-This post did help https://discuss.pytorch.org/t/userwarning-cuda-initialization-cuda-unknown-error-this-may-be-due-to-an-incorrectly-set-up-environment-e-g-changing-env-variable-cuda-visible-devices-after-program-start-setting-the-available-devices-to-be-zero/129335/2
-scikit-learn
-cpu conda install pytorch torchvision torchaudio -c pytorch
-See mmdet / mmcv for install
 
+## Results 
+
+|                                                                                                                             | Twincity (Synthetic)                                                                                                                                                                                         | MoTSynth (Synthetic)                                                                        | EuroCityPerson (Real)                                                                              |
+|-----------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| Boundig Box parameter sensitivity : MR vs FPPI for bbox aspect ratio (line 1), height (line 2) and occlusion rate (line 3). | ![gtbbox_cofactor_fppi_mr.png](reference_results%2Ftwincity50%2Fgtbbox_cofactor_fppi_mr.png)                                                                                                                 | ![gtbbox_cofactor_fppi_mr.png](reference_results%2Fmotsynth600%2Fgtbbox_cofactor_fppi_mr.png) | ![gtbbox_cofactor_fppi_mr.png](reference_results%2FEuroCityPerson30%2Fgtbbox_cofactor_fppi_mr.png) |
+| Frame parameter sensitivity :  MR vs FPPI for Day vs Night (line 2) and Camera Angle (line 3).                              | ![Image 1](reference_results/twincity50/frame_cofactor_fppi_mr.png)                                                                                                                                          | ![frame_cofactor_fppi_mr.png](reference_results%2Fmotsynth600%2Fframe_cofactor_fppi_mr.png) | ![frame_cofactor_fppi_mr.png](reference_results%2FEuroCityPerson30%2Fframe_cofactor_fppi_mr.png)   |
+| Frame parameter sensitivity : Missing Rate difference between specific scenario and average                                 |   ![Performance_difference_MR_['faster-rcnn_cityscapes', 'mask-rcnn_coco'].png](reference_results%2Ftwincity50%2FPerformance_difference_MR_%5B%27faster-rcnn_cityscapes%27%2C%20%27mask-rcnn_coco%27%5D.png) | ![Performance_difference_MR_['faster-rcnn_cityscapes', 'mask-rcnn_coco'].png](reference_results%2Fmotsynth600%2FPerformance_difference_MR_%5B%27faster-rcnn_cityscapes%27%2C%20%27mask-rcnn_coco%27%5D.png)| ![Performance_difference_MR_['faster-rcnn_cityscapes', 'mask-rcnn_coco'].png](reference_results%2FEuroCityPerson30%2FPerformance_difference_MR_%5B%27faster-rcnn_cityscapes%27%2C%20%27mask-rcnn_coco%27%5D.png)|

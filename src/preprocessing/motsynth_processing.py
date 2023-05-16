@@ -6,15 +6,17 @@ import pandas as pd
 import os
 from src.utils import target_2_json, target_2_torch
 from src.plot_utils import xywh2xyxy
-
 from .processing import DatasetProcessing
 from configs_path import ROOT_DIR
 
 
+# todo specific to motsynth
+# todo bug 140, 174 and whatt appens if less samples than sequences ?????
+# todo the bug of delay of 3
+
 class MotsynthProcessing(DatasetProcessing):
 
-
-    def __init__(self, root, max_samples=200, video_ids=None):
+    def __init__(self, root, max_samples=200, sequence_ids=None):
 
         self.dataset_name = "motsynth"
         super().__init__(root, max_samples)
@@ -23,45 +25,47 @@ class MotsynthProcessing(DatasetProcessing):
         self.frames_dir = f"{root}/frames"
         self.annot_dir = f"{root}/coco annot"
         os.makedirs(self.saves_dir, exist_ok=True)
-        self.video_ids = video_ids
+        self.sequence_ids = sequence_ids
+        self.max_samples_per_sequence = self.max_samples // len(self.get_usable_sequence_ids())
 
-        # todo specific to motsynth
-        # todo bug 140, 174 and whatt appens if less samples than sequences ?????
+        # Additional info
+        self.RESOLUTION = (1920, 1080)
+        self.NUM_KEYPOINTS = 22
 
 
-    def get_video_ids(self):
-        if self.video_ids is None:
+
+    def get_usable_sequence_ids(self):
+        """
+        Get usable sequence ids.
+        :return:
+        """
+        if self.sequence_ids is None:
             exclude_ids_frames = set(["060", "081", "026", "132", "136", "102", "099", "174", "140"])
-            video_ids_frames = set(np.sort(os.listdir(self.frames_dir)).tolist())
-            video_ids_json = set([i.replace(".json", "") for i in
+            sequence_ids_frames = set(np.sort(os.listdir(self.frames_dir)).tolist())
+            sequence_ids_json = set([i.replace(".json", "") for i in
                                   os.listdir(self.annot_dir)]) - exclude_ids_frames
-            video_ids = list(np.sort(list(set.intersection(video_ids_frames, video_ids_json))))
-            if self.max_samples < len(video_ids):
-                video_ids = np.random.choice(video_ids, self.max_samples, replace=False)
+            sequence_ids = list(np.sort(list(set.intersection(sequence_ids_frames, sequence_ids_json))))
+            if self.max_samples < len(sequence_ids):
+                sequence_ids = np.random.choice(sequence_ids, self.max_samples, replace=False)
         else:
-            video_ids = self.video_ids
-
-        return video_ids
+            sequence_ids = self.sequence_ids
+        return sequence_ids
 
 
     def get_dataset(self):
-        targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata= self.get_MoTSynth_annotations_and_imagepaths()
+        targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.get_MoTSynth_annotations_and_imagepaths()
 
-        df_gtbbox_metadata["aspect_ratio"] = 1 / df_gtbbox_metadata["aspect_ratio"]
-        mu = 0.4185
-        std = 0.12016
-        df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
-                                                                       df_gtbbox_metadata["aspect_ratio"] > mu - std)
-
-        df_frame_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
+        # Common post-processing
+        df_gtbbox_metadata = self.format_gtbbox_metadata(df_gtbbox_metadata)
+        df_frame_metadata = self.format_frame_metadata(df_frame_metadata, df_gtbbox_metadata)
 
         return self.root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 
-    def get_MoTSynth_annotations_and_imagepaths_video(self, video_id="004", max_samples=100000, random_sampling=True, delay=3):
+    def get_MoTSynth_annotations_and_imagepaths_sequence(self, sequence_id="004", max_samples=100, random_sampling=True, delay=3):
 
         np.random.seed(0)
         df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()]*3
-        json_path = f"{self.annot_dir}/{video_id}.json"
+        json_path = f"{self.annot_dir}/{sequence_id}.json"
         with open(json_path) as jsonFile:
             annot_motsynth = json.load(jsonFile)
 
@@ -94,14 +98,12 @@ class MotsynthProcessing(DatasetProcessing):
 
             # BBOXES metadata
             annots = [x for x in annot_motsynth["annotations"] if x["image_id"] == frame_id+delay]
-
             height = [x["bbox"][3] for x in annots]
             width = [x["bbox"][2] for x in annots]
-            aspect_ratio = [h/w for h,w in zip(height, width)]
-
-            keypoints_label = [(np.array(annot["keypoints"])).reshape((22, 3))[:,2] for annot in annots]
-            keypoints_posx = [(np.array(annot["keypoints"])).reshape((22, 3))[:,0] for annot in annots]
-            keypoints_posy = [(np.array(annot["keypoints"])).reshape((22, 3))[:, 1] for annot in annots]
+            aspect_ratio = [w/h for h,w in zip(height, width)]
+            keypoints_label = [(np.array(annot["keypoints"])).reshape((self.NUM_KEYPOINTS, 3))[:,2] for annot in annots]
+            keypoints_posx = [(np.array(annot["keypoints"])).reshape((self.NUM_KEYPOINTS, 3))[:,0] for annot in annots]
+            keypoints_posy = [(np.array(annot["keypoints"])).reshape((self.NUM_KEYPOINTS, 3))[:, 1] for annot in annots]
             area = [annot["area"] for annot in annots]
             is_crowd = [annot["iscrowd"] for annot in annots]
             is_blurred = [annot["is_blurred"] for annot in annots]
@@ -150,9 +152,9 @@ class MotsynthProcessing(DatasetProcessing):
 
                 df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, df_gtbbox_metadata_current], axis=0)
 
-                keypoints_label_names = [f"keypoints_label_{i}" for i in range(22)]
-                keypoints_posx_names = [f"keypoints_posx_{i}" for i in range(22)]
-                keypoints_posy_names = [f"keypoints_posy_{i}" for i in range(22)]
+                keypoints_label_names = [f"keypoints_label_{i}" for i in range(self.NUM_KEYPOINTS)]
+                keypoints_posx_names = [f"keypoints_posx_{i}" for i in range(self.NUM_KEYPOINTS)]
+                keypoints_posy_names = [f"keypoints_posy_{i}" for i in range(self.NUM_KEYPOINTS)]
 
 
                 df_gtbbox_metadata[keypoints_label_names] = df_gtbbox_metadata["keypoints_label"].apply(lambda x: pd.Series(x))
@@ -167,15 +169,12 @@ class MotsynthProcessing(DatasetProcessing):
                 df_frame_metadata = pd.concat([df_frame_metadata, pd.DataFrame({key:val for key,val in image.items() if key in frame_metadata_features}, index=[frame_id])], axis=0)
         frame_id_list = list(targets.keys())
 
-        # Metadata at the video level
-        df_sequence_metadata = pd.DataFrame(annot_motsynth["info"], index=[video_id])
+        # Metadata at the sequence level
+        df_sequence_metadata = pd.DataFrame(annot_motsynth["info"], index=[sequence_id])
 
         df_gtbbox_metadata["seq_name"] = df_frame_metadata["seq_name"].iloc[0]
 
         metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
-
-        # todo this info ? as a dict of additional dataset parameters I would say
-        resolution = (1920, 1080)
 
 
         return targets, metadatas, frame_id_list, img_path_list
@@ -201,17 +200,17 @@ class MotsynthProcessing(DatasetProcessing):
 
         except:
             print("Did not find precomputed metadatas.")
-            video_ids = self.get_video_ids()
+            sequence_ids = self.get_usable_sequence_ids()
             max_samples = self.max_samples
             df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = [pd.DataFrame()]*3
 
-            if video_ids is None:
+            if sequence_ids is None:
                 folders = os.listdir(self.frames_dir)
             else:
-                folders = video_ids
+                folders = sequence_ids
 
             num_folders = len(list(folders))
-            max_num_sample_per_video = int(max_samples/num_folders)
+            max_num_sample_per_sequence = int(max_samples/num_folders)
 
             targets, targets_metadata, frames_metadata, frame_id_list, img_path_list = {}, {}, {}, [], []
 
@@ -220,7 +219,7 @@ class MotsynthProcessing(DatasetProcessing):
 
                 #try:
                 targets_folder, targets_metadatas, frame_id_list_folder, img_path_list_folder =\
-                    self.get_MoTSynth_annotations_and_imagepaths_video(video_id=folder, max_samples=max_num_sample_per_video)
+                    self.get_MoTSynth_annotations_and_imagepaths_sequence(sequence_id=folder, max_samples=max_num_sample_per_sequence)
                 df_gtbbox_metadata_folder, df_frame_metadata_folder, df_sequence_metadata_folder = targets_metadatas
                 targets.update(targets_folder)
                 df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, pd.DataFrame(df_gtbbox_metadata_folder)], axis=0)
@@ -276,10 +275,11 @@ class MotsynthProcessing(DatasetProcessing):
         df_gtbbox_metadata["id"] = df_gtbbox_metadata["id"].astype(str)
         df_gtbbox_metadata["image_id"] = df_gtbbox_metadata["image_id"].astype(str)
         df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
+        #df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
 
         df_gtbbox_metadata.index = df_gtbbox_metadata.index.rename({"image_id": "frame_id"})
         df_gtbbox_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").apply(len)
-        keypoints_label_names = [f"keypoints_label_{i}" for i in range(22)]
+        keypoints_label_names = [f"keypoints_label_{i}" for i in range(self.NUM_KEYPOINTS)]
 
         # Todo https://github.com/cocodataset/cocoapi/issues/130
         df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata[keypoints_label_names].apply(lambda x: (2 - x)).mean(
@@ -299,10 +299,10 @@ class MotsynthProcessing(DatasetProcessing):
 
 """
 
-def visual_check_motsynth_annotations(video_num="004", img_file_name="0200.jpg", shift=3):
+def visual_check_motsynth_annotations(sequence_num="004", img_file_name="0200.jpg", shift=3):
 
 
-    json_path = f"/home/raphael/work/datasets/MOTSynth/coco annot/{video_num}.json"
+    json_path = f"/home/raphael/work/datasets/MOTSynth/coco annot/{sequence_num}.json"
     with open(json_path) as jsonFile:
         annot_motsynth = json.load(jsonFile)
 
@@ -310,11 +310,11 @@ def visual_check_motsynth_annotations(video_num="004", img_file_name="0200.jpg",
     img_id = [(x["id"]) for x in annot_motsynth["images"] if img_file_name in x["file_name"]][0]
     bboxes = [xywh2xyxy(x["bbox"]) for x in annot_motsynth["annotations"] if x["image_id"] == img_id+shift]
 
-    img_path = f"/home/raphael/work/datasets/MOTSynth/frames/{video_num}/rgb/{img_file_name}"
+    img_path = f"/home/raphael/work/datasets/MOTSynth/frames/{sequence_num}/rgb/{img_file_name}"
     img = plt.imread(img_path)
     img = add_bboxes_to_img(img, bboxes, c=(0, 255, 0), s=6)
 
-    keypoints = [(np.array(x["keypoints"])).reshape((22, 3)) for x in annot_motsynth["annotations"] if
+    keypoints = [(np.array(x["keypoints"])).reshape((self.NUM_KEYPOINTS, 3)) for x in annot_motsynth["annotations"] if
                  x["image_id"] == img_id + shift]
 
     for keypoint in keypoints:
@@ -326,46 +326,46 @@ def visual_check_motsynth_annotations(video_num="004", img_file_name="0200.jpg",
 
 
 
-def get_motsynth_day_night_video_ids(max_iter=50, force=False):
+def get_motsynth_day_night_sequence_ids(max_iter=50, force=False):
 
     # Save
     if os.path.exists("/home/raphael/work/datasets/MOTSynth/coco_infos.json") or not force:
         with open("/home/raphael/work/datasets/MOTSynth/coco_infos.json") as jsonFile:
-            video_info = json.load(jsonFile)
+            sequence_info = json.load(jsonFile)
     else:
-        video_info = {}
+        sequence_info = {}
 
 
-    for i, video_file in enumerate(mmcv.scandir("/home/raphael/work/datasets/MOTSynth/coco annot/")):
+    for i, sequence_file in enumerate(mmcv.scandir("/home/raphael/work/datasets/MOTSynth/coco annot/")):
 
-        print(video_file)
+        print(sequence_file)
 
-        if video_file.replace(".json", "") not in video_info.keys():
+        if sequence_file.replace(".json", "") not in sequence_info.keys():
             try:
-                json_path = f"/home/raphael/work/datasets/MOTSynth/coco annot/{video_file}"
+                json_path = f"/home/raphael/work/datasets/MOTSynth/coco annot/{sequence_file}"
 
                 with open(json_path) as jsonFile:
                     annot_motsynth = json.load(jsonFile)
 
 
                 is_night = annot_motsynth["info"]["is_night"]
-                print(video_file, is_night)
+                print(sequence_file, is_night)
 
-                video_info[video_file.replace(".json", "")] = annot_motsynth["info"]
+                sequence_info[sequence_file.replace(".json", "")] = annot_motsynth["info"]
             except:
-                print(f"Did not work for {video_file}")
+                print(f"Did not work for {sequence_file}")
 
         if i > max_iter:
             break
 
     with open("/home/raphael/work/datasets/MOTSynth/coco_infos.json", 'w') as f:
-        json.dump(video_info, f)
+        json.dump(sequence_info, f)
     night = []
     day = []
 
-    day_index = [key for key, value in video_info.items() if
+    day_index = [key for key, value in sequence_info.items() if
            not value["is_night"] and os.path.exists(f"/home/raphael/work/datasets/MOTSynth/frames/{key}")]
-    night_index = [key for key, value in video_info.items() if
+    night_index = [key for key, value in sequence_info.items() if
            value["is_night"] and os.path.exists(f"/home/raphael/work/datasets/MOTSynth/frames/{key}")]
 
     print("night", night_index)

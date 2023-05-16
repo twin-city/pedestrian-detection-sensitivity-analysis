@@ -246,7 +246,7 @@ def plot_fppi_mr_vs_gtbbox_cofactor(df_analysis_cats, ODD_criterias=None, result
             plot_ffpi_mr_on_ax(df_analysis_cats, cat, ax[pos[0], pos[1]])
     plt.tight_layout()
     if results_dir is not None:
-        plt.savefig(osp.join(results_dir, "frame_cofactor_fppi_mr.png"))
+        plt.savefig(osp.join(results_dir, "gtbbox_cofactor_fppi_mr.png"))
     if show:
         plt.show()
 
