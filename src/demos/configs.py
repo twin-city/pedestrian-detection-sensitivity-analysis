@@ -92,8 +92,8 @@ gtbbox_filtering_occlusion_cats = {
 }
 
 gtbbox_filtering_aspectratio_cats = {
-    "ignore_region": 0,
     "Typical aspect ratios": {
+        "ignore_region": 0,
         "aspect_ratio_is_typical": 1,  #
         "occlusion_rate": {"<": 0.01},
     },

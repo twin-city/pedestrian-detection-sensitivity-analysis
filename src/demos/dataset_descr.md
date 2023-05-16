@@ -1,6 +1,0 @@
-|    |   Unnamed: 0.2 |   Unnamed: 0.1 | Unnamed: 0            | motsynth                                                                  |   motsynth_600 |   twincity_50 |
-|---:|---------------:|---------------:|:----------------------|:--------------------------------------------------------------------------|---------------:|--------------:|
-|  0 |              0 |              0 | sequences (day/night) | 24/10                                                                     |            nan |           nan |
-|  1 |              1 |              1 | images (day/night)    | 404/170                                                                   |            nan |           nan |
-|  2 |              2 |              2 | person (day/night)    | 12096/5365                                                                |            nan |           nan |
-|  3 |              3 |              3 | weather               | THUNDER, CLEAR, SMOG, EXTRASUNNY, FOGGY, CLOUDS, BLIZZARD, RAIN, OVERCAST |            nan |           nan |

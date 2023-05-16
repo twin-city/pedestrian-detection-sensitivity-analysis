@@ -59,6 +59,7 @@ class COCOProcessing(DatasetProcessing):
         df_gtbbox_metadata = df_gtbbox_metadata.set_index(["frame_id","id"])
         df_gtbbox_metadata["width"] = df_gtbbox_metadata["x1"] - df_gtbbox_metadata["x0"]
         df_gtbbox_metadata["height"] = df_gtbbox_metadata["y1"] - df_gtbbox_metadata["y0"]
+
         df_frame_metadata.rename_axis('frame_id')
         df_frame_metadata["seq_name"] = 0
         df_frame_metadata["weather"] = "dry"
@@ -73,5 +74,11 @@ class COCOProcessing(DatasetProcessing):
             target = [dict(boxes=torch.tensor(frame_bboxes))]
             target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
             targets[key] = target
+
+        df_gtbbox_metadata["aspect_ratio"] = df_gtbbox_metadata["width"] / df_gtbbox_metadata["height"]
+        mu = 0.4185
+        std = 0.12016
+        df_gtbbox_metadata["aspect_ratio_is_typical"] = 1*np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
+                                                                       df_gtbbox_metadata["aspect_ratio"] > mu - std)
 
         return root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata

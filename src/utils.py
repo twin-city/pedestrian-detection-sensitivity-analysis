@@ -77,6 +77,9 @@ def subset_dataframe(df, conditions):
     # Create an empty mask
     mask = pd.Series([True] * len(df), index=df.index)
 
+    if type(conditions) == int:
+        print("coucou")
+
     # Iterate over each condition in the dictionary and update the mask accordingly
     for column, values in conditions.items():
 
@@ -158,17 +161,22 @@ import matplotlib.patches as patches
 
 def compute_models_metrics_from_gtbbox_criteria(dataset, gtbbox_filtering_cats, model_names):
 
-
+    len_overall = len(subset_dataframe(dataset.df_gtbbox_metadata, gtbbox_filtering_cats["Overall"]))
     df_frame_metadata = dataset.df_frame_metadata
+    gt_bbox_columns = dataset.df_gtbbox_metadata.columns
 
     # Compute for multiple criteria
     df_metrics_criteria_list = []
     for key, gtbbox_filtering in gtbbox_filtering_cats.items():
-        df_results_aspectratio = pd.concat(
-            [compute_model_metrics_on_dataset(model_name, dataset, gtbbox_filtering, device="cuda")[0] for
-             model_name in model_names])
-        df_results_aspectratio["gtbbox_filtering_cat"] = key
-        df_metrics_criteria_list.append(df_results_aspectratio)
+
+        #todo not do if filtering is same as Overall
+        len_key = len(subset_dataframe(dataset.df_gtbbox_metadata, gtbbox_filtering_cats[key]))
+        if len_key != len_overall or key == "Overall":
+            df_results_aspectratio = pd.concat(
+                [compute_model_metrics_on_dataset(model_name, dataset, gtbbox_filtering, device="cuda")[0] for
+                 model_name in model_names])
+            df_results_aspectratio["gtbbox_filtering_cat"] = key
+            df_metrics_criteria_list.append(df_results_aspectratio)
     df_metrics_criteria = pd.concat(df_metrics_criteria_list, axis=0)
     df_analysis = pd.merge(df_metrics_criteria.reset_index(), df_frame_metadata, on="frame_id")
 

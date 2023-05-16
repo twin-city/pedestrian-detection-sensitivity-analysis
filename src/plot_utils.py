@@ -376,14 +376,21 @@ def plot_fppi_mr_vs_gtbbox_cofactor(df_analysis_cats, ODD_criterias=None):
 
     fig, ax = plt.subplots(3, 3, figsize=(10,10), sharey=True)
     plot_ffpi_mr_on_ax(df_analysis_cats, "Overall", ax[0,0], odd=ODD_criterias)
-    plot_ffpi_mr_on_ax(df_analysis_cats, "Typical aspect ratios", ax[0,1])
-    plot_ffpi_mr_on_ax(df_analysis_cats, "Atypical aspect ratios", ax[0,2])
-    plot_ffpi_mr_on_ax(df_analysis_cats, "near", ax[1,0])
-    plot_ffpi_mr_on_ax(df_analysis_cats, "medium", ax[1,1])
-    plot_ffpi_mr_on_ax(df_analysis_cats, "far", ax[1,2])
-    plot_ffpi_mr_on_ax(df_analysis_cats, "No occlusion", ax[2,0])
-    plot_ffpi_mr_on_ax(df_analysis_cats, "Partial occlusion", ax[2,1])
-    plot_ffpi_mr_on_ax(df_analysis_cats, "Heavy occlusion", ax[2,2])
+
+    cats = [
+        "Typical aspect ratios", "Atypical aspect ratios",
+        "near", "medium", "far",
+        "No occlusion", "Partial occlusion", "Heavy occlusion",
+    ]
+    positions = [
+        [0, 1], [0, 2],
+        [1, 0], [1, 1], [1, 2],
+        [2, 0], [2, 1], [2, 2],
+    ]
+
+    for cat, pos in zip(cats, positions):
+        if cat in df_analysis_cats["gtbbox_filtering_cat"].unique():
+            plot_ffpi_mr_on_ax(df_analysis_cats, cat, ax[pos[0], pos[1]])
     plt.tight_layout()
     plt.show()
 

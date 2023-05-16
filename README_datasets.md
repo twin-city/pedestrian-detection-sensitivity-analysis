@@ -10,3 +10,6 @@
   - ??
 - Twincity
   - Hendled Glitch via ignore regions : too big bbox or multiple colors
+
+# About filtering
+typical / atypical above 50pix or not ?
