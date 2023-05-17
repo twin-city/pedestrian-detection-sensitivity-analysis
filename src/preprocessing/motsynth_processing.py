@@ -28,6 +28,7 @@ class MotsynthProcessing(DatasetProcessing):
         self.sequence_ids = sequence_ids
 
 
+
         # self.max_samples_per_sequence = self.max_samples // len(self.get_usable_sequence_ids())
 
         # Additional info
@@ -56,8 +57,8 @@ class MotsynthProcessing(DatasetProcessing):
         return sequence_ids
 
 
-    def get_dataset(self):
-        targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.load_or_preprocess_motsynth()
+    def get_dataset(self, force_recompute=False):
+        targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.load_or_preprocess_motsynth(force_recompute)
 
         # Common post-processing
         df_gtbbox_metadata = self.format_gtbbox_metadata(df_gtbbox_metadata)
@@ -177,24 +178,50 @@ class MotsynthProcessing(DatasetProcessing):
 
         # Metadata at the sequence level
         df_sequence_metadata = pd.DataFrame(annot_motsynth["info"], index=[sequence_id])
-
         df_gtbbox_metadata["seq_name"] = df_frame_metadata["seq_name"].iloc[0]
-
         metadatas = df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
-
 
         return targets, metadatas, frame_id_list, img_path_list
 
 
+    def load_or_preprocess_motsynth(self, force_recompute=False):
 
-
-    def load_or_preprocess_motsynth(self):
-
+        # Set the paths
         path_df_gtbbox_metadata = osp.join(self.saves_dir, f"df_gtbbox_{self.max_samples}.csv")
         path_df_frame_metadata = osp.join(self.saves_dir, f"df_frame_{self.max_samples}.csv")
         path_df_sequence_metadata = osp.join(self.saves_dir, f"df_sequence_{self.max_samples}.csv")
         path_target = osp.join(self.saves_dir, f"targets_{self.max_samples}.json")
 
+        # Check if all files exist
+        exist_all_paths = True
+        file_paths = [path_df_gtbbox_metadata, path_df_frame_metadata, path_df_sequence_metadata, path_target]
+        for file_path in file_paths:
+            if not os.path.exists(file_path):
+                exist_all_paths = False
+
+        # If all files exist, load them
+        if exist_all_paths and not force_recompute:
+            print("Loading previously computed dataset")
+            # Load it
+            df_gtbbox_metadata = pd.read_csv(path_df_gtbbox_metadata, index_col=["image_id", "id"])
+            df_frame_metadata = pd.read_csv(path_df_frame_metadata, index_col=["frame_id"])
+            df_sequence_metadata = pd.read_csv(path_df_sequence_metadata, index_col=["sequence_id"])
+            with open(path_target) as jsonFile:
+                targets = target_2_torch(json.load(jsonFile))
+
+        # Else, compute them
+        else:
+            targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.preprocess_motsynth()
+
+            # Save dataframes
+            df_gtbbox_metadata.to_csv(path_df_gtbbox_metadata)
+            df_frame_metadata.to_csv(path_df_frame_metadata)
+            df_sequence_metadata.to_csv(path_df_sequence_metadata)
+            with open(path_target, 'w') as f:
+                json.dump(target_2_json(targets), f)
+
+
+        """
         try:
             print("Try")
             df_gtbbox_metadata = pd.read_csv(path_df_gtbbox_metadata).set_index(["image_id", "id"])
@@ -208,13 +235,13 @@ class MotsynthProcessing(DatasetProcessing):
             print("Did not find precomputed metadatas.")
             targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.preprocess_motsynth()
 
-            # Save dataframes
-            df_gtbbox_metadata.to_csv(path_df_gtbbox_metadata)
-            df_frame_metadata.to_csv(path_df_frame_metadata)
-            df_sequence_metadata.to_csv(path_df_sequence_metadata)
-            with open(path_target, 'w') as f:
-                json.dump(target_2_json(targets), f)
 
+
+        if force_recompute:
+            targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.preprocess_motsynth()
+        """
+
+        """
         df_frame_metadata.index.rename("frame_id", inplace=True)
         df_frame_metadata = df_frame_metadata.reset_index()
         df_frame_metadata["frame_id"] = df_frame_metadata["frame_id"].astype(str)
@@ -228,16 +255,7 @@ class MotsynthProcessing(DatasetProcessing):
 
         df_gtbbox_metadata.index = df_gtbbox_metadata.index.rename({"image_id": "frame_id"})
         df_gtbbox_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").apply(len)
-        keypoints_label_names = [f"keypoints_label_{i}" for i in range(self.NUM_KEYPOINTS)]
-
-        # Todo https://github.com/cocodataset/cocoapi/issues/130
-        df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata[keypoints_label_names].apply(lambda x: (2 - x)).mean(
-            axis=1)
-
-        # todo seems there is a bug on pitch/roll/yaw. We assume a mistake of MoTSynth authors, and the referenced "yaw" is in fact "pitch"
-        df_frame_metadata["temp"] = df_frame_metadata["pitch"]
-        df_frame_metadata["pitch"] = df_frame_metadata["yaw"]
-        df_frame_metadata["yaw"] = df_frame_metadata["temp"]
+        """
 
         return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 
@@ -303,10 +321,31 @@ class MotsynthProcessing(DatasetProcessing):
         #df_frame_metadata = df_frame_metadata.rename(columns=new_cam_intr_names)
         """
 
+        # Additional processing
+        keypoints_label_names = [f"keypoints_label_{i}" for i in range(self.NUM_KEYPOINTS)]
+        # Todo https://github.com/cocodataset/cocoapi/issues/130
+        df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata[keypoints_label_names].apply(lambda x: (2 - x)).mean(
+            axis=1)
+        # todo seems there is a bug on pitch/roll/yaw. We assume a mistake of MoTSynth authors, and the referenced "yaw" is in fact "pitch"
+        df_frame_metadata["temp"] = df_frame_metadata["pitch"]
+        df_frame_metadata["pitch"] = df_frame_metadata["yaw"]
+        df_frame_metadata["yaw"] = df_frame_metadata["temp"]
+
+
+        # Operations on indexes
         df_gtbbox_metadata = df_gtbbox_metadata.reset_index()
-        df_gtbbox_metadata["image_id"] = df_gtbbox_metadata["image_id"] - self.delay
+        df_gtbbox_metadata["frame_id"] = df_gtbbox_metadata["image_id"] - self.delay
+        df_gtbbox_metadata[["frame_id", "id"]] = df_gtbbox_metadata[["frame_id", "id"]].astype(str)
+
         df_gtbbox_metadata = df_gtbbox_metadata.set_index(["image_id", "id"])
 
+        df_frame_metadata.index = df_frame_metadata.index.astype(str)
+        df_frame_metadata.index.name = "frame_id"
+
+        df_sequence_metadata.index.name = "sequence_id"
+        df_sequence_metadata.index = df_sequence_metadata.index.astype(str)
+
+        return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
         # todo : american, synthetic, ... (labels)
 
 

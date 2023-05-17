@@ -9,6 +9,36 @@ import os.path as osp
 
 class TestOutput(unittest.TestCase):
 
+    def test_load_motsynth_dataset(self):
+
+        # Folder should be created though
+        output_path = osp.join(ROOT_DIR, "tests/output_motsynth_dataset")
+        os.makedirs(output_path, exist_ok=True)
+
+        # Delete if exists
+        for file_extension in [".csv", ".md"]:
+            if os.path.exists(osp.join(output_path, "df_descr{file_extension}")):
+                os.remove(output_path, "df_descr{file_extension}")
+
+        dataset_names = ["motsynth_small"]
+        DATASET_ROOT = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets"
+        roots = [osp.join(DATASET_ROOT, x) for x in ["motsynth_small"]]
+        max_samples = [50, None, None]
+        for root, dataset_name, max_sample in zip(roots, dataset_names, max_samples):
+
+            dataset = DatasetFactory.get_dataset(dataset_name, max_sample, root, force_recompute=True)
+            dataset.create_markdown_description_table(output_path)
+            # dataset_tuple = dataset.get_dataset_as_tuple()
+            # root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset_tuple
+
+        # Assert we have the same dataset of description
+        df_descr_gt = pd.read_csv(osp.join(output_path, "df_descr_gt.csv")).set_index("characteristics")
+        df_descr = pd.read_csv(osp.join(output_path, "df_descr.csv")).set_index("characteristics")
+        self.assertEqual(df_descr_gt.shape, df_descr.shape)
+        pd.testing.assert_frame_equal(df_descr_gt, df_descr)
+
+
+    """
     def test_load_datasets(self):
 
         # Folder should be created though
@@ -37,3 +67,4 @@ class TestOutput(unittest.TestCase):
         df_descr = pd.read_csv(osp.join(output_path, "df_descr.csv")).set_index("characteristics")
         self.assertEqual(df_descr_gt.shape, df_descr.shape)
         pd.testing.assert_frame_equal(df_descr_gt, df_descr)
+    """
