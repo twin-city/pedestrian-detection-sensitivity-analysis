@@ -52,11 +52,13 @@ class Dataset():
     def create_markdown_description_table(self, folder_path="../../results"):
 
         df_frame = self.df_frame_metadata.copy(deep=True)
+
+        #todo fix
         if "is_night" not in df_frame.columns:
             df_frame["is_night"] = 0
 
         n_images = df_frame.groupby("is_night").apply(len)
-        n_seqs = df_frame.groupby("is_night").apply(lambda x: len(x["seq_name"].unique()))
+        n_seqs = df_frame.groupby("is_night").apply(lambda x: len(x["sequence_id"].unique()))
         n_person = df_frame.groupby("is_night").apply(lambda x: x["num_pedestrian"].sum())
         weathers = df_frame["weather"].unique()
 

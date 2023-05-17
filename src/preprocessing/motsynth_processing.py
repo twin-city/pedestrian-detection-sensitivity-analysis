@@ -122,17 +122,21 @@ class MotsynthProcessing(DatasetProcessing):
 
 
     #todo here should be shared with coco style datasets
-    def preprocess_motsynth_sequence(self, sequence_id="004", delay=3):
+    def preprocess_motsynth_sequence(self, sequence_id="004"):
 
         # Open annotation file
         json_path = f"{self.annot_dir}/{sequence_id}.json"
         with open(json_path) as jsonFile:
             annot_motsynth = json.load(jsonFile)
 
+        for img in annot_motsynth["images"]:
+            img["id"] += self.delay
+
+
         # If there is subsampling
         if self.max_num_sample_per_sequence < len(annot_motsynth["images"]):
             images_list = annot_motsynth["images"][::len(annot_motsynth["images"]) // self.max_num_sample_per_sequence]
-            annot_list = [x for x in annot_motsynth["annotations"] if x["image_id"] in [i["id"]+delay for i in images_list]]
+            annot_list = [x for x in annot_motsynth["annotations"] if x["image_id"] in [i["id"] for i in images_list]]
         else:
             images_list = annot_motsynth["images"]
             annot_list = annot_motsynth["annotations"]
@@ -147,12 +151,24 @@ class MotsynthProcessing(DatasetProcessing):
         new_images, new_annots = [], []
 
         for image in images_list:
-            new_images.append(subset_dict(image, frame_keys_to_keep))
+            subset_image = subset_dict(image, frame_keys_to_keep)
+            subset_image["sequence_id"] = sequence_id
+            new_images.append(subset_image)
 
         for annot in annot_list:
-            new_annots.append(subset_dict(annot, annot_keys_to_keep))
+            subset_annot = subset_dict(annot, annot_keys_to_keep)
+            subset_annot["sequence_id"] = sequence_id
+            new_annots.append(subset_annot)
 
         infos = annot_motsynth["info"]
+        infos["sequence_id"] = sequence_id
+
+        #todo filter when too many annots because of delay
+        image_id_annot = set(np.unique([img["image_id"] for img in new_annots]))
+        image_id_image = set([img["id"] for img in new_images])
+        intersection_id = set.intersection(image_id_annot, image_id_image)
+        new_annots = [annot for annot in new_annots if annot["image_id"] in intersection_id]
+        new_images = [img for img in new_images if img["id"] in intersection_id]
 
         return infos, new_images, new_annots
 
@@ -327,10 +343,18 @@ class MotsynthProcessing(DatasetProcessing):
 
 
         #%% Renaming
+        df_sequence_metadata = df_sequence_metadata.set_index("sequence_id")
         df_frame_metadata["id"] = df_frame_metadata["id"].astype(str)
         df_gtbbox_metadata[['image_id', 'id']] = df_gtbbox_metadata[['image_id', 'id']].astype(str)
         df_frame_metadata = df_frame_metadata.rename(columns={"id": "frame_id"}).set_index("frame_id")
         df_gtbbox_metadata = df_gtbbox_metadata.rename(columns={"image_id": "frame_id"}).set_index(["frame_id", "id"])
+
+        #todo temporary
+        #%% Add Sequence information to Frame
+        sequence_columns = ['is_night', "weather"]
+        for sequence_id in df_sequence_metadata.index:
+            df_frame_metadata.loc[df_frame_metadata["sequence_id"]==sequence_id, sequence_columns] = df_sequence_metadata.loc[sequence_id, sequence_columns].values
+
 
         #%% Tagets
         targets = df_gtbbox_metadata.groupby("frame_id").apply(lambda x: x[["x0", "y0", "x1", "y1"]].values).to_dict()
@@ -361,7 +385,7 @@ class MotsynthProcessing(DatasetProcessing):
 
         # Additional processing
         # Todo https://github.com/cocodataset/cocoapi/issues/130
-        keypoints_label_names = ["o_{i}" for i in range(self.NUM_KEYPOINTS)]
+        keypoints_label_names = [f"o_{i}" for i in range(self.NUM_KEYPOINTS)]
         df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata[keypoints_label_names].apply(lambda x: (2 - x)).mean(axis=1)
 
         # todo seems there is a bug on pitch/roll/yaw. We assume a mistake of MoTSynth authors, and the referenced "yaw" is in fact "pitch"
@@ -369,4 +393,4 @@ class MotsynthProcessing(DatasetProcessing):
         df_frame_metadata["pitch"] = df_frame_metadata["yaw"]
         df_frame_metadata["yaw"] = df_frame_metadata["temp"]
 
-        return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+        return targets_torch, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata

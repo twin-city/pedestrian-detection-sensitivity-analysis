@@ -73,6 +73,9 @@ class DatasetProcessing:
     def format_gtbbox_metadata(self, df_gtbbox_metadata):
 
         # Bounding Box Height, Width & Aspect Ratios
+        df_gtbbox_metadata["height"] = df_gtbbox_metadata["y1"] - df_gtbbox_metadata["y0"]
+        df_gtbbox_metadata["width"] = df_gtbbox_metadata["x1"] - df_gtbbox_metadata["x0"]
+
         df_gtbbox_metadata["height"] = df_gtbbox_metadata["height"].astype(int)
         df_gtbbox_metadata["width"] = df_gtbbox_metadata["width"].astype(int)
         df_gtbbox_metadata["aspect_ratio"] = df_gtbbox_metadata["width"] / df_gtbbox_metadata["height"]
