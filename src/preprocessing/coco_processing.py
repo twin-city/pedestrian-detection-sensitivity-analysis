@@ -45,6 +45,8 @@ class COCOProcessing(DatasetProcessing):
         frame_features = ['file_name', 'height', 'width', 'date_captured', 'num_pedestrian']
         gtbbox_features = ['id', 'image_id', 'category_id', 'iscrowd', 'area', "x0", "y0", "x1", "y1"]
 
+        frame_features = ['height', "width"]
+
         # Dataframes
         df_sequence_metadata = pd.DataFrame()
         df_frame_metadata = pd.concat([pd.DataFrame(img, index=[str(img["id"])])[frame_features] for img in coco_json["images"]])
