@@ -50,7 +50,7 @@ class Detector:
 
         # Frame id list
         file_list = [osp.join(root, x) for x in df_frame_metadata["file_name"]]
-        frame_id_list = list(df_frame_metadata["id"].values.astype(str))
+        frame_id_list = list(df_frame_metadata.index)
 
         config_file = self.config_path
         checkpoint_file = self.checkpoint_path

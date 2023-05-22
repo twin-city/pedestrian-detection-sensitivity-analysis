@@ -8,34 +8,14 @@ from src.utils import target_2_json, target_2_torch
 from src.plot_utils import xywh2xyxy
 from .processing import DatasetProcessing
 from .coco_processing import subset_dict
+from .preprocessing_utils import *
 
 
-def dftarget_2_torch(df):
-    targets = df.groupby("frame_id").apply(
-        lambda x: x[["x0", "y0", "x1", "y1"]].values).to_dict()
-    targets_torch = {}
-    for key, val in targets.items():
-        # Target and labels
-        target = [dict(boxes=torch.tensor(val))]
-        target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
-        targets_torch[key] = target
-    return targets_torch
-
-def get_scalar_dict(dict, dict_frame_to_scalar):
-    scalar_dict = {}
-    for key, values in dict.items():
-        if key in dict_frame_to_scalar.keys():
-            for i, value in enumerate(values):
-                scalar_dict[f"{dict_frame_to_scalar[key][i]}"] = value
-        else:
-            scalar_dict[key] = values
-    return scalar_dict
-
-
-def flatten_list(l):
-    return [item for sublist in l for item in sublist]
 
 class MotsynthProcessing(DatasetProcessing):
+    """
+    Here sequence are annotated (vs img annotation for ECP)
+    """
 
     def __init__(self, root, max_samples=200, sequence_ids=None):
 
@@ -81,12 +61,21 @@ class MotsynthProcessing(DatasetProcessing):
                     sequence_ids = np.random.choice(sequence_ids, self.max_samples, replace=False)
         else:
             sequence_ids = self.sequence_ids
+
         return sequence_ids
 
+    def get_sequence_dict(self):
+
+        sequence_dict = {}
+        for sequence_id in self.sequence_ids:
+            img_sequence_dir = osp.join(self.frames_dir, sequence_id)
+            annot_sequence_dir = osp.join(self.annot_dir)
+            sequence_dict[sequence_id] = (img_sequence_dir, annot_sequence_dir)
+        return sequence_dict
 
 
-    #todo here should be shared with coco style datasets
-    def preprocess_motsynth_sequence(self, sequence_id="004"):
+    #todo here should be shared with coco style datasets. Can be factorized to a large extent
+    def preprocess_sequence(self, sequence_id, img_sequence_dir, annot_sequence_dir):
 
         # Open annotation file
         json_path = f"{self.annot_dir}/{sequence_id}.json"
@@ -109,10 +98,8 @@ class MotsynthProcessing(DatasetProcessing):
         annot_keys_to_keep = ['id', 'image_id', 'category_id', 'area', 'bbox', 'iscrowd',
                               'num_keypoints', 'ped_id', 'model_id', 'attributes', 'is_blurred', 'keypoints'] # , 'keypoints_3d' 'segmentation',
 
-        # image_types = {key: type(val) for key, val in images_list[0].items()} #todo later
 
         new_images, new_annots = [], []
-
         for image in images_list:
             subset_image = subset_dict(image, frame_keys_to_keep)
             subset_image["sequence_id"] = sequence_id
@@ -136,54 +123,7 @@ class MotsynthProcessing(DatasetProcessing):
         return infos, new_images, new_annots
 
 
-    #todo a part of this can be factorized
-    def preprocess(self):
-        """
-        Get a full coco style Dataset
-        :return:
-        """
-
-        infos, new_images, new_annots = [], [], []
-        for sequence in self.sequence_ids:
-            print(f"Checking sequence {sequence}")
-            infos_sequence, new_images_sequence, new_annots_sequence = self.preprocess_motsynth_sequence(sequence_id=sequence)
-
-            new_images.append(new_images_sequence)
-            new_annots.append(new_annots_sequence)
-            infos.append(infos_sequence)
-
-        new_images = [item for sublist in new_images for item in sublist]
-        new_annots = [item for sublist in new_annots for item in sublist]
-
-        #%% Now how to transform to dataframe ? To a scalar that can be in a dataframe
-        dict_frame_to_scalar = {
-            "cam_world_rot": ("yaw", "pitch", "roll"), # todo Has to be checked
-            "cam_world_pos": ("x", "y", "z"),
-        }
-
-        dict_annot_to_scalar = {
-            "attributes": [f"attribute_{i}" for i in range(11)],
-            "bbox": ("x0", "y0", "x1", "y1"),
-            "keypoints": flatten_list([[f"x_{i}", f"y_{i}", f"o_{i}"] for i in range(22)]),
-        }
-
-        df_frame_metadata = pd.DataFrame([get_scalar_dict(img, dict_frame_to_scalar) for img in new_images])
-        df_gtbbox_metadata = pd.DataFrame([get_scalar_dict(annot, dict_annot_to_scalar) for annot in new_annots])
-        df_sequence_metadata = pd.DataFrame(infos)
-
-        #%% Renaming
-        df_sequence_metadata = df_sequence_metadata.set_index("sequence_id")
-        df_frame_metadata["id"] = df_frame_metadata["id"].astype(str)
-        df_gtbbox_metadata[['image_id', 'id']] = df_gtbbox_metadata[['image_id', 'id']].astype(str)
-        df_frame_metadata = df_frame_metadata.rename(columns={"id": "frame_id"}).set_index("frame_id")
-        df_gtbbox_metadata = df_gtbbox_metadata.rename(columns={"image_id": "frame_id"}).set_index(["frame_id", "id"])
-
-        # Targets
-        targets = dftarget_2_torch(df_gtbbox_metadata)
-
-        #todo temporary adding sequence information to
-        #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Add Sequence information to Frame
-
+    def preprocess_specific(self, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata):
         # Add sequence information
         sequence_columns = ['is_night', "weather"]
         for sequence_id in df_sequence_metadata.index:
@@ -209,4 +149,5 @@ class MotsynthProcessing(DatasetProcessing):
         keypoints_label_names = [f"o_{i}" for i in range(self.NUM_KEYPOINTS)]
         df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata[keypoints_label_names].apply(lambda x: (2 - x)).mean(axis=1)
 
-        return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+        return df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+

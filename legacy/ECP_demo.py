@@ -8,7 +8,7 @@ model_name = "faster-rcnn_cityscapes"
 max_sample = 30 # Uniform sampled in dataset
 
 #%%
-from src.preprocessing.ecp_processing import ECPProcessing
+from src.preprocessing.ecp_processing_legacy import ECPProcessing
 
 root_ecp = "/media/raphael/Projects/datasets/EuroCityPerson/ECP/"
 ecp_processor = ECPProcessing(root_ecp, max_samples=max_sample)

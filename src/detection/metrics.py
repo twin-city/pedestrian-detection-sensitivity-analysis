@@ -230,10 +230,7 @@ class detection_metric:
         :return:
         """
 
-        # thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
-
         thresholds = [0, 0.5, 0.9, 0.99, 0.999, 0.9999]
-
 
         df_root = f"{ROOT_DIR}/data/preds/{dataset_name}_{model_name}"
         os.makedirs(df_root, exist_ok=True)
@@ -256,15 +253,12 @@ class detection_metric:
         else:
             df_matched_gtbbox = pd.DataFrame(columns=["frame_id", "id", "threshold", "matched"]).set_index(["frame_id", "id"])
 
-
         df_matched_gtbbox_list = []
         df_mr_fppi_list = []
         frame_ids = preds.keys() #todo all for now
 
         # maybe do a set here ?
-
         for i, frame_id in enumerate(frame_ids):
-
             if len(pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T) == 1:
                 df_gtbbox_metadata_frame = pd.DataFrame(df_gtbbox_metadata.loc[frame_id]).T.reset_index()
             else:
@@ -273,18 +267,13 @@ class detection_metric:
 
             #%% Compare the 2
 
-            """ Legacy
-            excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
-            """
+
             from src.utils import subset_dataframe, filter_gt_bboxes
-
-
-
             excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
-
 
             #todo handle case no one to predict in image
             if len(excluded_gt) < len(targets[frame_id][0]["boxes"]):
+                print(frame_id)
 
                 # todo here to compute few for now. At random ?
                 if i > max_frames:
@@ -295,15 +284,8 @@ class detection_metric:
                     print(f"{frame_id}  {gtbbox_filtering} Already done")
                 else:
                     print(f"{frame_id}  {gtbbox_filtering} Not already done")
-
                     results = {}
                     for threshold in thresholds:
-
-                            #todo handle only 1 ???
-
-                            #todo delay here was removed for ECP df_gtbbox_metadata_frame = df_gtbbox_metadata.loc[int(frame_id)+3].reset_index()
-
-
                             results[threshold] = compute_fp_missratio(preds[frame_id], targets[frame_id],
                                                                       threshold=threshold, excluded_gt=excluded_gt)
 

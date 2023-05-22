@@ -94,7 +94,7 @@ class Dataset():
 
     # Plotting
     def plot_dataset_sequence_correlation(self, sequence_cofactors):
-        corr_matrix, p_matrix = compute_correlations(self.df_frame_metadata.groupby("seq_name").apply(lambda x: x.mean()), sequence_cofactors)
+        corr_matrix, p_matrix = compute_correlations(self.df_frame_metadata.groupby("sequence_id").apply(lambda x: x.mean()), sequence_cofactors)
         plot_correlations(corr_matrix, p_matrix, title="Correlations between metadatas at sequence level")
 
     def plot_dataset_statistics(self):

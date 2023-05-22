@@ -198,10 +198,6 @@ def plot_image_with_detections(dataset, dataset_name, model_name, plot_threshold
     # Load Dataset
     root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
 
-    # Get a file (at random for now, maybe later with criterias ?)
-    frame_id = df_frame_metadata.index[frame_idx]
-    img_path = osp.join(root, df_frame_metadata["file_name"].iloc[frame_idx])
-
     # Perform detection and compute metrics
     detector = Detector(model_name, device="cpu")
     preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
@@ -209,11 +205,17 @@ def plot_image_with_detections(dataset, dataset_name, model_name, plot_threshold
     df_mr_fppi, df_gt_bbox = metric.compute(dataset_name, model_name, preds, targets, df_gtbbox_metadata,
                                             gtbbox_filtering)
 
+    # todo fix getting df_mr_fppi index because they can be removed via gt_bbox filtering
+    # Get a file (at random for now, maybe later with criterias ?)
+    frame_id = df_mr_fppi.index.get_level_values(0).unique()[frame_idx]
+    img_path = osp.join(root, df_frame_metadata.loc[frame_id,"file_name"])
+
     # Plot it
     fig, ax = plt.subplots(len(plot_thresholds),1, figsize=((len(plot_thresholds)*4), 10))
     for i, threshold in enumerate(plot_thresholds):
         mr_val = df_mr_fppi.loc[frame_id, threshold]["MR"]
         fppi_val = df_mr_fppi.loc[frame_id, threshold]["FPPI"]
+
         plot_results_img(img_path, frame_id, preds=preds, targets=targets,
                      df_gt_bbox=df_gt_bbox, threshold=threshold, ax=ax[i],
                          title=f"thresh={plot_thresholds[i]}, MR={mr_val:.2f} FPPI={fppi_val:.0f}") #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.

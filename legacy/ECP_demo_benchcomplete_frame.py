@@ -64,7 +64,7 @@ results_dir = osp.join("../", "results", "ECP", f"ECP_{max_sample}")
 os.makedirs(results_dir, exist_ok=True)
 
 #%%
-from src.preprocessing.ecp_processing import ECPProcessing
+from src.preprocessing.ecp_processing_legacy import ECPProcessing
 
 root_ecp = "/media/raphael/Projects/datasets/EuroCityPerson/ECP/"
 ecp_processor = ECPProcessing(root_ecp, max_samples=max_sample)

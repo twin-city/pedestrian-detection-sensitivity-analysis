@@ -30,7 +30,8 @@ def run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, 
     thresholds = [0.5, 0.9, 0.99]
 
     #%% Load Dataset ==================================================================================================
-    dataset = DatasetFactory.get_dataset(dataset_name, max_samples, root=root, coco_json_path=coco_json_path)
+    dataset = DatasetFactory.get_dataset(dataset_name, max_samples, root=root,
+                                         coco_json_path=coco_json_path, force_recompute=True)
     results_dir = osp.join(output_dir, dataset.get_dataset_dir())
     os.makedirs(results_dir, exist_ok=True)
     dataset_tuple = dataset.get_dataset_as_tuple()
@@ -39,8 +40,8 @@ def run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, 
 
     if dataset_analysis:
         # Correlations
-        sequence_cofactors = ["is_night"]
-        dataset.plot_dataset_sequence_correlation(sequence_cofactors)
+        sequence_cofactors = ["is_night", "num_pedestrian"]
+        # dataset.plot_dataset_sequence_correlation(sequence_cofactors)
         # Height & Occlusion
         dataset.plot_dataset_statistics()
 
@@ -98,12 +99,7 @@ if __name__ == "__main__":
 
 
 
-    # Parameters ECP
-    dataset_name = "ecp_small"
-    root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/ecp_small"
-    max_samples = 30
-    model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
-    coco_json_path = None
+
     """
 
     # Parameters Twincity
@@ -113,15 +109,26 @@ if __name__ == "__main__":
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     coco_json_path = None
 
+
+
+
+
     # Parameters MoTSynth
     dataset_name = "motsynth_small"
     root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/motsynth_small"
-    max_samples = 1000
+    max_samples = 50
+    model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
+    coco_json_path = None
+
+    # Parameters ECP
+    dataset_name = "ecp_small"
+    root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/ecp_small"
+    max_samples = 30
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     coco_json_path = None
 
     run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, coco_json_path=coco_json_path,
-                                  dataset_analysis=True, frame_analysis=True, gtbbox_analysis=False,
+                                  dataset_analysis=False, frame_analysis=False, gtbbox_analysis=False,
                                   plot_image=True, output_dir="results/run_small", show=True)
 
 
