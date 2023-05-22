@@ -108,6 +108,7 @@ class MotsynthProcessing(DatasetProcessing):
         for annot in annot_list:
             subset_annot = subset_dict(annot, annot_keys_to_keep)
             subset_annot["sequence_id"] = sequence_id
+            subset_annot["bbox"] = xywh2xyxy(subset_annot["bbox"]) # because bbox format can be different
             new_annots.append(subset_annot)
 
         infos = annot_motsynth["info"]

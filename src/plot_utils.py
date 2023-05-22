@@ -207,7 +207,7 @@ def plot_image_with_detections(dataset, dataset_name, model_name, plot_threshold
 
     # todo fix getting df_mr_fppi index because they can be removed via gt_bbox filtering
     # Get a file (at random for now, maybe later with criterias ?)
-    frame_id = df_mr_fppi.index.get_level_values(0).unique()[frame_idx]
+    frame_id = np.sort(df_mr_fppi.index.get_level_values(0).unique())[frame_idx]
     img_path = osp.join(root, df_frame_metadata.loc[frame_id,"file_name"])
 
     # Plot it

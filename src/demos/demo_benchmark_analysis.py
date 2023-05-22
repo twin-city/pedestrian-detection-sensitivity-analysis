@@ -113,17 +113,19 @@ if __name__ == "__main__":
 
 
 
-    # Parameters MoTSynth
-    dataset_name = "motsynth_small"
-    root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/motsynth_small"
-    max_samples = 50
-    model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
-    coco_json_path = None
+
 
     # Parameters ECP
     dataset_name = "ecp_small"
     root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/ecp_small"
     max_samples = 30
+    model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
+    coco_json_path = None
+
+    # Parameters MoTSynth
+    dataset_name = "motsynth_small"
+    root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/motsynth_small"
+    max_samples = 50
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     coco_json_path = None
 
