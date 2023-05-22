@@ -22,13 +22,18 @@ def print_stat(df_stat):
 
 class Dataset():
     def __init__(self, dataset_name, max_sample, root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata):
-        self.dataset_name = dataset_name
+        if max_sample is None:
+            self.dataset_name = dataset_name
+        else:
+            self.dataset_name = dataset_name + "_"+str(max_sample)
         self.root = root
         self.targets = targets
         self.df_gtbbox_metadata = df_gtbbox_metadata
         self.df_frame_metadata = df_frame_metadata
         self.df_sequence_metadata = df_sequence_metadata
         self.max_sample = max_sample
+
+        #todo assert the max_samples ?
 
         # Create dir if needed
         self.results_dir = osp.join("../../", "results", dataset_name, f"{dataset_name}{max_sample}")

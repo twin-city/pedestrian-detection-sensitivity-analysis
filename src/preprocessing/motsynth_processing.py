@@ -17,10 +17,10 @@ class MotsynthProcessing(DatasetProcessing):
     Here sequence are annotated (vs img annotation for ECP)
     """
 
-    def __init__(self, root, max_samples=200, sequence_ids=None):
+    def __init__(self, root, max_samples_per_sequence=10):
 
         self.dataset_name = "motsynth"
-        super().__init__(root, max_samples)
+        super().__init__(root, max_samples_per_sequence)
 
         self.delay = 3
         self.frames_dir = f"{root}/frames"
@@ -28,14 +28,14 @@ class MotsynthProcessing(DatasetProcessing):
         os.makedirs(self.saves_dir, exist_ok=True)
 
 
-        self.sequence_ids = sequence_ids
+        #self.sequence_ids = sequence_ids
         self.sequence_ids = self.get_usable_sequence_ids()
         self.num_sequences = len(self.sequence_ids)
 
         #if max_samples is not None:
         #    self.max_num_sample_per_sequence = int(max_samples / self.num_sequences)
         #else:
-        self.max_num_sample_per_sequence = 1000  # todo max to 1000 arbirterary
+        # self.max_samples_per_sequence = 1000  # todo max to 1000 arbirterary
         # self.max_samples_per_sequence = self.max_samples // len(self.get_usable_sequence_ids())
 
         # Additional info
@@ -49,18 +49,18 @@ class MotsynthProcessing(DatasetProcessing):
         Get usable sequence ids.
         :return:
         """
-        if self.sequence_ids is None:
-            exclude_ids_frames = set(["060", "081", "026", "132", "136", "102", "099", "174", "140"])
-            sequence_ids_frames = set(np.sort(os.listdir(self.frames_dir)).tolist())
-            sequence_ids_json = set([i.replace(".json", "") for i in
-                                  os.listdir(self.annot_dir)]) - exclude_ids_frames
-            sequence_ids = list(np.sort(list(set.intersection(sequence_ids_frames, sequence_ids_json))))
+        #if self.sequence_ids is None:
+        exclude_ids_frames = set(["060", "081", "026", "132", "136", "102", "099", "174", "140"])
+        sequence_ids_frames = set(np.sort(os.listdir(self.frames_dir)).tolist())
+        sequence_ids_json = set([i.replace(".json", "") for i in
+                              os.listdir(self.annot_dir)]) - exclude_ids_frames
+        sequence_ids = list(np.sort(list(set.intersection(sequence_ids_frames, sequence_ids_json))))
 
-            if self.max_samples is not None:
-                if self.max_samples < len(sequence_ids):
-                    sequence_ids = np.random.choice(sequence_ids, self.max_samples, replace=False)
-        else:
-            sequence_ids = self.sequence_ids
+            #if self.max_samples is not None:
+            #    if self.max_samples < len(sequence_ids):
+            #        sequence_ids = np.random.choice(sequence_ids, self.max_samples, replace=False)
+        #else:
+        #    sequence_ids = self.sequence_ids
 
         return sequence_ids
 
@@ -86,12 +86,12 @@ class MotsynthProcessing(DatasetProcessing):
             img["id"] += self.delay
 
         # If there is subsampling
-        if self.max_num_sample_per_sequence < len(annot_motsynth["images"]):
-            images_list = annot_motsynth["images"][::len(annot_motsynth["images"]) // self.max_num_sample_per_sequence]
-            annot_list = [x for x in annot_motsynth["annotations"] if x["image_id"] in [i["id"] for i in images_list]]
-        else:
-            images_list = annot_motsynth["images"]
-            annot_list = annot_motsynth["annotations"]
+        #if self.max_samples_per_sequence < len(annot_motsynth["images"]):
+        #    images_list = annot_motsynth["images"][::len(annot_motsynth["images"]) // self.max_samples_per_sequence]
+        #    annot_list = [x for x in annot_motsynth["annotations"] if x["image_id"] in [i["id"] for i in images_list]]
+        #else:
+        images_list = annot_motsynth["images"]
+        annot_list = annot_motsynth["annotations"]
 
 
         frame_keys_to_keep = ['file_name', 'id', 'frame_n', 'cam_world_pos', 'cam_world_rot', 'height', 'width'] #'ignore_mask' #todo renaming ?

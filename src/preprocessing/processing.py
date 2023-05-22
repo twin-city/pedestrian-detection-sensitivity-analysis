@@ -9,9 +9,9 @@ import os.path as osp
 from .preprocessing_utils import *
 
 class DatasetProcessing:
-    def __init__(self, root, max_samples):
+    def __init__(self, root, max_samples_per_sequence):
         self.root = root
-        self.max_samples = max_samples
+        self.max_samples_per_sequence = max_samples_per_sequence
         np.random.seed(0)
 
         self.saves_dir = f"{ROOT_DIR}/data/preprocessing/{self.dataset_name}"
@@ -37,10 +37,10 @@ class DatasetProcessing:
     def load_or_preprocess(self, force_recompute=False):
 
         # Set the paths
-        path_df_gtbbox_metadata = osp.join(self.saves_dir, f"df_gtbbox_{self.max_samples}.csv")
-        path_df_frame_metadata = osp.join(self.saves_dir, f"df_frame_{self.max_samples}.csv")
-        path_df_sequence_metadata = osp.join(self.saves_dir, f"df_sequence_{self.max_samples}.csv")
-        path_target = osp.join(self.saves_dir, f"targets_{self.max_samples}.json")
+        path_df_gtbbox_metadata = osp.join(self.saves_dir, f"df_gtbbox_{self.max_samples_per_sequence}.csv")
+        path_df_frame_metadata = osp.join(self.saves_dir, f"df_frame_{self.max_samples_per_sequence}.csv")
+        path_df_sequence_metadata = osp.join(self.saves_dir, f"df_sequence_{self.max_samples_per_sequence}.csv")
+        path_target = osp.join(self.saves_dir, f"targets_{self.max_samples_per_sequence}.json")
 
         # Check if all files exist
         exist_all_paths = True
@@ -86,6 +86,11 @@ class DatasetProcessing:
         for sequence_id, (img_sequence_dir, annot_sequence_dir) in self.get_sequence_dict().items():
 
             infos_sequence, new_images_sequence, new_annots_sequence = self.preprocess_sequence(sequence_id, img_sequence_dir, annot_sequence_dir)
+
+            # Limit the number of samples per sequence
+            if self.max_samples_per_sequence is not None:
+                new_images_sequence = new_images_sequence[:self.max_samples_per_sequence]
+                new_annots_sequence = [annot for annot in new_annots_sequence if annot["image_id"] in [img["id"] for img in new_images_sequence]]
 
             new_images.append(new_images_sequence)
             new_annots.append(new_annots_sequence)

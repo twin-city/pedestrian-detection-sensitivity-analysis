@@ -57,9 +57,9 @@ class Detector:
 
         # todo problem with int / str id
 
-        json_root = f"{ROOT_DIR}/data/preds/{config_file.split('/')[-1].replace('.py', '')}"
+        json_root = f"{ROOT_DIR}/cache/inference/{dataset_name}/{config_file.split('/')[-1].replace('.py', '')}"
         os.makedirs(json_root, exist_ok=True)
-        json_file = f"{json_root}/preds_{dataset_name}.json"
+        json_file = f"{json_root}/preds_{dataset_name}_{config_file.split('/')[-1].replace('.py', '')[:10]}.json"
 
         # If exist load it
         if os.path.isfile(json_file):

@@ -235,10 +235,10 @@ class detection_metric:
         thresholds = [0, 0.5, 0.9, 0.99, 0.999, 0.9999]
 
 
-        df_root = f"{ROOT_DIR}/data/preds/{dataset_name}_{model_name}"
+        df_root = f"{ROOT_DIR}/cache/metrics/{dataset_name}/{model_name}"
         os.makedirs(df_root, exist_ok=True)
-        df_file = f"{df_root}/metrics-{json.dumps(gtbbox_filtering)}.json"
-        df_matched_file = f"{df_root}/matched-{json.dumps(gtbbox_filtering)}.json"
+        df_file = f"{df_root}/metrics_{json.dumps(gtbbox_filtering)}.json"
+        df_matched_file = f"{df_root}/matched_{json.dumps(gtbbox_filtering)}.json"
 
         # If exist load it
         if os.path.isfile(df_file):

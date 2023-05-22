@@ -13,9 +13,9 @@ class ECPProcessing(DatasetProcessing):
     Class that handles the preprocessing of (extracted) ECP Dataset in order to get a standardized dataset format.
     """
 
-    def __init__(self, root, max_samples=100):
+    def __init__(self, root, max_samples_per_sequence=10):
         self.dataset_name = "ecp"
-        super().__init__(root, max_samples)
+        super().__init__(root, max_samples_per_sequence)
         os.makedirs(self.saves_dir, exist_ok=True)
 
     def preprocess_sequence(self, sequence_id, img_sequence_dir, annot_sequence_dir):
@@ -34,11 +34,6 @@ class ECPProcessing(DatasetProcessing):
         new_images = []
 
         for i, frame_id in enumerate(total_frame_ids):
-
-            # set max samples #todo
-            if self.max_samples is not None:
-                if i > self.max_samples:
-                    break
 
             # Load ECP annotations
             img_path = f"{img_sequence_dir}/{frame_id}.png"
@@ -68,8 +63,11 @@ class ECPProcessing(DatasetProcessing):
                         new_annots.append({"id": f"{frame_id}_{j}", "image_id": frame_id,
                                  "x0": annots[j]["x0"], "y0": annots[j]["y0"], "x1": annots[j]["x1"], "y1": annots[j]["y1"],
                                  'identity': annots[j]["identity"], 'tags': annots[j]["tags"],
-                                 "sequence_id": sequence_id
-                                 })
+                                 "sequence_id": sequence_id,
+                                 "occlusion_rate": syntax_occl_ECP(annots[j]["tags"]),
+                                 "truncation_rate": syntax_truncated_ECP(annots[j]["tags"]),
+                                        })
+                    #todo depiction ?
 
         return infos, new_images, new_annots
 
@@ -91,6 +89,11 @@ class ECPProcessing(DatasetProcessing):
 
         return sequence_dict
 
+
+    def preprocess_specific(self, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata):
+        df_gtbbox_metadata["occlusion_rate_original"] = df_gtbbox_metadata["occlusion_rate"]
+        df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata.apply(lambda x: x[["occlusion_rate", "truncation_rate"]].max(), axis=1)
+        return df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
 
 
     def explore_tags(self):
