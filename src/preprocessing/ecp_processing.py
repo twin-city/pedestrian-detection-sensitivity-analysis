@@ -61,9 +61,20 @@ class ECPProcessing(DatasetProcessing):
                     break
 
             # Load ECP annotations
+            img_path = f"{self.root}/{time}/img/{set}/{city}/{frame_id}.json"
             json_path = f"{self.root}/{time}/labels/{set}/{city}/{frame_id}.json"
             with open(json_path) as jsonFile:
                 annot_ECP = json.load(jsonFile)
+
+
+
+                # New imgs & New annots
+                img = {"file_path": img_path, "id": frame_id}
+
+
+                annots = [c for c in annot_ECP["children"] if c["identity"] in ["pedestrian", "rider"]]
+                j = 0
+                annot = {"id": f"{frame_id}_{j}", "image_id": frame_id, }
 
                 target = [
                     dict(
@@ -95,8 +106,14 @@ class ECPProcessing(DatasetProcessing):
                     iscrowd = [1 * ("group" in c["identity"]) for c in annot_ECP["children"] if
                                c["identity"] in ["pedestrian", "rider"]]
 
+                    x0 = [c["x0"] for c in annot_ECP["children"] if c["identity"] in ["pedestrian", "rider"]]
+                    x1 = [c["x1"] for c in annot_ECP["children"] if c["identity"] in ["pedestrian", "rider"]]
+                    y0 = [c["y0"] for c in annot_ECP["children"] if c["identity"] in ["pedestrian", "rider"]]
+                    y1 = [c["y1"] for c in annot_ECP["children"] if c["identity"] in ["pedestrian", "rider"]]
+
                     targets_metadata[frame_id] = (annot_ECP["tags"], tags,
-                                                  areas, heights, widths, aspect_ratio, iscrowd)
+                                                  areas, heights, widths, aspect_ratio, iscrowd,
+                                                  x0, x1, y0, y1)
 
         frame_id_list = list(targets.keys())
         img_path_list = []
@@ -108,7 +125,7 @@ class ECPProcessing(DatasetProcessing):
         return targets, targets_metadata, frame_id_list, img_path_list
 
 
-    def get_annotations_and_imagepaths(self):
+    def preprocess(self):
 
         """
         try:
@@ -157,6 +174,9 @@ class ECPProcessing(DatasetProcessing):
                         df_frames_metadata_folder["id"] = frame_id_list_folder
                         df_frames_metadata_folder["seq_name"] = city + " "+luminosity
 
+                        df_frames_metadata_folder["weather_original"] = "dry"
+                        df_frames_metadata_folder.loc[df_frames_metadata_folder["rainy"],"weather_original"] = "rainy"
+                        df_frames_metadata_folder.loc[df_frames_metadata_folder["wiper"],"weather_original"] = "wiper" #todo wiper means rainy
                         df_frames_metadata_folder["weather"] = "dry"
                         df_frames_metadata_folder.loc[df_frames_metadata_folder["rainy"],"weather"] = "rainy"
                         df_frames_metadata_folder.loc[df_frames_metadata_folder["wiper"],"weather"] = "rainy" #todo wiper means rainy
@@ -186,7 +206,12 @@ class ECPProcessing(DatasetProcessing):
                                                              2: "height",
                                                              3: "width",
                                                              4: "aspect_ratio",
-                                                             5: "is_crowd"}, inplace=True)
+                                                             5: "is_crowd",
+                                                             6: "x0",
+                                                             7: "x1",
+                                                             8: "y0",
+                                                             9: "y1",
+                                                             }, inplace=True)
 
                             df_gt_bbox_folder = pd.concat([df_gt_bbox_folder, df_gt_bbox_frame])
 
@@ -194,6 +219,10 @@ class ECPProcessing(DatasetProcessing):
                         targets.update(targets_folder)
                         frame_id_list += frame_id_list_folder
                         img_path_list += img_path_list_folder
+
+                        df_gt_bbox_folder["sequence_id"] = city + " "+luminosity
+                        df_frames_metadata_folder["sequence_id"] = city + " "+luminosity
+
                         df_frame_metadata = pd.concat([df_frame_metadata, df_frames_metadata_folder])
                         df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, df_gt_bbox_folder])
 
@@ -202,6 +231,4 @@ class ECPProcessing(DatasetProcessing):
         df_gtbbox_metadata["id"] = df_gtbbox_metadata["frame_id"] + "_" + df_gtbbox_metadata["id_in_frame"].astype(str)
         df_gtbbox_metadata = df_gtbbox_metadata.set_index(["frame_id", "id"])
 
-
-
-        return targets, df_gtbbox_metadata, df_frame_metadata, None
+        return targets, df_gtbbox_metadata, df_frame_metadata, pd.DataFrame()

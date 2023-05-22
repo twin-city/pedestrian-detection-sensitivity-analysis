@@ -33,7 +33,7 @@ class DatasetFactory():
         elif dataset_name == "ecp_small":
             #root = "/media/raphael/Projects/datasets/EuroCityPerson/ECP/"
             ecp_processor = ECPProcessing(root, max_samples=max_sample)
-            dataset = ecp_processor.get_dataset()
+            dataset = ecp_processor.get_dataset(force_recompute=force_recompute)
             return Dataset(dataset_name, max_sample, *dataset)
         elif "coco" in dataset_name:
             coco_dataset = COCOProcessing(root, coco_json_path, dataset_name, max_samples=max_sample)

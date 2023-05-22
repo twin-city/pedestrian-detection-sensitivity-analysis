@@ -60,7 +60,7 @@ class Dataset():
         n_images = df_frame.groupby("is_night").apply(len)
         n_seqs = df_frame.groupby("is_night").apply(lambda x: len(x["sequence_id"].unique()))
         n_person = df_frame.groupby("is_night").apply(lambda x: x["num_pedestrian"].sum())
-        weathers = df_frame["weather"].unique()
+        weathers = df_frame["weather_original"].unique() #todo set as new weather cats ?
 
         if self.max_sample is not None:
             dataset_version_name = f"{self.dataset_name}_{self.max_sample}"

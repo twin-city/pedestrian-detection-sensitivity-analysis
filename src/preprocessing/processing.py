@@ -18,15 +18,14 @@ class DatasetProcessing:
     def __str__(self):
         return self.dataset_name
 
-    def get_dataset(self):
-        targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.get_annotations_and_imagepaths()
+    def get_dataset(self, force_recompute=False):
+        targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.load_or_preprocess(force_recompute)
 
         # Common post-processing
         df_gtbbox_metadata = self.format_gtbbox_metadata(df_gtbbox_metadata)
         df_frame_metadata = self.format_frame_metadata(df_frame_metadata, df_gtbbox_metadata)
 
         return self.root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
-
 
 
     def load_or_preprocess(self, force_recompute=False):
@@ -56,7 +55,7 @@ class DatasetProcessing:
 
         # Else, compute them
         else:
-            targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.preprocess_motsynth()
+            targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.preprocess()
 
             # Save dataframes
             df_gtbbox_metadata.to_csv(path_df_gtbbox_metadata)
@@ -66,6 +65,7 @@ class DatasetProcessing:
                 json.dump(target_2_json(targets), f)
 
         return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+
 
     def add_dummy_columns(self):
         pass
