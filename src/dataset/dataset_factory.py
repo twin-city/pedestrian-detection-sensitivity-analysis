@@ -13,7 +13,7 @@ class DatasetFactory():
             #root = "/home/raphael/work/datasets/twincity-Unreal/v5"
             #dataset = get_twincity_dataset(root, max_sample)
             twincity_processor = TwincityProcessing(root, max_samples_per_sequence=max_samples_per_sequence)
-            dataset = twincity_processor.get_dataset()
+            dataset = twincity_processor.get_dataset(force_recompute=force_recompute)
             return Dataset(dataset_name, max_samples_per_sequence, *dataset)
         elif dataset_name == "motsynth":
             raise NotImplementedError("Deprecated")

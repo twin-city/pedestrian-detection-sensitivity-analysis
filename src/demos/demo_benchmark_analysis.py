@@ -102,12 +102,6 @@ if __name__ == "__main__":
 
     """
 
-    # Parameters Twincity
-    dataset_name = "twincity"
-    root = "/home/raphael/work/datasets/twincity-Unreal/v5"
-    max_samples = 50
-    model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
-    coco_json_path = None
 
 
     # Parameters ECP
@@ -123,6 +117,15 @@ if __name__ == "__main__":
     max_samples = 1
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     coco_json_path = None
+
+    # Parameters Twincity
+    dataset_name = "twincity"
+    # root = "/home/raphael/work/datasets/twincity-Unreal/v5"
+    root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/twincity-Unreal/v5"
+    max_samples = 5
+    model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
+    coco_json_path = None
+
 
 
     run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, coco_json_path=coco_json_path,

@@ -353,6 +353,8 @@ class detection_metric:
         frame_id_intersect = set.intersection(set(set_df_bbox), set(frame_ids))
         frame_id_intersect = set.intersection(set(frame_id_intersect), set(set_df_matched))
 
+        print(df_mr_fppi.loc[list(frame_id_intersect)[0]])
+
         return df_mr_fppi.loc[frame_id_intersect], df_matched_gtbbox.loc[frame_id_intersect]
 
 
