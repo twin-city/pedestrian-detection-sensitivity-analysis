@@ -61,7 +61,7 @@ class DatasetProcessing:
 
         # Else, compute them
         else:
-            targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.preprocess()
+            targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.preprocess(force_recompute=force_recompute)
             df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = self.preprocess_specific(df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata)
 
             # Save dataframes
@@ -76,7 +76,7 @@ class DatasetProcessing:
 
 
     #todo a part of this can be factorized
-    def preprocess(self):
+    def preprocess(self, force_recompute=False):
         """
         Get a full coco style Dataset
         :return:
@@ -85,7 +85,10 @@ class DatasetProcessing:
         infos, new_images, new_annots = [], [], []
         for sequence_id, (img_sequence_dir, annot_sequence_dir) in self.get_sequence_dict().items():
 
-            infos_sequence, new_images_sequence, new_annots_sequence = self.preprocess_sequence(sequence_id, img_sequence_dir, annot_sequence_dir)
+            infos_sequence, new_images_sequence, new_annots_sequence = self.preprocess_sequence(sequence_id,
+                                                                                                img_sequence_dir,
+                                                                                                annot_sequence_dir,
+                                                                                                force_recompute=force_recompute)
 
             # Limit the number of samples per sequence
             if self.max_samples_per_sequence is not None:
@@ -149,8 +152,8 @@ class DatasetProcessing:
         df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
                                                                        df_gtbbox_metadata["aspect_ratio"] > mu - std)
 
-        if "ignore-region" not in df_gtbbox_metadata.columns:
-            df_gtbbox_metadata["ignore-region"] = 0
+        if "ignore_region" not in df_gtbbox_metadata.columns:
+            df_gtbbox_metadata["ignore_region"] = 0
 
         return df_gtbbox_metadata
 

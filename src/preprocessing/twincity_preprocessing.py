@@ -1,15 +1,12 @@
-from src.utils import target_2_json, target_2_torch
 import glob
 import matplotlib.image as mpimg
 import json
 import numpy as np
-import torch
 import os.path as osp
-import pandas as pd
 import os
 from .processing import DatasetProcessing
-from .twincity_preprocessing2 import get_twincity_boxes, find_duplicate_indices, target_2_torch, creation_date
-from configs_path import ROOT_DIR
+from legacy.twincity_preprocessing2 import get_twincity_boxes, creation_date
+
 
 class TwincityProcessing(DatasetProcessing):
     """
@@ -26,7 +23,7 @@ class TwincityProcessing(DatasetProcessing):
         sequence_dict = {x.split("/")[-1]: (osp.join(x, "png"), osp.join(x, "labels")) for x in folders}
         return sequence_dict
 
-    def preprocess_sequence(self, sequence_id, img_sequence_dir, annot_sequence_dir):
+    def preprocess_sequence(self, sequence_id, img_sequence_dir, annot_sequence_dir, force_recompute=False):
 
         # Check files
         metadata_path = glob.glob(osp.join(annot_sequence_dir, "Metadata*"))[0]
@@ -49,7 +46,7 @@ class TwincityProcessing(DatasetProcessing):
             image_id = img_rgb_path_list[i].split("/")[-1].split(".png")[0]
             path_annot_img = osp.join(annot_sequence_dir, f"{image_id}.json")
 
-            if not os.path.exists(path_annot_img):
+            if not os.path.exists(path_annot_img) or force_recompute:
 
                 print(f"Perform annotation transformation for image {image_id}")
 
@@ -71,6 +68,8 @@ class TwincityProcessing(DatasetProcessing):
         infos["sequence_id"] = annot_sequence_dir.split("/")[-2]
         new_images = []
         new_annots = []
+
+        #todo sequence to rename
 
         # For all images in the sequence
         for i, img_annot_path in enumerate(img_annot_path_list):
@@ -104,4 +103,31 @@ class TwincityProcessing(DatasetProcessing):
         return infos, new_images, new_annots
 
 
+    def preprocess_specific(self, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata):
 
+
+        df_frame_metadata['weather_original'] = df_frame_metadata['weather']
+
+
+        # Weather renaming
+        weather_renaming = {
+            # Dry Weather
+            #"EXTRASUNNY": "extrasunny",
+            #"CLEAR": "clear",
+            "Partially cloudy": "clouds",
+            #"OVERCAST": "overcast",
+            # Rainy Weather
+            #"RAIN": "rainy",
+            #"THUNDER": "thunder",
+            # Reduced Visibility
+            #"SMOG": "smog",
+            #"FOGGY": "foggy",
+            "Snow": "snow",
+        }
+
+        import pandas as pd
+
+        # Assuming you have a DataFrame named 'df' with a column named 'weather'
+        df_frame_metadata['weather_original'] = df_frame_metadata['weather_original'].replace(weather_renaming)
+
+        return df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata

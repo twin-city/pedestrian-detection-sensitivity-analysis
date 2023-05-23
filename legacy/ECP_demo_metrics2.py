@@ -1,6 +1,5 @@
 import pandas as pd
 # from src.utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
-from src.detection.metrics import filter_gt_bboxes, compute_fp_missratio2
 import os.path as osp
 import numpy as np
 
@@ -32,7 +31,7 @@ resolution = (1920, 1024)
 
 
 #%%
-from src.preprocessing.ecp_processing_legacy import ECPProcessing
+from legacy.ecp_processing_legacy import ECPProcessing
 
 root_ecp = "/media/raphael/Projects/datasets/EuroCityPerson/ECP/"
 ecp_processor = ECPProcessing(root_ecp, max_samples=max_sample)
@@ -67,7 +66,6 @@ df_frame_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").app
 
 # Correlation checks
 
-import matplotlib.pyplot as plt
 from src.utils import compute_correlations, plot_correlations
 
 corr_matrix, p_matrix = compute_correlations(df_gtbbox_metadata, bbox_cofactors)
@@ -303,8 +301,7 @@ plt.show()
 
 #%% Model sensibility :  What are the main parameters influencing model performance ?
 
-from src.utils import compute_correlations, plot_correlations
-
+from src.utils import compute_correlations
 
 p_matrix_list = []
 bar_width = 1/(len(metrics)+1)

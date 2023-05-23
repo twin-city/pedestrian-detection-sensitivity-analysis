@@ -75,7 +75,7 @@ class MotsynthProcessing(DatasetProcessing):
 
 
     #todo here should be shared with coco style datasets. Can be factorized to a large extent
-    def preprocess_sequence(self, sequence_id, img_sequence_dir, annot_sequence_dir):
+    def preprocess_sequence(self, sequence_id, img_sequence_dir, annot_sequence_dir, force_recompute=False):
 
         # Open annotation file
         json_path = f"{self.annot_dir}/{sequence_id}.json"
@@ -145,6 +145,26 @@ class MotsynthProcessing(DatasetProcessing):
         df_frame_metadata.loc[np.isin(df_frame_metadata["weather_original"], dry_cats), "weather"] = "dry"
         df_frame_metadata.loc[np.isin(df_frame_metadata["weather_original"], rainy_cats), "rainy_cats"] = "rainy"
         df_frame_metadata.loc[np.isin(df_frame_metadata["weather_original"], reduced_visibility_cats), "weather"] = "reduced visibility"
+
+        weather_renaming = {
+            # Dry Weather
+            "EXTRASUNNY": "extrasunny",
+            "CLEAR": "clear",
+            "CLOUDS": "clouds",
+            "OVERCAST": "overcast",
+            # Rainy Weather
+            "RAIN": "rainy",
+            "THUNDER": "thunder",
+            # Reduced Visibility
+            "SMOG": "smog",
+            "FOGGY": "foggy",
+            "BLIZZARD": "snow",
+        }
+
+        import pandas as pd
+
+        # Assuming you have a DataFrame named 'df' with a column named 'weather'
+        df_frame_metadata['weather_original'] = df_frame_metadata['weather_original'].replace(weather_renaming)
 
         # Occlusions
         keypoints_label_names = [f"o_{i}" for i in range(self.NUM_KEYPOINTS)]

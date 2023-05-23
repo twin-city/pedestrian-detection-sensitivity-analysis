@@ -67,10 +67,10 @@ class Dataset():
         n_person = df_frame.groupby("is_night").apply(lambda x: x["num_pedestrian"].sum())
         weathers = df_frame["weather_original"].unique() #todo set as new weather cats ?
 
-        if self.max_sample is not None:
-            dataset_version_name = f"{self.dataset_name}_{self.max_sample}"
-        else:
-            dataset_version_name = f"{self.dataset_name}"
+        #if self.max_sample is not None:
+        dataset_version_name = f"{self.dataset_name}"
+        #else:
+        #    dataset_version_name = f"{self.dataset_name}"
 
         df_descr = pd.DataFrame({
             "sequences (day/night)": f"{print_stat(n_seqs)}",

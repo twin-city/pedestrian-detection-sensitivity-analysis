@@ -18,7 +18,7 @@ class ECPProcessing(DatasetProcessing):
         super().__init__(root, max_samples_per_sequence)
         os.makedirs(self.saves_dir, exist_ok=True)
 
-    def preprocess_sequence(self, sequence_id, img_sequence_dir, annot_sequence_dir):
+    def preprocess_sequence(self, sequence_id, img_sequence_dir, annot_sequence_dir, force_recompute=False):
 
         # todo some asserts
         # Here ECP specific

@@ -2,10 +2,8 @@ import os
 
 import pandas as pd
 # from src.utils import filter_gt_bboxes, plot_results_img, compute_ffpi_against_fp2
-from src.detection.metrics import filter_gt_bboxes, compute_fp_missratio2
 import os.path as osp
 import numpy as np
-import matplotlib.pyplot as plt
 from src.utils import plot_heatmap_metrics
 import matplotlib.pyplot as plt
 
@@ -64,7 +62,7 @@ results_dir = osp.join("../", "results", "ECP", f"ECP_{max_sample}")
 os.makedirs(results_dir, exist_ok=True)
 
 #%%
-from src.preprocessing.ecp_processing_legacy import ECPProcessing
+from legacy.ecp_processing_legacy import ECPProcessing
 
 root_ecp = "/media/raphael/Projects/datasets/EuroCityPerson/ECP/"
 ecp_processor = ECPProcessing(root_ecp, max_samples=max_sample)
@@ -74,7 +72,6 @@ root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dat
 
 
 #%% Multiple plots
-from src.utils import compute_correlations, plot_correlations
 #corr_matrix, p_matrix = compute_correlations(df_frame_metadata.groupby("seq_name").apply(lambda x: x.mean()), seq_cofactors)
 #plot_correlations(corr_matrix, p_matrix, title="Correlations between metadatas at sequence level")
 

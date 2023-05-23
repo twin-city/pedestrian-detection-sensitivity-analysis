@@ -26,7 +26,7 @@ height_thresh = [20, 50, 120]
 resolution = (1920, 1024)
 
 #%%
-from src.preprocessing.ecp_processing_legacy import ECPProcessing
+from legacy.ecp_processing_legacy import ECPProcessing
 
 root_ecp = "/media/raphael/Projects/datasets/EuroCityPerson/ECP/"
 ecp_processor = ECPProcessing(root_ecp, max_samples=max_sample)

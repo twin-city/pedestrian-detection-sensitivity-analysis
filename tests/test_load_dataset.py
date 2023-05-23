@@ -10,6 +10,32 @@ import os.path as osp
 class TestOutput(unittest.TestCase):
 
 
+    def test_load_twincity_dataset(self):
+
+        # Folder should be created though
+        output_path = osp.join(ROOT_DIR, "tests/output_twincity_dataset")
+        os.makedirs(output_path, exist_ok=True)
+
+        # Delete if exists
+        for file_extension in [".csv", ".md"]:
+            if os.path.exists(osp.join(output_path, f"df_descr{file_extension}")):
+                os.remove(osp.join(output_path, f"df_descr{file_extension}"))
+
+        dataset_names = ["twincity"]
+        roots = ["/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/twincity-Unreal/v5"]
+        max_samples = [1]
+        for root, dataset_name, max_sample in zip(roots, dataset_names, max_samples):
+
+            dataset = DatasetFactory.get_dataset(dataset_name, max_sample, root, force_recompute=True)
+            dataset.create_markdown_description_table(output_path)
+
+        # Assert we have the same dataset of description
+        df_descr_gt = pd.read_csv(osp.join(output_path, "df_descr_gt.csv")).set_index("characteristics")
+        df_descr = pd.read_csv(osp.join(output_path, "df_descr.csv")).set_index("characteristics")
+        self.assertEqual(df_descr_gt.shape, df_descr.shape)
+        pd.testing.assert_frame_equal(df_descr_gt, df_descr)
+
+
     def test_load_ecp_dataset(self):
 
         # Folder should be created though

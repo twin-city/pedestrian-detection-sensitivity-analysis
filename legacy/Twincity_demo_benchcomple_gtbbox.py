@@ -1,9 +1,5 @@
-import os
 import pandas as pd
-import setuptools.errors
 import numpy as np
-import os.path as osp
-
 
 #%% params of input dataset
 
@@ -22,7 +18,7 @@ height_thresh = [20, 50, 120]
 resolution = (1920, 1080)
 
 #%% Get the dataset
-from src.preprocessing.twincity_preprocessing2 import get_twincity_dataset
+from legacy.twincity_preprocessing2 import get_twincity_dataset
 dataset = get_twincity_dataset(root, 50)
 root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
 
@@ -42,7 +38,6 @@ df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadat
 df_frame_metadata[df_frame_metadata["is_night"]==1]["file_name"]
 
 #%% Multiple plots
-from src.utils import compute_correlations, plot_correlations
 #corr_matrix, p_matrix = compute_correlations(df_frame_metadata.groupby("seq_name").apply(lambda x: x.mean()), seq_cofactors)
 #plot_correlations(corr_matrix, p_matrix, title="Correlations between metadatas at sequence level")
 

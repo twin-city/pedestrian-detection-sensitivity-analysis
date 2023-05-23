@@ -1,4 +1,3 @@
-from src.preprocessing.twincity_preprocessing2 import get_twincity_dataset
 from src.preprocessing.ecp_processing import ECPProcessing
 from src.preprocessing.motsynth_processing import MotsynthProcessing
 from src.dataset.dataset import Dataset

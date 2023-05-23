@@ -90,17 +90,9 @@ def run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, 
 
 
 if __name__ == "__main__":
-    # Parameters coco-Fudan
-    """
-    dataset_name = "coco_Fudan"
-    max_samples = 200
-    root = "/home/raphael/work/datasets/PennFudanPed"
-    coco_json_path = "/home/raphael/work/datasets/PennFudanPed/coco.json"
 
 
 
-
-    """
 
 
 
@@ -125,6 +117,12 @@ if __name__ == "__main__":
     max_samples = 5
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     coco_json_path = None
+
+    # Parameters coco-Fudan
+    dataset_name = "coco_Fudan"
+    max_samples = 10
+    root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed"
+    coco_json_path = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed/coco.json"
 
 
 

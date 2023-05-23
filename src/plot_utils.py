@@ -199,7 +199,7 @@ def plot_image_with_detections(dataset, dataset_name, model_name, plot_threshold
     root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
 
     # Perform detection and compute metrics
-    detector = Detector(model_name, device="cpu")
+    detector = Detector(model_name, device="cuda")
     preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
     metric = detection_metric(gtbbox_filtering)
     df_mr_fppi, df_gt_bbox = metric.compute(dataset_name, model_name, preds, targets, df_gtbbox_metadata,

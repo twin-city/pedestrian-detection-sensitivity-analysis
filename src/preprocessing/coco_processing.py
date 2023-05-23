@@ -25,27 +25,26 @@ class COCOProcessing(DatasetProcessing):
     Class that handles the preprocessing of (extracted) ECP Dataset in order to get a standardized dataset format.
     """
 
-    def __init__(self, root, coco_json_path, dataset_name, max_samples=100): #todo max_samples here is different than from MoTSynth
+    def __init__(self, root, coco_json_path, dataset_name, max_samples_per_sequence=100): #todo max_samples here is different than from MoTSynth
 
         self.dataset_name = dataset_name
-        super().__init__(root, max_samples)
+        super().__init__(root, max_samples_per_sequence)
         #self.saves_dir = f"data/preprocessing/{self.dataset_name}"
         os.makedirs(self.saves_dir, exist_ok=True)
 
         self.coco_json_path = coco_json_path
 
 
-    def get_annotations_and_imagepaths(self):
+    def get_dataset(self):
+        #todo if needed save and format as the other datasets.
 
         # Load coco dataset
         with open(self.coco_json_path) as f:
             coco_json = json.load(f)
 
         # WHich features to keep
-        frame_features = ['file_name', 'height', 'width', 'date_captured', 'num_pedestrian']
         gtbbox_features = ['id', 'image_id', 'category_id', 'iscrowd', 'area', "x0", "y0", "x1", "y1"]
-
-        frame_features = ['height', "width"]
+        frame_features = ['file_name', 'height', "width"]
 
         # Dataframes
         df_sequence_metadata = pd.DataFrame()
@@ -76,4 +75,4 @@ class COCOProcessing(DatasetProcessing):
             target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
             targets[key] = target
 
-        return targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+        return self.root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
