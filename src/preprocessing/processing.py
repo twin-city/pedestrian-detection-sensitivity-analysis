@@ -75,6 +75,12 @@ class DatasetProcessing:
 
 
 
+    def get_sequence_dict(self):
+        raise NotImplementedError
+
+    def preprocess_sequence(self, sequence_id, img_sequence_dir, annot_sequence_dir, force_recompute=False):
+        raise NotImplementedError
+
     #todo a part of this can be factorized
     def preprocess(self, force_recompute=False):
         """

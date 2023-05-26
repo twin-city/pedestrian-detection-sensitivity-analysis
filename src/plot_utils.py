@@ -1,21 +1,14 @@
 import cv2
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
 from src.detection.metrics import compute_fp_missratio2
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.stats import pearsonr
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.inspection import permutation_importance
-from sklearn.linear_model import RidgeCV
-import matplotlib.patches as patches
 import os.path as osp
 from src.detection.metrics import compute_model_metrics_on_dataset
 from src.utils import subset_dataframe
 from src.detection.detector import Detector
-from src.utils import filter_gt_bboxes
 from src.detection.metrics import detection_metric
 from src.utils import get_linear_importance, get_permuation_importance
 import matplotlib.patches as patches
@@ -93,7 +86,11 @@ def plot_correlations(corr_matrix, p_matrix, title=""):
 
 #%% Main results plot functions ======================================================================================================
 
-def plot_heatmap_metrics(df_analysis_heatmap, model_names, metrics, ODD_limit, param_heatmap_metrics={}, results_dir=None, show=False):
+def plot_heatmap_metrics(df_analysis_heatmap, model_names, metrics, ODD_limit, param_heatmap_metrics=None, results_dir=None, show=False):
+
+    if param_heatmap_metrics is None:
+        param_heatmap_metrics = {}
+
     for metric in metrics:
         mean_metric_values = df_analysis_heatmap.groupby("model_name").apply(lambda x: x[metric].mean())
         df_odd_model_list = []
@@ -150,6 +147,10 @@ def plot_gtbbox_matched_correlations(model_names, dataset, features_bbox, thresh
         attributes = ['attributes_0', 'attributes_1', 'attributes_2',
                       'attributes_3', 'attributes_4', 'attributes_5', 'attributes_6',
                       'attributes_7', 'attributes_8', 'attributes_9', 'attributes_10']
+    else:
+        attributes = 0
+
+    att_list = []
 
     df_gtbbox_corr_list = []
     for model_name in model_names:

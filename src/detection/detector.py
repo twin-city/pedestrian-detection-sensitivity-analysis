@@ -86,6 +86,8 @@ class Detector:
 
         if len(missing_frames) > 0:
             model = init_detector(config_file, checkpoint_file, device=self.device)
+        else:
+            model = init_detector(config_file, checkpoint_file, device="cpu")
 
         for i in tqdm(range(len(missing_files))):
 

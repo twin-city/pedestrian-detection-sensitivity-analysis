@@ -1,16 +1,10 @@
 import json
 import numpy as np
-import torch
 import os.path as osp
-import pandas as pd
 import os
-from src.utils import target_2_json, target_2_torch
 from src.plot_utils import xywh2xyxy
 from .processing import DatasetProcessing
 from .coco_processing import subset_dict
-from .preprocessing_utils import *
-
-
 
 class MotsynthProcessing(DatasetProcessing):
     """
@@ -50,8 +44,8 @@ class MotsynthProcessing(DatasetProcessing):
         :return:
         """
         #if self.sequence_ids is None:
-        exclude_ids_frames = set(["060", "081", "026", "132", "136", "102", "099", "174", "140"])
-        sequence_ids_frames = set(np.sort(os.listdir(self.frames_dir)).tolist())
+        exclude_ids_frames = {"060", "081", "026", "132", "136", "102", "099", "174", "140"}
+        sequence_ids_frames = set(list(np.sort(os.listdir(self.frames_dir))))
         sequence_ids_json = set([i.replace(".json", "") for i in
                               os.listdir(self.annot_dir)]) - exclude_ids_frames
         sequence_ids = list(np.sort(list(set.intersection(sequence_ids_frames, sequence_ids_json))))
@@ -161,7 +155,6 @@ class MotsynthProcessing(DatasetProcessing):
             "BLIZZARD": "snow",
         }
 
-        import pandas as pd
 
         # Assuming you have a DataFrame named 'df' with a column named 'weather'
         df_frame_metadata['weather_original'] = df_frame_metadata['weather_original'].replace(weather_renaming)

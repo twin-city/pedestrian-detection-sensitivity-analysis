@@ -42,7 +42,10 @@ def get_df_matched_gtbbox(results, frame_id, threshold, gtbbox_ids):
     return df_matched_gtbbox
 
 
-def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
+def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=None):
+
+    if excluded_gt is None:
+        excluded_gt = []
 
     num_gtbbox = len(target_bbox[0]["boxes"])
 
@@ -113,7 +116,11 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[])
 
     return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox, excluded_gt
 
-def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
+def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5, excluded_gt=None):
+
+    if excluded_gt is None:
+        excluded_gt = []
+
     num_gtbbox = len(target_bbox[0]["boxes"])
     score_sorted = np.argsort(pred_bbox[0]["scores"].numpy())[::-1]
     gt_bboxes = target_bbox[0]["boxes"]
@@ -221,13 +228,16 @@ class detection_metric:
 
 
 
-    def compute_ffpi_against_fp(self, dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering={}, max_frames=1e6):
+    def compute_ffpi_against_fp(self, dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering=None, max_frames=1e6):
         """
         On preds keys.
         :param preds:
         :param targets:
         :return:
         """
+
+        if gtbbox_filtering is None:
+            gtbbox_filtering = {}
 
         # thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
 
@@ -275,7 +285,7 @@ class detection_metric:
             """ Legacy
             excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
             """
-            from src.utils import subset_dataframe, filter_gt_bboxes
+            from src.utils import filter_gt_bboxes
 
 
 

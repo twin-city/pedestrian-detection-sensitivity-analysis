@@ -110,6 +110,14 @@ if __name__ == "__main__":
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     coco_json_path = None
 
+
+
+    # Parameters coco-Fudan
+    dataset_name = "coco_Fudan"
+    max_samples = 10
+    root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed"
+    coco_json_path = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed/coco.json"
+
     # Parameters Twincity
     dataset_name = "twincity"
     # root = "/home/raphael/work/datasets/twincity-Unreal/v5"
@@ -118,16 +126,8 @@ if __name__ == "__main__":
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     coco_json_path = None
 
-    # Parameters coco-Fudan
-    dataset_name = "coco_Fudan"
-    max_samples = 10
-    root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed"
-    coco_json_path = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed/coco.json"
-
-
-
     run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, coco_json_path=coco_json_path,
-                                  dataset_analysis=False, frame_analysis=True, gtbbox_analysis=False,
+                                  dataset_analysis=False, frame_analysis=True, gtbbox_analysis=True,
                                   plot_image=True, output_dir="results/run_small", show=True)
 
 

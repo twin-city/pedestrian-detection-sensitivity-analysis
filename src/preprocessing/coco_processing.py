@@ -35,7 +35,7 @@ class COCOProcessing(DatasetProcessing):
         self.coco_json_path = coco_json_path
 
 
-    def get_dataset(self):
+    def get_dataset(self, force_recompute=False):
         #todo if needed save and format as the other datasets.
 
         # Load coco dataset

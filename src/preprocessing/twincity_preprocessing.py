@@ -125,8 +125,6 @@ class TwincityProcessing(DatasetProcessing):
             "Snow": "snow",
         }
 
-        import pandas as pd
-
         # Assuming you have a DataFrame named 'df' with a column named 'weather'
         df_frame_metadata['weather_original'] = df_frame_metadata['weather_original'].replace(weather_renaming)
 

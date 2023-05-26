@@ -4,7 +4,7 @@ import os
 from src.utils import compute_correlations
 from src.plot_utils import plot_correlations
 from src.plot_utils import plot_dataset_statistics
-from configs_path import ROOT_DIR
+
 
 
 def print_stat(df_stat):

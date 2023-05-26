@@ -1,17 +1,10 @@
-import cv2
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
-from src.detection.metrics import compute_fp_missratio2
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import RidgeCV
-import matplotlib.patches as patches
-import os.path as osp
 from src.detection.metrics import compute_model_metrics_on_dataset
 
 

@@ -19,7 +19,7 @@ class DatasetFactory():
             #root = "/home/raphael/work/datasets/MOTSynth/"
             #motsynth_processor = MotsynthProcessing(root, max_samples=max_sample)
             #dataset = motsynth_processor.get_dataset()
-            return Dataset(dataset_name, max_sample, *dataset)
+            #return Dataset(dataset_name, max_sample, *dataset)
         elif dataset_name == "motsynth_small":
             #root = "/home/raphael/work/datasets/motsynth_small/"
             motsynth_processor = MotsynthProcessing(root, max_samples_per_sequence=max_samples_per_sequence)
