@@ -187,7 +187,20 @@ def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5, excluded_gt=None
     target_bbox_missed = list(set_unmatched_target_bboxs_ids-set_excl_target_bboxs_ids)
     unmatched_preds = None #ballec
 
-    return num_fp, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox, excluded_gt
+
+    res = {
+        "num_ground_truth": num_gtbbox,
+        "num_false_positives": num_fp,
+        "false_positives": unmatched_preds,
+        "false_negatives": target_bbox_missed,
+        "true_positives": matched_target_bbox_list,
+        "ignore_regions": excluded_gt,
+        "missing_rate": miss_ratio_image,
+    }
+
+    #return num_fp, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox, excluded_gt
+    return res
+
 
 """
 legacy
@@ -286,9 +299,6 @@ class detection_metric:
             excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
             """
             from src.utils import filter_gt_bboxes
-
-
-
             excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
 
 

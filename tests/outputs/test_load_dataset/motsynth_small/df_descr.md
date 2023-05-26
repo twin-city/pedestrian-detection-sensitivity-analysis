@@ -1,4 +1,4 @@
-| characteristics       | motsynth_small_50_50                                                   |
+| characteristics       | motsynth_small_50                                                      |
 |:----------------------|:-----------------------------------------------------------------------|
 | sequences (day/night) | 24/10                                                                  |
 | images (day/night)    | 237/100                                                                |

@@ -17,7 +17,7 @@ from src.plot_utils import plot_image_with_detections
 #todo find a way to harmonize the coco_json_path
 def run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, coco_json_path=None,
                                   dataset_analysis=False, frame_analysis=False, gtbbox_analysis=False,
-                                  plot_image=False, output_dir="output", show=False):
+                                  plot_image=False, output_dir="output", show=False, force_recompute=False):
 
     #%% Asserts =======================================================================================================
 
@@ -31,7 +31,7 @@ def run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, 
 
     #%% Load Dataset ==================================================================================================
     dataset = DatasetFactory.get_dataset(dataset_name, max_samples, root=root,
-                                         coco_json_path=coco_json_path, force_recompute=True)
+                                         coco_json_path=coco_json_path, force_recompute=force_recompute)
     results_dir = osp.join(output_dir, dataset.get_dataset_dir())
     os.makedirs(results_dir, exist_ok=True)
     dataset_tuple = dataset.get_dataset_as_tuple()
@@ -93,9 +93,6 @@ if __name__ == "__main__":
 
 
 
-
-
-
     # Parameters ECP
     dataset_name = "ecp_small"
     root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/ecp_small"
@@ -109,7 +106,6 @@ if __name__ == "__main__":
     max_samples = 1
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     coco_json_path = None
-
 
 
     # Parameters coco-Fudan
@@ -127,7 +123,7 @@ if __name__ == "__main__":
     coco_json_path = None
 
     run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, coco_json_path=coco_json_path,
-                                  dataset_analysis=False, frame_analysis=True, gtbbox_analysis=True,
+                                  dataset_analysis=False, frame_analysis=False, gtbbox_analysis=False,
                                   plot_image=True, output_dir="results/run_small", show=True)
 
 
