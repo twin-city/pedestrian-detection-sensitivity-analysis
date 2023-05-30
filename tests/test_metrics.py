@@ -1,21 +1,44 @@
 import unittest
-import pandas as pd
-from src.utils import subset_dataframe
+import torch
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
+from pprint import pprint
+from src.detection.metrics import compute_fp_missratio
 
-class TestMetrics(unittest.TestCase):
+class testMetrics(unittest.TestCase):
 
-    def test_bbox_filtering(self):
-        df = pd.read_csv("data/df_gtbbox_metadata_frame_twincity_test.csv")
-        gtbbox_filtering3 = {"height": {">": 50}}
-        df_subset = subset_dataframe(df, gtbbox_filtering3)
-        excluded_gt = set(range(len(df))) - set(df_subset.index)
-        self.assertEqual(excluded_gt, set([13,5]))
+    def test_metrics(self):
+        """
+        A blank image with user defined target bboxes and predicted bboxes
+        :return:
+        """
 
-    def test_bbox_filtering2(self):
-        df = pd.read_csv("data/df_gtbbox_metadata_frame_twincity_test.csv")
-        gtbbox_filtering3 = {"height": {"between": (50, 100)}}
-        df_subset = subset_dataframe(df, gtbbox_filtering3)
-        excluded_gt = set(range(len(df))) - set(df_subset.index)
-        self.assertEqual(excluded_gt, {0, 2, 3, 4, 5, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18})
+
+        preds = [
+            dict(
+                boxes=torch.tensor([[258.0, 41.0, 606.0, 285.0]]),
+                scores=torch.tensor([0.536]),
+                labels=torch.tensor([0]),
+            )
+        ]
+        target = [
+            dict(
+                boxes=torch.tensor([[214.0, 41.0, 562.0, 285.0]]),
+                labels=torch.tensor([0]),
+            )
+        ]
+
+        #todo as well as check Pedestron & NightOwls --> Does it handle ignore-regions ?????? Use pycocotools instead
+        # Torch mAP
+        metric = MeanAveragePrecision()
+        metric.update(preds, target)
+        metric.compute()
+        # pprint(metric.compute())
+
+        fp_missratio = compute_fp_missratio(preds, target, threshold=0.5, excluded_gt=None)
+
+        gt_fp_missratio = {'num_ground_truth': 1, 'num_false_positives': 0, 'false_positives': None, 'false_negatives': [], 'true_positives': [0], 'ignore_regions': [], 'missing_rate': 0.0}
+        self.assertEqual(fp_missratio, gt_fp_missratio)
+
+
 
 

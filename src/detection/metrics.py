@@ -6,6 +6,7 @@ import torchvision
 import torch
 from .detector import Detector
 from configs_path import ROOT_DIR
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 def compute_model_metrics_on_dataset(model_name, dataset, gtbbox_filtering, device="cuda"):
 
@@ -30,13 +31,13 @@ def get_df_matched_gtbbox(results, frame_id, threshold, gtbbox_ids):
     # 2 --> mached
     # 3 (other) --> missed
 
-    df_matched_gtbbox = 1 * pd.DataFrame([i in results[threshold][2] for i in range(results[threshold][5])])
+    df_matched_gtbbox = 1 * pd.DataFrame([i in results[threshold]["true_positives"] for i in range(results[threshold]["num_ground_truth"])])
     df_matched_gtbbox["frame_id"] = frame_id
     df_matched_gtbbox["threshold"] = threshold
     df_matched_gtbbox["id"] = gtbbox_ids
     df_matched_gtbbox = df_matched_gtbbox.rename(columns={0: 'matched'})
 
-    df_matched_gtbbox.iloc[results[threshold][6], 0] = -1
+    df_matched_gtbbox.iloc[results[threshold]['ignore_regions'], 0] = -1
 
 
     return df_matched_gtbbox
@@ -237,6 +238,7 @@ class detection_metric:
         df_mr_fppi, df_matched_gtbbox = self.compute_ffpi_against_fp(dataset_name, model_name, preds, targets,
                                                                  df_gtbbox_metadata, gtbbox_filtering)
 
+
         return df_mr_fppi, df_matched_gtbbox
 
 
@@ -334,7 +336,7 @@ class detection_metric:
 
                     # df = matched_gtbbox = pd.DataFrame({key:val[3] for key,val in results.items()})
 
-                    df_results_threshold = pd.DataFrame({key:val[:2] for key,val in results.items()}).T.rename(columns={0: "FPPI", 1: "MR"})
+                    df_results_threshold = pd.DataFrame({key:(val["num_false_positives"], val["missing_rate"]) for key,val in results.items()}).T.rename(columns={0: "FPPI", 1: "MR"})
                     df_results_threshold.index.name = "threshold"
                     df_results_threshold["frame_id"] = str(frame_id)
                     df_mr_fppi_list.append(df_results_threshold.reset_index().set_index(["frame_id", "threshold"]))
