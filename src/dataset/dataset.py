@@ -6,6 +6,9 @@ from src.plot_utils import plot_correlations
 from src.plot_utils import plot_dataset_statistics
 
 
+def print_mean_std(df, col, decimal=0):
+    return f"{df[col].mean():.{decimal}f} +- ({df[col].std():.{decimal}f})"
+
 
 def print_stat(df_stat):
     stat_day = 0 in df_stat.keys()
@@ -37,14 +40,13 @@ class Dataset():
 
         # Create dir if needed
         self.results_dir = osp.join("../../", "results", dataset_name, f"{dataset_name}{max_sample}")
-        os.makedirs(self.results_dir, exist_ok=True)
-
+        # os.makedirs(self.results_dir, exist_ok=True)
         # Show descriptive statistics
         # self.create_markdown_description_table()
 
 
     def get_dataset_dir(self):
-        return f"{self.dataset_name}{self.max_sample}"
+        return f"{self.dataset_name}"
 
 
     def get_dataset_as_tuple(self):
@@ -54,13 +56,18 @@ class Dataset():
 
 
 
-    def create_markdown_description_table(self, folder_path="../../results"):
+    def create_markdown_description_table(self, folder_path="."):
 
         df_frame = self.df_frame_metadata.copy(deep=True)
+        df_gtbbox = self.df_gtbbox_metadata.copy(deep=True)
 
         #todo fix
         if "is_night" not in df_frame.columns:
             df_frame["is_night"] = 0
+        if "weather_original" not in df_frame.columns:
+            df_frame["weather_original"] = "dry"
+        if "occlusion_rate" not in df_gtbbox.columns:
+            df_gtbbox["occlusion_rate"] = 0
 
         n_images = df_frame.groupby("is_night").apply(len)
         n_seqs = df_frame.groupby("is_night").apply(lambda x: len(x["sequence_id"].unique()))
@@ -77,8 +84,18 @@ class Dataset():
             "images (day/night)": f"{print_stat(n_images)}",
             "person (day/night)": f"{print_stat(n_person)}",
             "weather": ", ".join(list(weathers)),
+            # Additional info
+            "height": print_mean_std(df_gtbbox.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True)), "height", decimal=0),
+            "occlusion rate": print_mean_std(df_gtbbox.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True)), "occlusion_rate", decimal=2),
+            "aspect ratio": print_mean_std(df_gtbbox.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True)), "aspect_ratio", decimal=2),
+
         }, index=[dataset_version_name]).T
         df_descr.index.name = "characteristics"
+
+        #todo add pitch info also ??? Number of viewpoints ???
+
+
+
 
         # Save in a common dataframe to compare the datasets
         save_csv_path = osp.join(folder_path, 'df_descr.csv')

@@ -35,7 +35,6 @@ class testMetrics(unittest.TestCase):
         # pprint(metric.compute())
 
         fp_missratio = compute_fp_missratio(preds, target, threshold=0.5, excluded_gt=None)
-
         gt_fp_missratio = {'num_ground_truth': 1, 'num_false_positives': 0, 'false_positives': None, 'false_negatives': [], 'true_positives': [0], 'ignore_regions': [], 'missing_rate': 0.0}
         self.assertEqual(fp_missratio, gt_fp_missratio)
 

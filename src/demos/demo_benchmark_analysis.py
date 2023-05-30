@@ -17,12 +17,20 @@ from src.plot_utils import plot_image_with_detections
 #todo find a way to harmonize the coco_json_path
 def run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, coco_json_path=None,
                                   dataset_analysis=False, frame_analysis=False, gtbbox_analysis=False,
-                                  plot_image=False, output_dir="output", show=False, force_recompute=False):
+                                  plot_image=False, output_dir="output/", show=False, force_recompute=False):
+
+
+
 
     #%% Asserts =======================================================================================================
 
     if not show and output_dir is None:
         raise ValueError("Stopping because no output_dir is provided and show is False.")
+
+    dataset_is_known = [dataset_name in ["ecp_small", "motsynth_small", "Twincity-Unreal-v5"]]
+    dataset_is_coco = osp.exists(osp.join(root, "coco.json"))
+    if not (dataset_is_coco or dataset_is_known):
+        raise ValueError("Stopping because dataset_name is not recognized.")
 
     #%% Parameters =====================================================================================================
 
@@ -30,8 +38,7 @@ def run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, 
     thresholds = [0.5, 0.9, 0.99]
 
     #%% Load Dataset ==================================================================================================
-    dataset = DatasetFactory.get_dataset(dataset_name, max_samples, root=root,
-                                         coco_json_path=coco_json_path, force_recompute=force_recompute)
+    dataset = DatasetFactory.get_dataset(dataset_name, max_samples, root=root, force_recompute=force_recompute)
     results_dir = osp.join(output_dir, dataset.get_dataset_dir())
     os.makedirs(results_dir, exist_ok=True)
     dataset_tuple = dataset.get_dataset_as_tuple()
@@ -108,11 +115,6 @@ if __name__ == "__main__":
     coco_json_path = None
 
 
-    # Parameters coco-Fudan
-    dataset_name = "coco_Fudan"
-    max_samples = 10
-    root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed"
-    coco_json_path = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed/coco.json"
 
     # Parameters Twincity
     dataset_name = "twincity"
@@ -122,9 +124,18 @@ if __name__ == "__main__":
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     coco_json_path = None
 
+    # Parameters coco-Fudan
+    dataset_name = "PennFudanPed"
+    max_samples = 10
+    root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed"
+    coco_json_path = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed/coco.json"
+
+    from configs_path import ROOT_DIR
+
+
     run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, coco_json_path=coco_json_path,
-                                  dataset_analysis=False, frame_analysis=False, gtbbox_analysis=False,
-                                  plot_image=True, output_dir="results/run_small", show=True)
+                                  dataset_analysis=False, frame_analysis=True, gtbbox_analysis=False,
+                                  plot_image=True, output_dir=osp.join(ROOT_DIR, "results/demo/"), show=True)
 
 
 

@@ -8,6 +8,21 @@ import os.path as osp
 
 from .preprocessing_utils import *
 
+
+def df_index_int2str(df):
+    if df.index.name is not None:
+        if df.index.dtype == int:
+            df.index = df.index.astype(str)
+    elif df.index.names is not None:
+        names = df.index.names
+        df = df.reset_index()
+        for name in names:
+            df[name] = df[name].astype(str)
+        df = df.set_index(names)
+    else:
+        raise ValueError("Dataframe should have an index or index names")
+    return df
+
 class DatasetProcessing:
     def __init__(self, root, max_samples_per_sequence):
         self.root = root
@@ -58,6 +73,10 @@ class DatasetProcessing:
             df_sequence_metadata = pd.read_csv(path_df_sequence_metadata, index_col=["sequence_id"])
             with open(path_target) as jsonFile:
                 targets = target_2_torch(json.load(jsonFile))
+
+            df_frame_metadata = df_index_int2str(df_frame_metadata)
+            df_gtbbox_metadata = df_index_int2str(df_gtbbox_metadata)
+
 
         # Else, compute them
         else:
