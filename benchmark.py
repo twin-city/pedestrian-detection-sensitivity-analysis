@@ -10,7 +10,7 @@ if __name__ == "__main__":
 
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     DATASET_DIR = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/"
-    OUTPUT_DIR = "benchmarkv4"
+    OUTPUT_DIR = "benchmarkv5"
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     force_recompute = False
@@ -21,8 +21,8 @@ if __name__ == "__main__":
     do_show = False
 
     benchmark_params = [
-        #{"dataset_name": "ecp_small", "max_samples": 30},
-        #{"dataset_name": "motsynth_small", "max_samples": 30},
+        {"dataset_name": "ecp_small", "max_samples": 30},
+        {"dataset_name": "motsynth_small", "max_samples": 30},
         #{"dataset_name": "PennFudanPed", "max_samples": 200},
         {"dataset_name": "Twincity-Unreal-v5", "max_samples": 30},
     ]
