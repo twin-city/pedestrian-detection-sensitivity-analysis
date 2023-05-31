@@ -254,7 +254,7 @@ def plot_fppi_mr_vs_gtbbox_cofactor(df_analysis_cats, ODD_criterias=None, result
         plt.show()
 
 
-def plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criterias, results_dir=None, show=False):
+def plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criterias=None, results_dir=None, show=False):
 
     min_x, max_x = 0.01, 100  # 0.01 false positive per image to 100
     min_y, max_y = 0.05, 1  # 5% to 100% Missing Rate
@@ -294,12 +294,14 @@ def plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criteria
 
                 x = min_x
                 y = min_y
-                width = ODD_criterias["FPPI"] - min_x
-                height = ODD_criterias["MR"] - min_y
-                # Add the grey square patch to the axes
-                grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
-                ax[i,j].add_patch(grey_square)
-                ax[i,j].text(min_x+width/2/10, min_y+height/2/10, s="ODD")
+
+                if ODD_criterias is not None:
+                    width = ODD_criterias["FPPI"] - min_x
+                    height = ODD_criterias["MR"] - min_y
+                    # Add the grey square patch to the axes
+                    grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
+                    ax[i,j].add_patch(grey_square)
+                    ax[i,j].text(min_x+width/2/10, min_y+height/2/10, s="ODD")
 
     plt.tight_layout()
     if results_dir is not None:

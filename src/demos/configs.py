@@ -32,10 +32,7 @@ ODD_limit = [
 ]
 
 # What is our area of performance ?
-ODD_criterias = {
-    "MR": 0.5,
-    "FPPI": 5,
-}
+ODD_criterias = None #  = {"MR": 0.5, "FPPI": 5,}
 
 occl_thresh = [0.35, 0.8]
 height_thresh = [20, 50, 120]

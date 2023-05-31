@@ -109,8 +109,9 @@ class Dataset():
                 df_descr_all = pd.concat([df_descr_all, df_descr], axis=1)
         df_descr_all.to_csv(save_csv_path)
 
-        with open(osp.join(self.results_dir, f'descr_{self.dataset_name}.md'), 'w') as f:
-            f.write(df_descr.to_markdown())
+        # todo add the dataset name in the title
+        #with open(osp.join(self.results_dir, f'descr_{self.dataset_name}.md'), 'w') as f:
+        #    f.write(df_descr.to_markdown())
         with open(save_md_path, 'w') as f:
             f.write(df_descr_all.to_markdown())
 

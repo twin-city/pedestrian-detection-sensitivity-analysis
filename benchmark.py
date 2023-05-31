@@ -10,27 +10,28 @@ if __name__ == "__main__":
 
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     DATASET_DIR = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/"
-    OUTPUT_DIR = "results/benchmarkv3"
+    OUTPUT_DIR = "benchmarkv4"
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     force_recompute = False
     do_dataset_analysis = False
-    do_frame_analysis = False
-    do_gtbbox_analysis = False
+    do_frame_analysis = True
+    do_gtbbox_analysis = True
     do_plot_image = True
     do_show = False
 
     benchmark_params = [
-        {"dataset_name": "ecp_small", "max_samples": 20},
-        {"dataset_name": "motsynth_small", "max_samples": 20},
-        {"dataset_name": "PennFudanPed", "max_samples": 200},
-        {"dataset_name": "Twincity-Unreal-v5", "max_samples": 20},
+        #{"dataset_name": "ecp_small", "max_samples": 30},
+        #{"dataset_name": "motsynth_small", "max_samples": 30},
+        #{"dataset_name": "PennFudanPed", "max_samples": 200},
+        {"dataset_name": "Twincity-Unreal-v5", "max_samples": 30},
     ]
 
     # Compute the descriptive markdown table
     from src.dataset.dataset_factory import DatasetFactory
     for param in benchmark_params:
         dataset_name, max_samples = param.values()
+        print(dataset_name, max_samples)
         root = osp.join(DATASET_DIR, dataset_name)
         dataset = DatasetFactory.get_dataset(dataset_name, max_samples, root, force_recompute=force_recompute)
         output_path = osp.join(OUTPUT_DIR)
@@ -38,6 +39,8 @@ if __name__ == "__main__":
 
     # Run the demo
     for param in benchmark_params:
+        dataset_name, max_samples = param.values()
+        root = osp.join(DATASET_DIR, dataset_name)
         run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names,
                                   dataset_analysis=do_dataset_analysis, frame_analysis=do_frame_analysis,
                                   gtbbox_analysis=do_gtbbox_analysis,

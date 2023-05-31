@@ -374,9 +374,15 @@ class detection_metric:
         frame_id_intersect = set.intersection(set(set_df_bbox), set(frame_ids))
         frame_id_intersect = set.intersection(set(frame_id_intersect), set(set_df_matched))
 
-        # print(df_mr_fppi.loc[list(frame_id_intersect)[0]])
+        #todo FIX : bug to handle in twincity (TOCHECK)
+        df_mr_fppi_res = df_mr_fppi.loc[frame_id_intersect].reset_index()
+        df_mr_fppi_res.drop_duplicates(inplace=True, subset=["frame_id", "threshold"])
+        df_mr_fppi_res.set_index(["frame_id", "threshold"], inplace=True)
+        df_matched_gtbbox = df_matched_gtbbox.loc[frame_id_intersect].reset_index()
+        df_matched_gtbbox.drop_duplicates(inplace=True, subset=["frame_id", "id"])
+        df_matched_gtbbox.set_index(["frame_id", "id"], inplace=True)
 
-        return df_mr_fppi.loc[frame_id_intersect], df_matched_gtbbox.loc[frame_id_intersect]
+        return df_mr_fppi_res, df_matched_gtbbox
 
 
 
