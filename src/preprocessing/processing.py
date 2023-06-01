@@ -29,7 +29,7 @@ class DatasetProcessing:
         self.max_samples_per_sequence = max_samples_per_sequence
         np.random.seed(0)
 
-        self.saves_dir = f"{ROOT_DIR}/data/preprocessing/{self.dataset_name}"
+        self.saves_dir = f"{ROOT_DIR}/cache/preprocessing/{self.dataset_name}"
         os.makedirs(self.saves_dir, exist_ok=True)
 
     def __str__(self):

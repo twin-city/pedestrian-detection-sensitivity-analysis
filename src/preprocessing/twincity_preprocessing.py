@@ -6,7 +6,8 @@ import os.path as osp
 import os
 from .processing import DatasetProcessing
 from legacy.twincity_preprocessing2 import get_twincity_boxes, creation_date
-
+import os
+import shutil
 
 class TwincityProcessing(DatasetProcessing):
     """
@@ -14,7 +15,10 @@ class TwincityProcessing(DatasetProcessing):
     """
 
     def __init__(self, root, max_samples_per_sequence=10):
-        self.dataset_name = "twincity"
+
+        num_v = root.split("/")[-1].split("-v")[-1]
+
+        self.dataset_name = f"twincity_v{num_v}"
         super().__init__(root, max_samples_per_sequence)
         os.makedirs(self.saves_dir, exist_ok=True)
 
@@ -24,6 +28,33 @@ class TwincityProcessing(DatasetProcessing):
         return sequence_dict
 
     def preprocess_sequence(self, sequence_id, img_sequence_dir, annot_sequence_dir, force_recompute=False):
+
+        # Check if need to modify structure
+        sequence_dir = "/".join(img_sequence_dir.split("/")[:-1])
+        png_folder = img_sequence_dir
+        labels_folder = annot_sequence_dir
+
+        # Step 1: Create the 'png' and 'labels' folders if they don't exist, and move the files
+        if not os.path.exists(png_folder) and not os.path.exists(labels_folder):
+            os.makedirs(png_folder)
+            os.makedirs(labels_folder)
+
+            # Step 2: Get a list of all .png and .json files in the sequence_dir
+            files = os.listdir(sequence_dir)
+            png_files = [file for file in files if file.endswith('.png')]
+            json_files = [file for file in files if file.endswith('.json')]
+
+            # Step 3: Move the .png files to the 'png' folder
+            for file in png_files:
+                src = os.path.join(sequence_dir, file)
+                dst = os.path.join(png_folder, file)
+                shutil.move(src, dst)
+
+            # Move the .json files to the 'labels' folder
+            for file in json_files:
+                src = os.path.join(sequence_dir, file)
+                dst = os.path.join(labels_folder, file)
+                shutil.move(src, dst)
 
         # Check files
         metadata_path = glob.glob(osp.join(annot_sequence_dir, "Metadata*"))[0]

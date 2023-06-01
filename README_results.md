@@ -4,6 +4,14 @@
 
 ## I Introduction
 
+
+| Real Data                                                                                   | Synthetic Data (Twincity)                                                                                                                                                | 
+|---------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ![Parc in Paris](data/paris_wikipedia_images/Cascade_du_parc_de_Bercy,_Paris_2017_001.jpeg) | ![Twincity Scene](..%2F..%2Fdatasets%2FPedestrianDetectionSensitivityDatasets%2FTwincity-Unreal-v8%2Fday_sun_50_plongee%2Fpng%2FSnapshot-2023-06-01_094123-34011800.png) |
+
+
+
+
 ### I.1 Context
 
 This work is part of the Entrepreneur d'Interet General (EIG) program, at the SDITN of 

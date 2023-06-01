@@ -318,6 +318,8 @@ def plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criteria
 def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=None,
                      threshold=0.9, ax=None, title=None):
 
+    had_ax = ax is not None
+
     # Read image
     img = plt.imread(img_path)
 
@@ -328,7 +330,7 @@ def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=No
         img = img[:,:,:3]
 
     # Create fig, ax
-    if ax is None:
+    if not had_ax:
         fig, ax = plt.subplots(1,1, figsize=(16,10))
 
     # Show RGB image
@@ -363,7 +365,7 @@ def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=No
 
     if title is not None:
         ax.set_title(title)
-    if ax is None:
+    if not had_ax:
         plt.axis('off')
         plt.tight_layout()
         plt.show()

@@ -339,8 +339,9 @@ class detection_metric:
                     df_results_threshold = pd.DataFrame({key:(val["num_false_positives"], val["missing_rate"]) for key,val in results.items()}).T.rename(columns={0: "FPPI", 1: "MR"})
                     df_results_threshold.index.name = "threshold"
                     df_results_threshold["frame_id"] = str(frame_id)
-                    df_mr_fppi_list.append(df_results_threshold.reset_index().set_index(["frame_id", "threshold"]))
 
+                    # Append to list
+                    df_mr_fppi_list.append(df_results_threshold.reset_index().set_index(["frame_id", "threshold"]))
                     df_matched_gtbbox_list.append(df_matched_gtbbox)
 
             # todo output here details for each image as a dataframe ? score threshold x image_id
@@ -379,7 +380,7 @@ class detection_metric:
         df_mr_fppi_res.drop_duplicates(inplace=True, subset=["frame_id", "threshold"])
         df_mr_fppi_res.set_index(["frame_id", "threshold"], inplace=True)
         df_matched_gtbbox = df_matched_gtbbox.loc[frame_id_intersect].reset_index()
-        df_matched_gtbbox.drop_duplicates(inplace=True, subset=["frame_id", "id"])
+        df_matched_gtbbox.drop_duplicates(inplace=True, subset=["frame_id", "id", "threshold"])
         df_matched_gtbbox.set_index(["frame_id", "id"], inplace=True)
 
         return df_mr_fppi_res, df_matched_gtbbox

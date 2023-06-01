@@ -134,6 +134,9 @@ class Detector:
             json.dump(preds_json, f)
 
         # Only keys we want
-        preds_out = {key: preds[key] for key in frame_id_list}
+        try:
+            preds_out = {key: preds[key] for key in frame_id_list}
+        except:
+            raise ValueError("Could not inder all frames due to misattribution of frame id")
 
         return preds_out
