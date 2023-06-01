@@ -5,10 +5,10 @@
 ## I Introduction
 
 
-| Real Data                                                                                   | Synthetic Data (Twincity)                                                                                                                                                | 
-|---------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| ![Parc in Paris](data/paris_wikipedia_images/Cascade_du_parc_de_Bercy,_Paris_2017_001.jpeg) | ![Twincity Scene](..%2F..%2Fdatasets%2FPedestrianDetectionSensitivityDatasets%2FTwincity-Unreal-v8%2Fday_sun_50_plongee%2Fpng%2FSnapshot-2023-06-01_094123-34011800.png) |
-| Bercy parc in Paris. Photo from [Wikipedia](https://fr.wikipedia.org/wiki/Parc_de_Bercy#/media/Fichier:Cascade_du_parc_de_Bercy,_Paris_2017_001.jpg)                                                   | A synthetic scene of a Parc in Twincity. Unreal Engine 5 offer a photorealistic rendering of urban sceene, allowing to explore the use of AI detection algorithms.
+| Real Data                                                                                                                                              | Synthetic Data (Twincity)                                                                                                                                                | 
+|--------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ![Parc in Paris](data/paris_wikipedia_images/Cascade_du_parc_de_Bercy,_Paris_2017_001.jpeg)                                                            | ![Twincity Scene](..%2F..%2Fdatasets%2FPedestrianDetectionSensitivityDatasets%2FTwincity-Unreal-v8%2Fday_sun_50_plongee%2Fpng%2FSnapshot-2023-06-01_094123-34011800.png) |
+| Bercy parc in Paris. Photo from [Wikipedia](https://fr.wikipedia.org/wiki/Parc_de_Bercy#/media/Fichier:Cascade_du_parc_de_Bercy,_Paris_2017_001.jpg).  | A synthetic scene of a Parc in Twincity. Unreal Engine 5 offer a photorealistic rendering of urban sceene, allowing to explore the use of AI detection algorithms.
 
 
 

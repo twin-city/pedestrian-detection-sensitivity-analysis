@@ -68,6 +68,6 @@ class TestOutput(unittest.TestCase):
         max_samples = 200
         root = "/home/raphael/work/datasets/PennFudanPed"
         coco_json_path = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed/coco.json"
-        cocoprocess = COCOProcessing(root, coco_json_path, dataset_name, max_samples).get_dataset()
+        cocoprocess = COCOProcessing(root, dataset_name, max_samples).get_dataset()
         dataset = Dataset(dataset_name, max_samples, *cocoprocess)
         dataset.create_markdown_description_table(output_path)

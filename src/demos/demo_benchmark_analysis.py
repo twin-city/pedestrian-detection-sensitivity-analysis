@@ -116,6 +116,12 @@ if __name__ == "__main__":
 
 
 
+    # Parameters coco-Fudan
+    dataset_name = "PennFudanPed"
+    max_samples = 10
+    root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed"
+    coco_json_path = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed/coco.json"
+
     # Parameters Twincity
     dataset_name = "twincity"
     # root = "/home/raphael/work/datasets/twincity-Unreal/v5"
@@ -123,12 +129,6 @@ if __name__ == "__main__":
     max_samples = 5
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     coco_json_path = None
-
-    # Parameters coco-Fudan
-    dataset_name = "PennFudanPed"
-    max_samples = 10
-    root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed"
-    coco_json_path = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed/coco.json"
 
     from configs_path import ROOT_DIR
 

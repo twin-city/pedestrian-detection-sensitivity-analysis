@@ -63,6 +63,15 @@ class TwincityProcessing(DatasetProcessing):
         with open(metadata_path) as file:
             metadata = json.load(file)
 
+        is_night = metadata["hour"] > 21 or metadata["hour"] < 6
+        weather = metadata["weather"]
+        pitch = metadata["cameraRotation"]["pitch"]
+
+        print(is_night, weather, pitch)
+        if is_night == True and weather == "Clear Sky" and np.abs((pitch - (-30.0))) < 1e-5:
+            print("coucou")
+
+
         ordering = np.argsort([creation_date(x) for x in images_path_list])
         img_annot_path_list = np.array(images_path_list)[ordering[::2]]
         img_rgb_path_list = np.array(images_path_list)[ordering[1::2]]

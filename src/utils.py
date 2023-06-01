@@ -78,7 +78,7 @@ def subset_dataframe(df, conditions):
 
         if column not in df.columns:
             print(f"Warning, column {column} was not found in dataframe to subset, disgarding.")
-            new_mask = df.iloc[:,0] == df.iloc[:,0] #todo ugly hack
+            new_mask = df.iloc[:,0] == df.iloc[:,0] #todo
         else:
             if isinstance(values, dict):
                 if 'between' in values: #todo might do it better ?
@@ -95,8 +95,10 @@ def subset_dataframe(df, conditions):
                     new_mask = df[column].isin(values['set_values'])
             elif isinstance(values, (list, set, np.ndarray)):
                 new_mask = df[column].isin(values)
-            elif isinstance(values, (int, float, str)):
+            elif isinstance(values, (int, str)):
                 new_mask = df[column] == values
+            elif isinstance(values, (float)):
+                new_mask = (df[column] - values).abs() < 1e-5 #todo because of pitch in twincity
             else:
                 raise NotImplementedError(f"The subset condition {values} was not set according to subset_dataframe inputs.")
 

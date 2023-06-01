@@ -10,14 +10,14 @@ if __name__ == "__main__":
 
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     DATASET_DIR = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/"
-    OUTPUT_DIR = "results/benchmarkv9"
+    OUTPUT_DIR = "results/test"
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     force_recompute = False
     do_dataset_analysis = False
     do_frame_analysis = False
-    do_gtbbox_analysis = True
-    do_plot_image = False
+    do_gtbbox_analysis = False
+    do_plot_image = True
     do_show = False
 
     benchmark_params = [

@@ -196,6 +196,8 @@ def plot_gtbbox_matched_correlations(model_names, dataset, features_bbox, thresh
 
 def plot_image_with_detections(dataset, dataset_name, model_name, plot_thresholds, gtbbox_filtering, frame_idx=0, results_dir=None, show=False):
 
+    frame_idx = 80
+
     # Load Dataset
     root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
 
@@ -358,6 +360,8 @@ def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=No
         add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_matched], c=(0, 1, 0), s=2)
         add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_missed], c=(1, 0, 0), s=2)
         add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_ignored], c=(1, 1, 0), s=2)
+    elif targets is not None:
+        add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"], c=(0, 1, 0), s=2)
 
     if targets is not None:
         for i, bbox in enumerate(targets[(frame_id)][0]["boxes"]):
