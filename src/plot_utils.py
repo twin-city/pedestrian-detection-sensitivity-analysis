@@ -350,7 +350,7 @@ def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=No
         add_bboxes_to_img_ax(ax, preds_above, c=(0, 0, 1), s=1)
         add_bboxes_to_img_ax(ax, preds_below, c=(0, 0, 1), s=1, linestyle="dotted")
 
-    if targets is not None and df_gt_bbox is not None:
+    if targets is not None and df_gt_bbox is not None and preds is not None:
         # Check the matched bboxes
         df_gt_bbox_frame = df_gt_bbox.loc[frame_id]
         df_gt_bbox_frame = df_gt_bbox_frame[df_gt_bbox_frame["threshold"] == threshold].reset_index()
@@ -360,6 +360,17 @@ def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=No
         add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_matched], c=(0, 1, 0), s=2)
         add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_missed], c=(1, 0, 0), s=2)
         add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_ignored], c=(1, 1, 0), s=2)
+    elif targets is not None and df_gt_bbox is not None and preds is None:
+        # Check the matched bboxes
+        df_gt_bbox_frame = df_gt_bbox.loc[frame_id]
+        df_gt_bbox_frame = df_gt_bbox_frame[df_gt_bbox_frame["threshold"] == threshold].reset_index()
+        idx_matched = (df_gt_bbox_frame[df_gt_bbox_frame["matched"] == 1]).index
+        idx_ignored = (df_gt_bbox_frame[df_gt_bbox_frame["matched"] == -1]).index
+        idx_missed = (df_gt_bbox_frame[df_gt_bbox_frame["matched"] == 0]).index
+        add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_matched], c=(0, 1, 0), s=2)
+        add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_missed], c=(0, 1, 0), s=2)
+        add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_ignored], c=(1, 1, 0), s=2)
+
     elif targets is not None:
         add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"], c=(0, 1, 0), s=2)
 

@@ -3,9 +3,8 @@ import matplotlib.image as mpimg
 import json
 import numpy as np
 import os.path as osp
-import os
 from .processing import DatasetProcessing
-from legacy.twincity_preprocessing2 import get_twincity_boxes, creation_date
+from src.preprocessing.twincity_preprocessing_utils import get_twincity_boxes, creation_date
 import os
 import shutil
 
@@ -160,8 +159,8 @@ class TwincityProcessing(DatasetProcessing):
             #"RAIN": "rainy",
             #"THUNDER": "thunder",
             # Reduced Visibility
-            #"SMOG": "smog",
-            #"FOGGY": "foggy",
+            "Clear Sky": "clear",
+            "Rain": "rainy",
             "Snow": "snow",
         }
 

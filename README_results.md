@@ -22,7 +22,6 @@ Keywords : *AI, Game-Engine, Synthetic Data, Pedestrian Detection, Object Detect
 
 ### I.2 Motivation
 
-(TODO Pedestrian detection : plot exampleSynthetic Versus Real)
 
 - Low luminosity, adverse weather conditions, occlusion or camera angle are factors that can affect the performance 
 of pedestrian detection methods. To what extent ?  
@@ -83,6 +82,12 @@ In short, we propose a sensitivity analysis, by correlating metrics of performan
 We then look at what parameter influence the most the performance, in what cases.
 
 
+|  | Day    | Night  |
+|-------------------------------------------------------------------------|--------|--------|
+| CCTV view                                                               | ![0_Clear Sky_-30.0_GT.png](results%2Fplots_twincity%2F0_Clear%20Sky_-30.0_GT.png) | ![1_Clear Sky_-30.0_GT.png](results%2Fplots_twincity%2F1_Clear%20Sky_-30.0_GT.png) |
+| Bird's eye view                                                         | ![0_Clear Sky_-70.0_GT.png](results%2Fplots_twincity%2F0_Clear%20Sky_-70.0_GT.png) | ![1_Clear Sky_-70.0_GT.png](results%2Fplots_twincity%2F1_Clear%20Sky_-70.0_GT.png) |
+
+> Example of randomization of a given scenario (luminosity, camera angle).
 
 
 ### I.3 The Task of Pedestrian Detection
@@ -100,6 +105,16 @@ Therefore, from a model output, we can define a threshold $t$ (between 0 and 1) 
 
 
 
+
+| Pedestrian detection in Twincity | Day   | Night                                                                                                                                                                              |
+|----------------------------------|-------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| CCTV view                        |![0_Clear Sky_-30.0_Preds.png](results%2Fplots_twincity%2F0_Clear%20Sky_-30.0_Preds.png) | ![1_Clear Sky_-30.0_Preds.png](results%2Fplots_twincity%2F1_Clear%20Sky_-30.0_Preds.png)   |
+| Bird's eye view                  | ![0_Clear Sky_-70.0_Preds.png](results%2Fplots_twincity%2F0_Clear%20Sky_-70.0_Preds.png) | ![1_Clear Sky_-70.0_Preds.png](results%2Fplots_twincity%2F1_Clear%20Sky_-70.0_Preds.png)                                                                                           |
+
+> Prediction for a given pedestrian detection model on the generated synthetic data. We can see that in Bird's eye view the model miss most of the pedestrians.
+
+
+
 (TODO image with model U takes image X and predict BBoxes with scores, which are filtered with a threshold t to get the final prediction)
 (This is to be compared to ground truths bounding boxes).
 
@@ -108,7 +123,14 @@ Therefore, from a model output, we can define a threshold $t$ (between 0 and 1) 
 Matching the Bounding Boxes
 - **IoU** : Intersection over Union, is a measure of the overlap between two bounding boxes (typically, a threshold of 0.5 is used to consider a prediction as a true positive).
 
-(TODO : an image to describe the matching of bboxes)
+
+| Metrics of detection in Twincity | Day                                                                                              | Night                                                                                                                                                                             |
+|----------------------------------|--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| CCTV view                        | ![0_Clear Sky_-30.0_Preds+GT.png](results%2Fplots_twincity%2F0_Clear%20Sky_-30.0_Preds%2BGT.png) | ![1_Clear Sky_-30.0_Preds+GT.png](results%2Fplots_twincity%2F1_Clear%20Sky_-30.0_Preds%2BGT.png) |
+| Bird's eye view                  | ![0_Clear Sky_-70.0_Preds+GT.png](results%2Fplots_twincity%2F0_Clear%20Sky_-70.0_Preds%2BGT.png)                                                                                                 | ![1_Clear Sky_-70.0_Preds+GT.png](results%2Fplots_twincity%2F1_Clear%20Sky_-70.0_Preds%2BGT.png)                                                                                      |
+
+
+
 
 Computing Metrics over matched Bounding Boxes
 - **Missing Rate (MR)** : the proportion of pedestrians that are not detected (i.e. not matched with a prediction).
@@ -116,7 +138,8 @@ Computing Metrics over matched Bounding Boxes
 - **False Positive Per Image (FPPI)** : the average number of false positives per image (i.e. the average number of bounding boxes that are not matched with a ground truth).
 This is especially important as there would always be agents monitoring AI solutions, and too many false positives decribilize the solution.
 
-(TODO : an image to describe the computation of MR and FPPI)
+_(TODO : an image to describe the computation of MR and FPPI)_
+_(TODO : an image to describe the matching of bboxes)_
 
 #### I.3.3 Papers and datasets of reference for Pedestrian Detection
 

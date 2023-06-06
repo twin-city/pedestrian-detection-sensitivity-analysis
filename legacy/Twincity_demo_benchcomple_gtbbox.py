@@ -18,7 +18,7 @@ height_thresh = [20, 50, 120]
 resolution = (1920, 1080)
 
 #%% Get the dataset
-from legacy.twincity_preprocessing2 import get_twincity_dataset
+from src.preprocessing.twincity_preprocessing_utils import get_twincity_dataset
 dataset = get_twincity_dataset(root, 50)
 root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
 
