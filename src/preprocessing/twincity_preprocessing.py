@@ -160,11 +160,15 @@ class TwincityProcessing(DatasetProcessing):
             #"THUNDER": "thunder",
             # Reduced Visibility
             "Clear Sky": "clear",
-            "Rain": "rainy",
+            "Rain": "rain",
             "Snow": "snow",
         }
 
         # Assuming you have a DataFrame named 'df' with a column named 'weather'
-        df_frame_metadata['weather_original'] = df_frame_metadata['weather_original'].replace(weather_renaming)
+        df_frame_metadata['weather'] = df_frame_metadata['weather_original'].replace(weather_renaming)
+
+        # Weather categories according to homegenized weather naming
+        df_frame_metadata = self.add_weather_cats(df_frame_metadata)
+
 
         return df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata

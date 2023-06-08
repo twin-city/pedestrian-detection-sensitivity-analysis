@@ -17,10 +17,31 @@ from src.demos.configs import height_thresh, occl_thresh
 
 
 
-
-
-
 #%% Utils plot functions ======================================================================================================
+
+
+def filter_frame_to_str(filter_frame):
+    keys = list(filter_frame.keys())
+    vals = list(filter_frame.values())
+
+    if keys == ["is_night"]:
+        if vals[0] == 0:
+            return "Day"
+        elif vals[0] == 1:
+            return "Night"
+        else:
+            raise NotImplementedError
+    elif keys == ["weather_cats"]:
+        return vals[0][0]
+    elif keys == ["pitch"]:
+        key = list(list(filter_frame.values())[0].keys())[0]  # todo change this
+        val = list(list(filter_frame.values())[0].values())[0]
+        if key in {"<", ">"}:
+            return f"{key} {val}°"
+        elif key == "between":
+            return f"[{val[0]}°, {val[1]}°]"
+        else:
+            raise NotImplementedError
 
 def xywh2xyxy(bbox):
     x, y, w, h = bbox
@@ -291,7 +312,12 @@ def plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criteria
                 ax[i,j].set_yscale('log')
                 ax[i,j].set_ylim(min_y, max_y)
                 ax[i,j].set_xlim(min_x, max_x)
-                ax[i,j].set_title(filter_frame)
+                ax[i,j].set_title(filter_frame_to_str(filter_frame))
+
+
+
+
+
                 ax[i, j].legend()
 
                 x = min_x

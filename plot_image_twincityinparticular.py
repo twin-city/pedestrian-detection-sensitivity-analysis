@@ -31,7 +31,7 @@ model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
 DATASET_DIR = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/"  # todo change this
 
 benchmark_params = [
-    {"dataset_name": "Twincity-Unreal-v8bis", "max_samples": 1},
+    {"dataset_name": "Twincity-Unreal-v9", "max_samples": 1},
     # {"dataset_name": "ecp_small", "max_samples": 30},
     # {"dataset_name": "motsynth_small", "max_samples": 30},
     # {"dataset_name": "PennFudanPed", "max_samples": 200},
@@ -52,7 +52,7 @@ root, targets, df_gtbbox_metadata, df_frame_metadata_0, df_sequence_metadata = d
 os.makedirs(f"results/plots_twincity/", exist_ok=True)
 
 for is_night in [0,1]:
-    for weather in ["Clear Sky", "Rain"]:
+    for weather in ["clear", "rain", "snow"]:
         for pitch in [0.0, -30.0, -70.0]: #Careful, set as float
 
 

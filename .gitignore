@@ -6,8 +6,6 @@ exps/
 out/
 results/
 data_legacy/
-data/
+
 legacy/
 cache/
-reference_results_old/
-reference_results/

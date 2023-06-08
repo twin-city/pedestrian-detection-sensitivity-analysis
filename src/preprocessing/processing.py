@@ -191,9 +191,27 @@ class DatasetProcessing:
 
         df_frame_metadata["is_night"] = 1 * df_frame_metadata["is_night"]
 
-
-
         return df_frame_metadata
+
+    @staticmethod
+    def add_weather_cats(df):
+        weather_cats_renaming = {
+            # Dry Weather
+            "sunny": "clear",
+            "clear": "clear",
+            "clouds": "clear",
+            "overcast": "clear",
+            # Rainy Weather
+            "rain": "rain",
+            "thunder": "rain",
+            # Reduced Visibility
+            "smog": "reduced visibility",
+            "foggy": "reduced visibility",
+            "snow": "reduced visibility",
+        }
+
+        df["weather_cats"] = df["weather"].replace(weather_cats_renaming)
+        return df
 
 
 

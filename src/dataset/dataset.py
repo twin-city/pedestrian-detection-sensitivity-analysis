@@ -72,7 +72,8 @@ class Dataset():
         n_images = df_frame.groupby("is_night").apply(len)
         n_seqs = df_frame.groupby("is_night").apply(lambda x: len(x["sequence_id"].unique()))
         n_person = df_frame.groupby("is_night").apply(lambda x: x["num_pedestrian"].sum())
-        weathers = df_frame["weather_original"].unique() #todo set as new weather cats ?
+        weathers = df_frame["weather"].unique() #todo set as new weather cats ?
+        weathers_cats = df_frame["weather_cats"].unique() #todo set as new weather cats ?
 
         #if self.max_sample is not None:
         dataset_version_name = f"{self.dataset_name}"
@@ -84,6 +85,7 @@ class Dataset():
             "images (day/night)": f"{print_stat(n_images)}",
             "person (day/night)": f"{print_stat(n_person)}",
             "weather": ", ".join(list(weathers)),
+            "weather categories": ", ".join(list(weathers_cats)),
             # Additional info
             "height": print_mean_std(df_gtbbox.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True)), "height", decimal=0),
             "occlusion rate": print_mean_std(df_gtbbox.groupby("frame_id").apply(lambda x: x.mean(numeric_only=True)), "occlusion_rate", decimal=2),
@@ -93,8 +95,6 @@ class Dataset():
         df_descr.index.name = "characteristics"
 
         #todo add pitch info also ??? Number of viewpoints ???
-
-
 
 
         # Save in a common dataframe to compare the datasets

@@ -111,17 +111,36 @@ Therefore, from a model output, we can define a threshold $t$ (between 0 and 1) 
 | CCTV view                        |![0_Clear Sky_-30.0_Preds.png](results%2Fplots_twincity%2F0_Clear%20Sky_-30.0_Preds.png) | ![1_Clear Sky_-30.0_Preds.png](results%2Fplots_twincity%2F1_Clear%20Sky_-30.0_Preds.png)   |
 | Bird's eye view                  | ![0_Clear Sky_-70.0_Preds.png](results%2Fplots_twincity%2F0_Clear%20Sky_-70.0_Preds.png) | ![1_Clear Sky_-70.0_Preds.png](results%2Fplots_twincity%2F1_Clear%20Sky_-70.0_Preds.png)                                                                                           |
 
-> Prediction for a given pedestrian detection model on the generated synthetic data. We can see that in Bird's eye view the model miss most of the pedestrians.
+> Prediction for a given pedestrian detection model on the generated synthetic data. We can see that in Bird's eye view the model misses most of the pedestrians.
 
 
 
-(TODO image with model U takes image X and predict BBoxes with scores, which are filtered with a threshold t to get the final prediction)
-(This is to be compared to ground truths bounding boxes).
 
 #### I.3.2 Metrics for the Task of Pedestrian Detection
 
 Matching the Bounding Boxes
 - **IoU** : Intersection over Union, is a measure of the overlap between two bounding boxes (typically, a threshold of 0.5 is used to consider a prediction as a true positive).
+
+TODO plot of IoU
+
+
+Computing Metrics over matched Bounding Boxes
+- **Missing Rate (MR)** : the proportion of pedestrians that are not detected (i.e. not matched with a prediction).
+
+- **False Positive Per Image (FPPI)** : the average number of false positives per image (i.e. the average number of bounding boxes that are not matched with a ground truth).
+This is especially important as there would always be agents monitoring AI solutions, and too many false positives decribilize the solution.
+
+
+(TODO image with model U takes image X and predict BBoxes with scores, which are filtered with a threshold t to get the final prediction)
+(This is to be compared to ground truths bounding boxes).
+
+_(TODO : an image to describe the matching of bboxes)_
+
+_(TODO : an image to describe the computation of MR and FPPI)_
+
+
+
+
 
 
 | Metrics of detection in Twincity | Day                                                                                              | Night                                                                                                                                                                             |
@@ -131,15 +150,6 @@ Matching the Bounding Boxes
 
 
 
-
-Computing Metrics over matched Bounding Boxes
-- **Missing Rate (MR)** : the proportion of pedestrians that are not detected (i.e. not matched with a prediction).
-
-- **False Positive Per Image (FPPI)** : the average number of false positives per image (i.e. the average number of bounding boxes that are not matched with a ground truth).
-This is especially important as there would always be agents monitoring AI solutions, and too many false positives decribilize the solution.
-
-_(TODO : an image to describe the computation of MR and FPPI)_
-_(TODO : an image to describe the matching of bboxes)_
 
 #### I.3.3 Papers and datasets of reference for Pedestrian Detection
 
@@ -192,7 +202,7 @@ to real data via the EurocityPerson dataset.
 Small version of dataset named as : ($name_small_$max samples) indicate a subsampling of the full dataset for faster prototyping, but shall 
 eventually be replaced by the full dataset.
 
-| characteristics       | ecp_small_30   | motsynth_small_30                                                      | PennFudanPed_200   | Twincity-Unreal-v5_30   |
+| characteristics       | ecp_small_30   | motsynth_small_30                                                      | PennFudanPed_200   | Twincity-Unreal-v8bis_20   |
 |:----------------------|:---------------|:-----------------------------------------------------------------------|:-------------------|:------------------------|
 | sequences (day/night) | 31/7           | 24/10                                                                  | 1/                 | 2/2                     |
 | images (day/night)    | 285/53         | 237/100                                                                | 170/               | 50/60                   |
@@ -226,10 +236,13 @@ We compare different scenarios, and for each compute the MR (Miss Rate) vs FPPI 
 
 ### II.3 Results
 
+
 |                                                                                                                             | **Twincity (Ours, Synthetic)**                                                                                                                                                                             | MoTSynth (Synthetic)                                                                        | EuroCityPerson (Real)                                                                              |
 |-----------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| Boundig Box parameter sensitivity : MR vs FPPI for bbox aspect ratio (line 1), height (line 2) and occlusion rate (line 3). | ![gtbbox_cofactor_fppi_mr.png](reference_results%2FTwincity-Unreal-v5_30%2Fgtbbox_cofactor_fppi_mr.png)                                                                                                               | ![gtbbox_cofactor_fppi_mr.png](reference_results%2Fmotsynth_small_30%2Fgtbbox_cofactor_fppi_mr.png) | ![gtbbox_cofactor_fppi_mr.png](reference_results%2Fecp_small_30%2Fgtbbox_cofactor_fppi_mr.png) |
-| Frame parameter sensitivity :  MR vs FPPI for Day vs Night (line 2) and Camera Angle (line 3).                              | ![Image 1](reference_results/Twincity-Unreal-v5_30/frame_cofactor_fppi_mr.png)                                                                                                                             | ![frame_cofactor_fppi_mr.png](reference_results%2Fmotsynth_small_30%2Fframe_cofactor_fppi_mr.png) | ![frame_cofactor_fppi_mr.png](reference_results%2Fecp_small_30%2Fframe_cofactor_fppi_mr.png)   |
+| Boundig Box parameter sensitivity : MR vs FPPI for bbox aspect ratio (line 1), height (line 2) and occlusion rate (line 3). | ![gtbbox_cofactor_fppi_mr.png](data/results%2FTwincity-Unreal-v8bis_20%2Fgtbbox_cofactor_fppi_mr.png)                                                                                                               | ![gtbbox_cofactor_fppi_mr.png](data/results%2Fmotsynth_small_30%2Fgtbbox_cofactor_fppi_mr.png) | ![gtbbox_cofactor_fppi_mr.png](data/results%2Fecp_small_30%2Fgtbbox_cofactor_fppi_mr.png) |
+| Frame parameter sensitivity :  MR vs FPPI for Day vs Night (line 2) and Camera Angle (line 3).                              | ![Image 1](data/data/results/Twincity-Unreal-v8bis_20/frame_cofactor_fppi_mr.png)                                                                                                                             | ![frame_cofactor_fppi_mr.png](data/results%2Fmotsynth_small_30%2Fframe_cofactor_fppi_mr.png) | ![frame_cofactor_fppi_mr.png](data/results%2Fecp_small_30%2Fframe_cofactor_fppi_mr.png)   |
+
+
 
 > To read the plots, the lower the curve the better. 
 > The x-axis is the FPPI (False Positive Per Image) and the y-axis is the MR (Miss Rate). 

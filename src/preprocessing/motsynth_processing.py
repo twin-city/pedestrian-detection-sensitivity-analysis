@@ -124,30 +124,15 @@ class MotsynthProcessing(DatasetProcessing):
         for sequence_id in df_sequence_metadata.index:
             df_frame_metadata.loc[df_frame_metadata["sequence_id"] == sequence_id, sequence_columns] = df_sequence_metadata.loc[sequence_id, sequence_columns].values
 
-        # Set Weather variables
-        """
-        We want : 
-        - Dry : CLEAR, OVERCAST, EXTRASUNNY, CLOUDS
-        - Rain : RAIN, THUNDER
-        - Reduced Visibility : SMOG, FOGGY, BLIZZARD
-        """
-        dry_cats = ["CLEAR", "OVERCAST", "EXTRASUNNY", "CLOUDS"]
-        rainy_cats = ["RAIN", "THUNDER"]
-        reduced_visibility_cats = ["SMOG", "FOGGY", "BLIZZARD"]
-        df_frame_metadata["weather_original"] = df_frame_metadata["weather"]
-        df_frame_metadata["weather"] = 0
-        df_frame_metadata.loc[np.isin(df_frame_metadata["weather_original"], dry_cats), "weather"] = "dry"
-        df_frame_metadata.loc[np.isin(df_frame_metadata["weather_original"], rainy_cats), "rainy_cats"] = "rainy"
-        df_frame_metadata.loc[np.isin(df_frame_metadata["weather_original"], reduced_visibility_cats), "weather"] = "reduced visibility"
 
         weather_renaming = {
             # Dry Weather
-            "EXTRASUNNY": "extrasunny",
+            "EXTRASUNNY": "sunny",
             "CLEAR": "clear",
             "CLOUDS": "clouds",
             "OVERCAST": "overcast",
             # Rainy Weather
-            "RAIN": "rainy",
+            "RAIN": "rain",
             "THUNDER": "thunder",
             # Reduced Visibility
             "SMOG": "smog",
@@ -155,9 +140,18 @@ class MotsynthProcessing(DatasetProcessing):
             "BLIZZARD": "snow",
         }
 
+        df_frame_metadata["weather_original"] = df_frame_metadata["weather"]
+        df_frame_metadata["weather"] = df_frame_metadata["weather"].replace(weather_renaming)
 
-        # Assuming you have a DataFrame named 'df' with a column named 'weather'
-        df_frame_metadata['weather_original'] = df_frame_metadata['weather_original'].replace(weather_renaming)
+        """
+        We want : 
+        - Dry : CLEAR, OVERCAST, EXTRASUNNY, CLOUDS
+        - Rain : RAIN, THUNDER
+        - Reduced Visibility : SMOG, FOGGY, BLIZZARD
+        """
+
+        # Weather categories according to homegenized weather naming
+        df_frame_metadata = self.add_weather_cats(df_frame_metadata)
 
         # Occlusions
         keypoints_label_names = [f"o_{i}" for i in range(self.NUM_KEYPOINTS)]

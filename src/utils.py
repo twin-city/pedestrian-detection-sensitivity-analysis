@@ -167,6 +167,12 @@ def compute_models_metrics_from_gtbbox_criteria(dataset, gtbbox_filtering_cats, 
         #todo not do if filtering is same as Overall
         len_key = len(subset_dataframe(dataset.df_gtbbox_metadata, gtbbox_filtering_cats[key]))
         if len_key != len_overall or key == "Overall":
+
+            # todo because params other than occlusion may change, for twincity
+            if ("occlusion" in key and "occlusion_rate" not in gt_bbox_columns):
+                print("Warning, occlusion_rate not in gt_bbox_columns, skipping")
+                continue
+
             df_results_aspectratio = pd.concat(
                 [compute_model_metrics_on_dataset(model_name, dataset, gtbbox_filtering, device="cuda")[0] for
                  model_name in model_names])

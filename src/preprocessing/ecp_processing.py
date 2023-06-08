@@ -88,6 +88,16 @@ class ECPProcessing(DatasetProcessing):
 
 
     def preprocess_specific(self, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata):
+
+
+        # Weather
+        df_frame_metadata["weather_original"] = df_frame_metadata["weather"]
+        df_frame_metadata["weather"] = df_frame_metadata["weather_original"].replace({"dry": "clear", "rainy": "rain"})
+
+        # Weather categories according to homegenized weather naming
+        df_frame_metadata = self.add_weather_cats(df_frame_metadata)
+
+        # Occlusion rate
         df_gtbbox_metadata["occlusion_rate_original"] = df_gtbbox_metadata["occlusion_rate"]
         df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata.apply(lambda x: x[["occlusion_rate", "truncation_rate"]].max(), axis=1)
         return df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
