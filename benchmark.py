@@ -3,7 +3,7 @@ import os
 from src.demos.demo_benchmark_analysis import run_demo_pedestrian_detection
 import os.path as osp
 import logging
-
+from configs_path import DATASET_DIR
 
 def dump_params(OUTPUT_DIR, param_dict):
     i = 0
@@ -20,8 +20,8 @@ if __name__ == "__main__":
     """
 
     ## DIRS
-    DATASET_DIR = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/"
-    OUTPUT_DIR = "results/benchv12_tests"
+    OUTPUT_DIR = "results/benchv13"
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     ## LOGGER
     # Create and configure the logger
@@ -38,9 +38,8 @@ if __name__ == "__main__":
 
 
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    force_recompute = True
+    force_recompute = False
     do_dataset_analysis = False
     do_frame_analysis = True
     do_gtbbox_analysis = True
@@ -57,9 +56,9 @@ if __name__ == "__main__":
     }
 
     datasets_params = [
-        {"dataset_name": "Twincity-Unreal-v8bis_test_bigbox", "max_samples": 1},
-        #{"dataset_name": "ecp_small", "max_samples": 30},
-        #{"dataset_name": "motsynth_small", "max_samples": 30},
+        {"dataset_name": "Twincity-Unreal-v9", "max_samples": 20},
+        {"dataset_name": "ecp_small", "max_samples": 30},
+        {"dataset_name": "motsynth_small", "max_samples": 30},
         #{"dataset_name": "PennFudanPed", "max_samples": 200},
     ]
 

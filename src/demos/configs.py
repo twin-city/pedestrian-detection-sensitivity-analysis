@@ -78,7 +78,7 @@ gtbbox_filtering_height_cats = {
 gtbbox_filtering_occlusion_cats = {
     "No occlusion": {
         "ignore_region": 0,
-        "occlusion_rate": {"<": max_occl_cats},
+        "occlusion_rate": {"<": occl_thresh[0]},
         "height": {">": height_thresh[1]},
     },
     "Partial occlusion": {

@@ -8,13 +8,16 @@ from .detector import Detector
 from configs_path import ROOT_DIR
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
+from .detector_factory import DetectorFactory
+
 def compute_model_metrics_on_dataset(model_name, dataset, gtbbox_filtering, device="cuda"):
 
     # dataset info
     dataset_name = dataset.dataset_name
     root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset.get_dataset_as_tuple()
 
-    detector = Detector(model_name, device=device)
+    detector = DetectorFactory.get_detector(model_name, device=device)
+    #detector = Detector(model_name, device=device)
     preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
 
     metric = detection_metric(gtbbox_filtering)

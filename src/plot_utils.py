@@ -13,7 +13,7 @@ from src.detection.metrics import detection_metric
 from src.utils import get_linear_importance, get_permuation_importance
 import matplotlib.patches as patches
 from src.demos.configs import height_thresh, occl_thresh
-
+from src.detection.detector_factory import DetectorFactory
 
 
 
@@ -223,7 +223,11 @@ def plot_image_with_detections(dataset, dataset_name, model_name, plot_threshold
     root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
 
     # Perform detection and compute metrics
-    detector = Detector(model_name, device="cuda")
+    #detector = Detector(model_name, device="cuda")
+
+
+    detector = DetectorFactory.get_detector(model_name, device="cpu")
+
     preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
     metric = detection_metric(gtbbox_filtering)
     df_mr_fppi, df_gt_bbox = metric.compute(dataset_name, model_name, preds, targets, df_gtbbox_metadata,

@@ -7,12 +7,14 @@ import os.path as osp
 from configs_path import ROOT_DIR, MMDET_DIR, CHECKPOINT_DIR
 
 class Detector:
-    def __init__(self, name, device="cuda", nms=False):
+    def __init__(self, name, device="cuda", nms=False, task="pedestrian_detection"):
         self.model_name = name
         self.device = device
-        self.config_path, self.checkpoint_path, self.inference_processor = self.get_config_and_checkpoints_path()
+        #self.config_path, self.checkpoint_path, self.inference_processor = self.get_config_and_checkpoints_path()
         self.nms = nms
+        self.task = task
 
+    """
     def get_config_and_checkpoints_path(self):
 
 
@@ -29,7 +31,7 @@ class Detector:
                 return x[0][0]
         else:
             raise ValueError(f"Model name {self.model_name} not known")
-        """
+        
         elif self.model_name == "yolo3_coco":
             config_path = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs/models/yolo/yolov3_d53_320_273e_coco.py"
             checkpoint_path = "/home/raphael/work/checkpoints/detection/yolov3_d53_320_273e_coco-421362b6.pth"
@@ -37,15 +39,12 @@ class Detector:
             #config_path = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs/models/faster_rcnn/faster_rcnn_r50_caffe_fpn_mstrain_1x_coco-person.py"
             config_path = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs/models/faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py"
             checkpoint_path = "/home/raphael/work/checkpoints/detection/faster_rcnn_r50_fpn_1x_coco-person_20201216_175929-d022e227.pth"
-        """
+        
         return config_path, checkpoint_path, get_person_bbox
+        """
 
-    #model_name = "yolo3_coco"
-    #model_name = "faster-rcnn_coco"
-    #checkpoint_root = "/home/raphael/work/checkpoints/detection"
-    #configs_root = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs"
 
-    # todo here bug with 1711 too many
+
     def get_preds_from_files(self, dataset_name, root, df_frame_metadata):
 
         # Frame id list

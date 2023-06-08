@@ -7,7 +7,7 @@ from src.detection.metrics import detection_metric
 from src.demos.configs import gtbbox_filtering_all
 from src.plot_utils import plot_results_img
 from src.dataset.dataset_factory import DatasetFactory
-
+from src.detection.detector_factory import DetectorFactory
 
 # Parameters for results generation
 model_idx = 0
@@ -49,7 +49,7 @@ root = osp.join(DATASET_DIR, dataset_name)
 dataset = DatasetFactory.get_dataset(dataset_name, max_samples, root=root, force_recompute=force_recompute)
 root, targets, df_gtbbox_metadata, df_frame_metadata_0, df_sequence_metadata = dataset.get_dataset_as_tuple()
 
-os.makedirs(f"results/plots_twincity/", exist_ok=True)
+os.makedirs(f"../../results/plots_twincity/", exist_ok=True)
 
 for is_night in [0,1]:
     for weather in ["clear", "rain", "snow"]:
@@ -87,8 +87,10 @@ for is_night in [0,1]:
             df_frame_metadata = subset_dataframe(df_frame_metadata_0.copy(), filter_frame) #todo perform the filtering
 
 
+
             # Perform detection and compute metrics
-            detector = Detector(model_name, device="cuda")
+            detector = DetectorFactory.get_detector(model_name, device="cuda")
+            #detector = Detector(model_name, device="cuda")
             preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
             metric = detection_metric(gtbbox_filtering)
             df_mr_fppi, df_gt_bbox = metric.compute(dataset_name, model_name, preds, targets, df_gtbbox_metadata,
@@ -99,7 +101,6 @@ for is_night in [0,1]:
                 pass
             elif plot_gtbbox:
                 pass
-                #preds = None
             else:
                 pass
 

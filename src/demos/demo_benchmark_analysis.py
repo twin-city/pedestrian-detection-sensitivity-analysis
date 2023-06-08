@@ -98,12 +98,7 @@ def run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, 
 
 if __name__ == "__main__":
 
-
-
-
-
-
-
+    from configs_path import ROOT_DIR
 
 
     # Parameters coco-Fudan
@@ -111,10 +106,6 @@ if __name__ == "__main__":
     max_samples = 10
     root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed"
     coco_json_path = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/PennFudanPed/coco.json"
-
-
-
-    from configs_path import ROOT_DIR
 
     # Parameters MoTSynth
     dataset_name = "motsynth_small"
@@ -135,10 +126,10 @@ if __name__ == "__main__":
     dataset_name = "Twincity-Unreal-v9"
     # root = "/home/raphael/work/datasets/twincity-Unreal/v5"
     root = "/home/raphael/work/datasets/PedestrianDetectionSensitivityDatasets/Twincity-Unreal-v9"
-    max_samples = 1
+    max_samples = 2
     model_names = ["faster-rcnn_cityscapes", "mask-rcnn_coco"]
     coco_json_path = None
-    force_recompute = True
+    force_recompute = False
 
     run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, coco_json_path=coco_json_path,
                                   dataset_analysis=False, frame_analysis=True, gtbbox_analysis=False,
