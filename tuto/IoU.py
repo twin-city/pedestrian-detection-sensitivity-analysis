@@ -70,12 +70,15 @@ for box2 in ([2, 3, 5, 5],):
     # plt.text(5.2, 3, "Area = 6", c="b", size=20)
 
 
+
+
+
 #%% Plot multiple boxes
 
 import numpy as np
 
 # Visualization
-fig, ax = plt.subplots(1)
+
 ax.set_xlim([0, 64])
 ax.set_ylim([0, 64])
 
@@ -97,6 +100,19 @@ gt_bboxes_false_positive = [
     [11, 12, 22, 35],
 ]
 
+pred_boxes = []
+for i, box1 in enumerate(gt_bboxes + gt_bboxes_crowd + gt_bboxes_false_positive):
+    pred_boxes.append(box1 + np.random.randint(-2, 2, size=(4)))
+
+
+#%%
+
+fig, ax = plt.subplots(1)
+ax.set_xlim([0, 64])
+ax.set_ylim([0, 64])
+
+
+
 for box1 in gt_bboxes:
     box1_rect = patches.Rectangle((box1[0], box1[1]), box1[2] - box1[0], box1[3] - box1[1],
                                   linewidth=2, edgecolor='g', facecolor='none')
@@ -107,18 +123,17 @@ for box1 in gt_bboxes_crowd:
                                   linewidth=2, edgecolor='y', facecolor='none')
     ax.add_patch(box1_rect)
 
-
-
 # Draw prediction boxes
 probas = [0.8, 0.99, 0.2, 0.1, 0.1, 0.1, 0.9, 0.1, 0.5]
 
-for i, box1 in enumerate(gt_bboxes + gt_bboxes_crowd + gt_bboxes_false_positive):
-    box1 += np.random.randint(-2, 2, size=(4))
+
+for i, box1 in enumerate(pred_boxes):
     box1_rect = patches.Rectangle((box1[0], box1[1]), box1[2] - box1[0], box1[3] - box1[1],
                                   linewidth=2, edgecolor='b', facecolor='none', linestyle="--")
     ax.text(box1[2], box1[3]+1, probas[i], c="b", size=12)
     ax.add_patch(box1_rect)
 
+# plt.gca().set_aspect('equal', adjustable='box')
 plt.show()
 
 #%%
@@ -143,7 +158,49 @@ threshold = 0.5
 res = compute_fp_missratio(pred_bbox, target_bbox, threshold=threshold, excluded_gt=[3, 4, 5])
 
 
+#%%
 
+for threshold in [0.9, 0.8, 0.5]:
+    res = compute_fp_missratio(pred_bbox, target_bbox, threshold=threshold, excluded_gt=[3, 4, 5])
+
+    fig, ax = plt.subplots(1)
+    ax.set_xlim([0, 64])
+    ax.set_ylim([0, 64])
+
+    for i, box1 in enumerate(pred_boxes):
+        if probas[i] >= threshold:
+            box1_rect = patches.Rectangle((box1[0], box1[1]), box1[2] - box1[0], box1[3] - box1[1],
+                                          linewidth=2, edgecolor='b', facecolor='none', linestyle="-")
+        else:
+            box1_rect = patches.Rectangle((box1[0], box1[1]), box1[2] - box1[0], box1[3] - box1[1],
+                                          linewidth=2, edgecolor='b',
+                                          facecolor='none', linestyle="--", alpha=0.5)
+        ax.text(box1[2], box1[3]+1, probas[i], c="b", size=12)
+        ax.add_patch(box1_rect)
+
+        for box1 in gt_bboxes_crowd:
+            box1_rect = patches.Rectangle((box1[0], box1[1]), box1[2] - box1[0], box1[3] - box1[1],
+                                          linewidth=2, edgecolor='y', facecolor='none')
+            ax.add_patch(box1_rect)
+
+    for i, box1 in enumerate(gt_bboxes):
+        if i in res["true_positives"]:
+            box1_rect = patches.Rectangle((box1[0], box1[1]), box1[2] - box1[0], box1[3] - box1[1],
+                                          linewidth=2, edgecolor='lime', facecolor='none')
+        else:
+            box1_rect = patches.Rectangle((box1[0], box1[1]), box1[2] - box1[0], box1[3] - box1[1],
+                                          linewidth=2, edgecolor='r', facecolor='none')
+        ax.add_patch(box1_rect)
+
+
+
+    # plt.gca().set_aspect('equal', adjustable='box')
+    plt.tight_layout()
+    plt.savefig(f"data/tuto_detection/fp_mr_example_threshold_{threshold}.png")
+    plt.show()
+
+
+#%%
 
 #%%
 
@@ -166,4 +223,68 @@ ax.plot(fppis, mrs)
 for threshold, mr, fppi in zip(thresholds, mrs, fppis):
     ax.scatter(fppi, mr, c="black")
     ax.text(fppi+0.1, mr+0.01, f"{threshold}", size=15)
+plt.tight_layout()
+plt.savefig(f"data/tuto_detection/matching_curve_fppi_mr.png")
 plt.show()
+
+
+
+#%% Do the plot multiple times
+
+
+
+
+
+
+
+#%%
+
+
+
+
+#%% Plot a stick person
+
+
+
+def plot_stick_figure(ax, xmin, xmax, ymin, ymax):
+
+
+    # Define the relative size and position of the head, body, arms and legs
+    head_radius = 0.1 * (ymax - ymin)
+    head_center = ((xmin + xmax) / 2, ymin + 0.6 * (ymax - ymin))
+
+    body_top = head_center[1] - head_radius
+    body_bottom = ymin + 0.2 * (ymax - ymin)
+
+    arm_left = xmin + 0.3 * (xmax - xmin)
+    arm_right = xmin + 0.7 * (xmax - xmin)
+    arm_height = ymin + 0.4 * (ymax - ymin)
+
+    leg_left = xmin + 0.3 * (xmax - xmin)
+    leg_right = xmin + 0.7 * (xmax - xmin)
+    leg_bottom = ymin
+
+    # Draw the head
+    head = plt.Circle(head_center, head_radius, fill=False)
+    ax.add_patch(head)
+
+    # Draw the body
+    ax.plot([head_center[0], head_center[0]], [body_top, body_bottom], color='black')
+
+    # Draw the arms
+    ax.plot([arm_left, arm_right], [arm_height, arm_height], color='black')
+
+    # Draw the legs
+    ax.plot([head_center[0], leg_left], [body_bottom, leg_bottom], color='black')
+    ax.plot([head_center[0], leg_right], [body_bottom, leg_bottom], color='black')
+
+    # Set limits and aspect ratio
+    #ax.set_xlim(xmin, xmax)
+    #ax.set_ylim(ymin, ymax)
+    #ax.set_aspect('equal')
+
+
+
+# Call the function with bounding box values
+# plot_stick_figure(0.2, 0.8, 0, 1)
+

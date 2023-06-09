@@ -138,7 +138,7 @@ Matching the Bounding Boxes
 
 | IoU                                                                                                      | 
 |----------------------------------------------------------------------------------------------------------|
-| ![IoU.png](tuto%2FIoU.png)                                                                               | 
+| ![IoU.png](data%2Ftuto_detection%2FIoU.png)                                                                              | 
 | Union =  (Red+Blue-Green)  <br/> Intersection = Green <br/> IoU = Intersection/Union = 2/(9+6-2) ~ 0.154 |
 > Typically a threshold of 0.5 is chosen to match a predicted bounding box (blue) with a groud truth bounding box (here in red).
 
@@ -150,13 +150,11 @@ Computing Metrics over matched Bounding Boxes
 - **False Positive Per Image (FPPI)** : the average number of false positives per image (i.e. the average number of bounding boxes that are not matched with a ground truth).
 This is especially important as there would always be agents monitoring AI solutions, and too many false positives decribilize the solution.
 
+![schema_fppi_mr.png](data%2Ftuto_detection%2Fschema_fppi_mr.png)
 
-(TODO image with model U takes image X and predict BBoxes with scores, which are filtered with a threshold t to get the final prediction)
-(This is to be compared to ground truths bounding boxes).
 
-_(TODO : an image to describe the matching of bboxes)_
-
-_(TODO : an image to describe the computation of MR and FPPI)_
+> For various thresholds, of predicted box confidence, we can compute the number of false positives,
+> as well as the missing rate (number of missed boundig boxes divided by the number of ground truth bounding boxes).
 
 
 
@@ -253,7 +251,7 @@ We compare different scenarios, and for each compute the MR (Miss Rate) vs FPPI 
 
 
 
-TODO : parametes of filtering for the study !! e;g. occlusion ...
+TODO : give parameters of filtering for the study !! e;g. occlusion ...
 
 
 
