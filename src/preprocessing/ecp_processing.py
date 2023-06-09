@@ -1,48 +1,8 @@
 import json
-import numpy as np
-import torch
 import os.path as osp
-import pandas as pd
 import os
 from .processing import DatasetProcessing
-
-"""
-Check more info https://eurocity-dataset.tudelft.nl/
-For example : ignore regions, snow ...
-"""
-
-def syntax_occl_ECP(x):
-    # keep only occluded
-    x = [x for x in x if "occluded" in x]
-    if x and "occluded" in x[0]:
-        return int(x[0].replace("occluded>", "")) / 100
-    elif x:
-        print(x)
-    else:
-        return 0
-
-def syntax_truncated_ECP(x):
-    # keep only truncated
-    x = [x for x in x if "truncated" in x]
-    if x and "truncated" in x[0]:
-        return int(x[0].replace("truncated>", "")) / 100
-    elif x:
-        print(x)
-    else:
-        return 0
-
-
-def syntax_criteria_ECP(x, criteria):
-    # "sitting-lying"
-    # keep only truncated
-    x = [x for x in x if criteria in x]
-    if x and criteria in x[0]:
-        return 1
-    elif x:
-        print(x, criteria)
-    else:
-        return 0
-
+from .preprocessing_utils import *
 
 
 class ECPProcessing(DatasetProcessing):
@@ -50,34 +10,102 @@ class ECPProcessing(DatasetProcessing):
     Class that handles the preprocessing of (extracted) ECP Dataset in order to get a standardized dataset format.
     """
 
-    def __init__(self, root, max_samples=100): #todo max_samples here is different than from MoTSynth
-
+    def __init__(self, root, max_samples_per_sequence=10, task="pedestrian_detection"):
         self.dataset_name = "ecp"
-        super().__init__(root, max_samples)
-        #self.saves_dir = f"data/preprocessing/{self.dataset_name}"
+        super().__init__(root, max_samples_per_sequence, task)
         os.makedirs(self.saves_dir, exist_ok=True)
 
-    def get_dataset(self):
-        targets, metadatas, frame_id_list, img_path_list = self.get_annotations_and_imagepaths()
+        assert task in ["pedestrian_detection"]
 
+    def preprocess_sequence(self, sequence_id, img_sequence_dir, annot_sequence_dir, force_recompute=False):
 
-
-        return self.root, targets, metadatas, frame_id_list, img_path_list
-
-    def get_ECP_annotations_and_imagepaths_folder(self, time, set, city):
-
+        # todo some asserts
         # Here ECP specific
-        root = f"{self.root}/{time}/labels/{set}/{city}"
+        total_frame_ids = [x.split(".png")[0] for x in os.listdir(img_sequence_dir) if ".png" in x]
+        total_annot_ids = [x.split(".json")[0] for x in os.listdir(annot_sequence_dir) if ".json" in x]
+        assert(len(total_frame_ids) == len(total_annot_ids))
+
+        time = "day" if "day" in img_sequence_dir else "night"
+
+        infos = {}
+        infos["sequence_id"] = sequence_id
+        new_annots = []
+        new_images = []
+
+        for i, frame_id in enumerate(total_frame_ids):
+
+            # Load ECP annotations
+            img_path = f"{img_sequence_dir}/{frame_id}.png"
+            json_path = f"{annot_sequence_dir}/{frame_id}.json"
+
+            with open(json_path) as jsonFile:
+
+                # Load and keep subset of annots
+                annot_ECP = json.load(jsonFile)
+                annots = [c for c in annot_ECP["children"] if c["identity"] in ["pedestrian", "rider"]]
+
+                # Keep only if there are annots
+                if len(annots) > 0:
+
+                    # New imgs
+                    img = {"file_name": img_path.split(self.root)[1][1:], "id": frame_id, "is_night": time == "night"}
+                    img["sequence_id"] = sequence_id
+                    categories = ["motionBlur", "rainy", "wiper", "lenseFlare", "constructionSite"]
+                    img_tags = {cat: cat in annot_ECP["tags"] for cat in categories}
+                    img_tags.update({"weather": "rainy" if "rainy" in annot_ECP["tags"] else "dry"})
+                    img_tags.update({"weather_original": "rainy" if "rainy" in annot_ECP["tags"] else "dry"})
+                    img.update(img_tags)
+                    new_images.append(img)
+
+                    # New annots
+                    for j, annot in enumerate(annots):
+                        new_annots.append({"id": f"{frame_id}_{j}", "image_id": frame_id,
+                                 "x0": annots[j]["x0"], "y0": annots[j]["y0"], "x1": annots[j]["x1"], "y1": annots[j]["y1"],
+                                 'identity': annots[j]["identity"], 'tags': annots[j]["tags"],
+                                 "sequence_id": sequence_id,
+                                 "occlusion_rate": syntax_occl_ECP(annots[j]["tags"]),
+                                 "truncation_rate": syntax_truncated_ECP(annots[j]["tags"]),
+                                        })
+                    #todo depiction ?
+
+        return infos, new_images, new_annots
 
 
+    def get_sequence_dict(self):
 
-        total_frame_ids = [x.split(".json")[0] for x in os.listdir(root) if ".json" in x]
+        sequence_dict = {}
+        for luminosity in ["day", "night"]:
+            for chosen_set in ["val"]:
+                img_folder_dir = f"{self.root}/{luminosity}/img/{chosen_set}"
+                annot_folder_dir = f"{self.root}/{luminosity}/labels/{chosen_set}"
 
-        # Init dicts for bboxes annotations and metadata
-        targets = {}
-        targets_metadata = {}
+                #todo an assert here ?
+                for city in os.listdir(img_folder_dir):
+                    sequence_id = f"{luminosity}_{chosen_set}_{city}"
+                    img_sequence_dir = osp.join(img_folder_dir, city)
+                    annot_sequence_dir = osp.join(annot_folder_dir, city)
+                    sequence_dict[sequence_id] = (img_sequence_dir, annot_sequence_dir)
+
+        return sequence_dict
 
 
+    def preprocess_specific(self, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata):
+
+
+        # Weather
+        df_frame_metadata["weather_original"] = df_frame_metadata["weather"]
+        df_frame_metadata["weather"] = df_frame_metadata["weather_original"].replace({"dry": "clear", "rainy": "rain"})
+
+        # Weather categories according to homegenized weather naming
+        df_frame_metadata = self.add_weather_cats(df_frame_metadata)
+
+        # Occlusion rate
+        df_gtbbox_metadata["occlusion_rate_original"] = df_gtbbox_metadata["occlusion_rate"]
+        df_gtbbox_metadata["occlusion_rate"] = df_gtbbox_metadata.apply(lambda x: x[["occlusion_rate", "truncation_rate"]].max(), axis=1)
+        return df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata
+
+
+    def explore_tags(self):
         #%% Check all tags
         """
         print("Data Check ECP ======================")
@@ -98,175 +126,4 @@ class ECPProcessing(DatasetProcessing):
         print(pd.Series(frame_children_identities).value_counts())
         print("END Data Check ECP ======================")
         """
-
-        for i, frame_id in enumerate(total_frame_ids):
-
-            # set max samples #todo
-            if i > self.max_samples:
-                break
-
-            # Load ECP annotations
-            json_path = f"{self.root}/{time}/labels/{set}/{city}/{frame_id}.json"
-            with open(json_path) as jsonFile:
-                annot_ECP = json.load(jsonFile)
-
-                target = [
-                    dict(
-                        boxes=torch.tensor(
-                            [(c["x0"], c["y0"], c["x1"], c["y1"]) for c in annot_ECP["children"] if
-                             c["identity"] in ["pedestrian", "rider"]]  # todo might not be the thing todo
-                        ),
-                    )
-                ]
-
-                target[0]["labels"] = torch.tensor([0] * len(target[0]["boxes"]))
-
-                # Keep only if at least 1 pedestrian
-                if len(target[0]["boxes"]) > 0:
-                    targets[frame_id] = target
-
-                    tags = [c["tags"] for c in annot_ECP["children"] if c["identity"] in ["pedestrian", "rider"]]
-                    areas = [(c["x1"] - c["x0"]) * (c["y1"] - c["y0"]) for c in annot_ECP["children"] if
-                             c["identity"] in ["pedestrian", "rider"]]
-
-                    heights = [(c["y1"] - c["y0"]) for c in annot_ECP["children"] if
-                             c["identity"] in ["pedestrian", "rider"]]
-
-                    widths = [(c["x1"] - c["x0"]) for c in annot_ECP["children"] if
-                             c["identity"] in ["pedestrian", "rider"]]
-
-                    aspect_ratio = [h/w for h,w in zip(heights, widths)]
-
-                    iscrowd = [1 * ("group" in c["identity"]) for c in annot_ECP["children"] if
-                               c["identity"] in ["pedestrian", "rider"]]
-
-                    targets_metadata[frame_id] = (annot_ECP["tags"], tags,
-                                                  areas, heights, widths, aspect_ratio, iscrowd)
-
-        frame_id_list = list(targets.keys())
-        img_path_list = []
-        for frame_id in frame_id_list:
-            # print(frame_id)
-            img_path = f"{time}/img/val/{city}/{frame_id}.png"
-            img_path_list.append(img_path)
-
-
-
-        return targets, targets_metadata, frame_id_list, img_path_list
-
-
-    def get_annotations_and_imagepaths(self):
-
-        """
-        try:
-            print("Try")
-            df_gtbbox_metadata = pd.read_csv(path_df_gtbbox_metadata).set_index(["image_id", "id"])
-            df_frame_metadata = pd.read_csv(path_df_frame_metadata).set_index("Unnamed: 0")
-            df_sequence_metadata = pd.read_csv(path_df_sequence_metadata).set_index("Unnamed: 0")
-
-
-            with open(path_target) as jsonFile:
-                targets = target_2_torch(json.load(jsonFile))
-            print("End Try")
-        """
-
-
-        targets = {}
-        frame_id_list = []
-        img_path_list = []
-        df_frame_metadata = pd.DataFrame()
-        df_gtbbox_metadata = pd.DataFrame()
-
-        key_tags = []
-
-        for luminosity in ["day", "night"]:
-            for chosen_set in ["val"]:
-                for city in os.listdir(
-                        f"{self.root}/{luminosity}/img/{chosen_set}"):
-                    if city not in ["berlin_small"]:
-                        print(luminosity, city)
-
-                        targets_folder, targets_metadata_folder, frame_id_list_folder, img_path_list_folder = self.get_ECP_annotations_and_imagepaths_folder(
-                            luminosity, chosen_set, city)
-
-                        # Df frame                 # print(np.unique([val[0] for key,val in targets_metadata.items()]))
-                        categories = ["motionBlur", "rainy", "wiper", "lenseFlare", "constructionSite"]
-                        df_frames_metadata_folder = pd.DataFrame(
-                            {key: [cat in val[0] for cat in categories] for key, val in
-                             targets_metadata_folder.items()}).T
-                        df_frames_metadata_folder.columns = categories
-                        df_frames_metadata_folder["is_night"] = luminosity == "night"
-                        df_frames_metadata_folder["city"] = city
-                        df_frames_metadata_folder["path"] = img_path_list_folder
-                        df_frames_metadata_folder["frame_id"] = frame_id_list_folder
-                        df_frames_metadata_folder["adverse_weather"] = 1*df_frames_metadata_folder["rainy"]
-                        df_frames_metadata_folder["file_name"] = img_path_list_folder
-                        df_frames_metadata_folder["id"] = frame_id_list_folder
-                        df_frames_metadata_folder["seq_name"] = city + " "+luminosity
-
-                        df_frames_metadata_folder["weather"] = "dry"
-                        df_frames_metadata_folder.loc[df_frames_metadata_folder["rainy"],"weather"] = "rainy"
-                        df_frames_metadata_folder.loc[df_frames_metadata_folder["wiper"],"weather"] = "rainy" #wiper means rainy
-
-
-
-                        # df_frames_metadata_folder["file_name"] = img_path_list_folder
-                        # media/raphael/Projects/datasets/EuroCityPerson/ECP/
-
-                        # Df bbox_gt
-                        # {key: {key: v for v in val[1]} for key,val in targets_metadata.items()}
-                        categories_gtbbox = [f"occluded>{i}0" for i in range(1, 10)] + ["depiction"]
-                        df_gt_bbox_folder = pd.DataFrame()
-                        for key, val in targets_metadata_folder.items():
-
-                            key_tags.append(val[1])
-
-                            df_gt_bbox_frame = pd.DataFrame(val[1:]).T
-                            df_gt_bbox_frame["frame_id"] = key
-                            for cat in categories_gtbbox:
-                                try:
-                                    df_gt_bbox_frame[cat] = cat in val[0]
-                                except:
-                                    print("coucou")
-                            df_gt_bbox_frame.drop(columns=[0], inplace=True)
-                            df_gt_bbox_frame["occlusion_rate"] = [syntax_occl_ECP(x) for x in val[1]]
-                            df_gt_bbox_frame["truncation_rate"] = [syntax_truncated_ECP(x) for x in val[1]]
-
-                            #todo better harmonize this
-                            for criteria in ['sitting-lying', 'behind-glass', 'unsure_orientation']:
-                                df_gt_bbox_frame[criteria] = [syntax_criteria_ECP(x, criteria) for x in val[1]]
-
-                            df_gt_bbox_frame.rename(columns={1: "area",
-                                                             2: "height",
-                                                             3: "width",
-                                                             4: "aspect_ratio",
-                                                             5: "is_crowd"}, inplace=True)
-
-                            df_gt_bbox_folder = pd.concat([df_gt_bbox_folder, df_gt_bbox_frame])
-
-                        # Add the folder
-                        targets.update(targets_folder)
-                        frame_id_list += frame_id_list_folder
-                        img_path_list += img_path_list_folder
-                        df_frame_metadata = pd.concat([df_frame_metadata, df_frames_metadata_folder])
-                        df_gtbbox_metadata = pd.concat([df_gtbbox_metadata, df_gt_bbox_folder])
-
-        df_gtbbox_metadata["id_in_frame"] = df_gtbbox_metadata.groupby("frame_id").apply(
-            lambda x: pd.Series(list(range(0, len(x))))).values
-        df_gtbbox_metadata["id"] = df_gtbbox_metadata["frame_id"] + "_" + df_gtbbox_metadata["id_in_frame"].astype(str)
-        df_gtbbox_metadata = df_gtbbox_metadata.set_index(["frame_id", "id"])
-
-
-        #todo factorize
-        df_gtbbox_metadata["aspect_ratio"] = 1 / df_gtbbox_metadata["aspect_ratio"]
-        mu = 0.4185
-        std = 0.12016
-        df_gtbbox_metadata["aspect_ratio_is_typical"] = np.logical_and(df_gtbbox_metadata["aspect_ratio"] < mu + std,
-                                                                       df_gtbbox_metadata["aspect_ratio"] > mu - std)
-
-        df_gtbbox_metadata["height"] = df_gtbbox_metadata["height"].astype(int)
-        df_frame_metadata["num_pedestrian"] = df_gtbbox_metadata.groupby("frame_id").apply(len).loc[df_frame_metadata.index]
-
-        df_gtbbox_metadata["ignore-region"] = 0
-
-        return targets, df_gtbbox_metadata, df_frame_metadata, None
+        pass

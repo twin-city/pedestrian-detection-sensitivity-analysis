@@ -7,12 +7,14 @@ import os.path as osp
 from configs_path import ROOT_DIR, MMDET_DIR, CHECKPOINT_DIR
 
 class Detector:
-    def __init__(self, name, device="cuda", nms=False):
+    def __init__(self, name, device="cuda", nms=False, task="pedestrian_detection"):
         self.model_name = name
         self.device = device
-        self.config_path, self.checkpoint_path, self.inference_processor = self.get_config_and_checkpoints_path()
+        #self.config_path, self.checkpoint_path, self.inference_processor = self.get_config_and_checkpoints_path()
         self.nms = nms
+        self.task = task
 
+    """
     def get_config_and_checkpoints_path(self):
 
 
@@ -29,7 +31,7 @@ class Detector:
                 return x[0][0]
         else:
             raise ValueError(f"Model name {self.model_name} not known")
-        """
+        
         elif self.model_name == "yolo3_coco":
             config_path = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs/models/yolo/yolov3_d53_320_273e_coco.py"
             checkpoint_path = "/home/raphael/work/checkpoints/detection/yolov3_d53_320_273e_coco-421362b6.pth"
@@ -37,29 +39,26 @@ class Detector:
             #config_path = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs/models/faster_rcnn/faster_rcnn_r50_caffe_fpn_mstrain_1x_coco-person.py"
             config_path = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs/models/faster_rcnn/faster_rcnn_r50_fpn_1x_coco.py"
             checkpoint_path = "/home/raphael/work/checkpoints/detection/faster_rcnn_r50_fpn_1x_coco-person_20201216_175929-d022e227.pth"
-        """
+        
         return config_path, checkpoint_path, get_person_bbox
+        """
 
-    #model_name = "yolo3_coco"
-    #model_name = "faster-rcnn_coco"
-    #checkpoint_root = "/home/raphael/work/checkpoints/detection"
-    #configs_root = "/home/raphael/work/code/pedestrian-detection-sensitivity-analysis/configs"
 
-    # todo here bug with 1711 too many
+
     def get_preds_from_files(self, dataset_name, root, df_frame_metadata):
 
         # Frame id list
         file_list = [osp.join(root, x) for x in df_frame_metadata["file_name"]]
-        frame_id_list = list(df_frame_metadata["id"].values.astype(str))
+        frame_id_list = list(df_frame_metadata.index)
 
         config_file = self.config_path
         checkpoint_file = self.checkpoint_path
 
         # todo problem with int / str id
 
-        json_root = f"{ROOT_DIR}/data/preds/{config_file.split('/')[-1].replace('.py', '')}"
+        json_root = f"{ROOT_DIR}/cache/inference/{dataset_name}/{config_file.split('/')[-1].replace('.py', '')}"
         os.makedirs(json_root, exist_ok=True)
-        json_file = f"{json_root}/preds_{dataset_name}.json"
+        json_file = f"{json_root}/preds_{dataset_name}_{config_file.split('/')[-1].replace('.py', '')[:10]}.json"
 
         # If exist load it
         if os.path.isfile(json_file):
@@ -86,6 +85,8 @@ class Detector:
 
         if len(missing_frames) > 0:
             model = init_detector(config_file, checkpoint_file, device=self.device)
+        else:
+            model = init_detector(config_file, checkpoint_file, device="cpu")
 
         for i in tqdm(range(len(missing_files))):
 
@@ -105,14 +106,24 @@ class Detector:
                         0.25,
                         score_threshold=0.25)
 
-                pred = [
-                    dict(
-                        boxes=torch.tensor(bboxes_person[:, :4]),
-                        scores=torch.tensor(bboxes_person[:, 4]),
-                        labels=torch.tensor([0] * len(bboxes_person)),
-                        img_path=img_path
-                    )
-                ]
+                if len(bboxes_person) == 0:
+                    pred = [
+                        dict(
+                            boxes=torch.tensor([]),
+                            scores=torch.tensor([]),
+                            labels=torch.tensor([]),
+                            img_path=img_path
+                        )
+                    ]
+                else:
+                    pred = [
+                        dict(
+                            boxes=torch.tensor(bboxes_person[:, :4]),
+                            scores=torch.tensor(bboxes_person[:, 4]),
+                            labels=torch.tensor([0] * len(bboxes_person)),
+                            img_path=img_path
+                        )
+                    ]
                 preds[str(frame_id)] = pred
             except:
                 print(f"Could not infer {frame_id} {img_path}")
@@ -132,6 +143,9 @@ class Detector:
             json.dump(preds_json, f)
 
         # Only keys we want
-        preds_out = {key: preds[key] for key in frame_id_list}
+        try:
+            preds_out = {key: preds[key] for key in frame_id_list}
+        except:
+            raise ValueError("Could not inder all frames due to misattribution of frame id")
 
         return preds_out

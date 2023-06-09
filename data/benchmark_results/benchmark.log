@@ -1,0 +1,14 @@
+2023-06-09 10:42:19,400 - INFO - {'datasets_params': [{'dataset_name': 'Twincity-Unreal-v9', 'max_samples': 20}, {'dataset_name': 'ecp_small', 'max_samples': 30}, {'dataset_name': 'motsynth_small', 'max_samples': 30}], 'run_params': {'force_recompute': False, 'do_dataset_analysis': False, 'do_frame_analysis': True, 'do_gtbbox_analysis': True, 'do_plot_image': False, 'do_show': False}}
+2023-06-09 10:42:19,400 - INFO - Computing descriptive markdown table for all datasets.
+2023-06-09 10:42:20,258 - INFO - Running the demo.
+2023-06-09 10:42:20,258 - INFO - Running the demo for Twincity-Unreal-v9.
+2023-06-09 10:42:36,005 - INFO - Running the demo for ecp_small.
+2023-06-09 10:42:53,189 - INFO - Running the demo for motsynth_small.
+2023-06-09 10:43:13,912 - INFO - Closing.
+2023-06-09 16:55:52,728 - INFO - {'datasets_params': [{'dataset_name': 'Twincity-Unreal-v9', 'max_samples': 20}, {'dataset_name': 'ecp_small', 'max_samples': 30}, {'dataset_name': 'motsynth_small', 'max_samples': 30}], 'run_params': {'force_recompute': False, 'do_dataset_analysis': False, 'do_frame_analysis': True, 'do_gtbbox_analysis': True, 'do_plot_image': False, 'do_show': False}}
+2023-06-09 16:55:52,728 - INFO - Computing descriptive markdown table for all datasets.
+2023-06-09 16:55:53,602 - INFO - Running the demo.
+2023-06-09 16:55:53,602 - INFO - Running the demo for Twincity-Unreal-v9.
+2023-06-09 16:59:46,745 - INFO - Running the demo for ecp_small.
+2023-06-09 17:01:44,196 - INFO - Running the demo for motsynth_small.
+2023-06-09 17:10:46,912 - INFO - Closing.

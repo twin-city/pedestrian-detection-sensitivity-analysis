@@ -1,33 +1,47 @@
 import cv2
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
-from src.detection.metrics import compute_fp_missratio2
+from src.detection.metrics import compute_fp_missratio
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from scipy.stats import pearsonr
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.inspection import permutation_importance
-from sklearn.linear_model import RidgeCV
-import matplotlib.patches as patches
 import os.path as osp
 from src.detection.metrics import compute_model_metrics_on_dataset
 from src.utils import subset_dataframe
 from src.detection.detector import Detector
-from src.utils import filter_gt_bboxes
 from src.detection.metrics import detection_metric
 from src.utils import get_linear_importance, get_permuation_importance
 import matplotlib.patches as patches
 from src.demos.configs import height_thresh, occl_thresh
-
-
-
-
+from src.detection.detector_factory import DetectorFactory
 
 
 
 #%% Utils plot functions ======================================================================================================
+
+
+def filter_frame_to_str(filter_frame):
+    keys = list(filter_frame.keys())
+    vals = list(filter_frame.values())
+
+    if keys == ["is_night"]:
+        if vals[0] == 0:
+            return "Day"
+        elif vals[0] == 1:
+            return "Night"
+        else:
+            raise NotImplementedError
+    elif keys == ["weather_cats"]:
+        return vals[0][0]
+    elif keys == ["pitch"]:
+        key = list(list(filter_frame.values())[0].keys())[0]  # todo change this
+        val = list(list(filter_frame.values())[0].values())[0]
+        if key in {"<", ">"}:
+            return f"{key} {val}°"
+        elif key == "between":
+            return f"[{val[0]}°, {val[1]}°]"
+        else:
+            raise NotImplementedError
 
 def xywh2xyxy(bbox):
     x, y, w, h = bbox
@@ -93,7 +107,11 @@ def plot_correlations(corr_matrix, p_matrix, title=""):
 
 #%% Main results plot functions ======================================================================================================
 
-def plot_heatmap_metrics(df_analysis_heatmap, model_names, metrics, ODD_limit, param_heatmap_metrics={}, results_dir=None, show=False):
+def plot_heatmap_metrics(df_analysis_heatmap, model_names, metrics, ODD_limit, param_heatmap_metrics=None, results_dir=None, show=False):
+
+    if param_heatmap_metrics is None:
+        param_heatmap_metrics = {}
+
     for metric in metrics:
         mean_metric_values = df_analysis_heatmap.groupby("model_name").apply(lambda x: x[metric].mean())
         df_odd_model_list = []
@@ -150,6 +168,10 @@ def plot_gtbbox_matched_correlations(model_names, dataset, features_bbox, thresh
         attributes = ['attributes_0', 'attributes_1', 'attributes_2',
                       'attributes_3', 'attributes_4', 'attributes_5', 'attributes_6',
                       'attributes_7', 'attributes_8', 'attributes_9', 'attributes_10']
+    else:
+        attributes = 0
+
+    att_list = []
 
     df_gtbbox_corr_list = []
     for model_name in model_names:
@@ -193,27 +215,35 @@ def plot_gtbbox_matched_correlations(model_names, dataset, features_bbox, thresh
 
 
 
-def plot_image_with_detections(dataset, dataset_name, model_name, plot_thresholds, gtbbox_filtering, frame_idx=0, results_dir=None, show=False):
+def plot_image_with_detections(task, dataset, dataset_name, model_name, plot_thresholds, gtbbox_filtering, frame_idx=0, results_dir=None, show=False):
+
+    frame_idx = 0
 
     # Load Dataset
     root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset
 
-    # Get a file (at random for now, maybe later with criterias ?)
-    frame_id = df_frame_metadata.index[frame_idx]
-    img_path = osp.join(root, df_frame_metadata["file_name"].iloc[frame_idx])
-
     # Perform detection and compute metrics
-    detector = Detector(model_name, device="cpu")
+    #detector = Detector(model_name, device="cuda")
+
+
+    detector = DetectorFactory.get_detector(model_name, device="cpu")
+
     preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
     metric = detection_metric(gtbbox_filtering)
     df_mr_fppi, df_gt_bbox = metric.compute(dataset_name, model_name, preds, targets, df_gtbbox_metadata,
                                             gtbbox_filtering)
+
+    # todo fix getting df_mr_fppi index because they can be removed via gt_bbox filtering
+    # Get a file (at random for now, maybe later with criterias ?)
+    frame_id = np.sort(df_mr_fppi.index.get_level_values(0).unique())[frame_idx]
+    img_path = osp.join(root, df_frame_metadata.loc[frame_id,"file_name"])
 
     # Plot it
     fig, ax = plt.subplots(len(plot_thresholds),1, figsize=((len(plot_thresholds)*4), 10))
     for i, threshold in enumerate(plot_thresholds):
         mr_val = df_mr_fppi.loc[frame_id, threshold]["MR"]
         fppi_val = df_mr_fppi.loc[frame_id, threshold]["FPPI"]
+
         plot_results_img(img_path, frame_id, preds=preds, targets=targets,
                      df_gt_bbox=df_gt_bbox, threshold=threshold, ax=ax[i],
                          title=f"thresh={plot_thresholds[i]}, MR={mr_val:.2f} FPPI={fppi_val:.0f}") #todo seems there is a bug, woman in middle should be in red and guy should be red. No sense of all this.
@@ -251,7 +281,7 @@ def plot_fppi_mr_vs_gtbbox_cofactor(df_analysis_cats, ODD_criterias=None, result
         plt.show()
 
 
-def plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criterias, results_dir=None, show=False):
+def plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criterias=None, results_dir=None, show=False):
 
     min_x, max_x = 0.01, 100  # 0.01 false positive per image to 100
     min_y, max_y = 0.05, 1  # 5% to 100% Missing Rate
@@ -286,17 +316,24 @@ def plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criteria
                 ax[i,j].set_yscale('log')
                 ax[i,j].set_ylim(min_y, max_y)
                 ax[i,j].set_xlim(min_x, max_x)
-                ax[i,j].set_title(filter_frame)
+                ax[i,j].set_title(filter_frame_to_str(filter_frame))
+
+
+
+
+
                 ax[i, j].legend()
 
                 x = min_x
                 y = min_y
-                width = ODD_criterias["FPPI"] - min_x
-                height = ODD_criterias["MR"] - min_y
-                # Add the grey square patch to the axes
-                grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
-                ax[i,j].add_patch(grey_square)
-                ax[i,j].text(min_x+width/2/10, min_y+height/2/10, s="ODD")
+
+                if ODD_criterias is not None:
+                    width = ODD_criterias["FPPI"] - min_x
+                    height = ODD_criterias["MR"] - min_y
+                    # Add the grey square patch to the axes
+                    grey_square = patches.Rectangle((x, y), width, height, facecolor='grey', alpha=0.5)
+                    ax[i,j].add_patch(grey_square)
+                    ax[i,j].text(min_x+width/2/10, min_y+height/2/10, s="ODD")
 
     plt.tight_layout()
     if results_dir is not None:
@@ -313,6 +350,8 @@ def plot_fppi_mr_vs_frame_cofactor(df_analysis, dict_filter_frames, ODD_criteria
 def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=None,
                      threshold=0.9, ax=None, title=None):
 
+    had_ax = ax is not None
+
     # Read image
     img = plt.imread(img_path)
 
@@ -323,7 +362,7 @@ def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=No
         img = img[:,:,:3]
 
     # Create fig, ax
-    if ax is None:
+    if not had_ax:
         fig, ax = plt.subplots(1,1, figsize=(16,10))
 
     # Show RGB image
@@ -341,7 +380,7 @@ def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=No
         add_bboxes_to_img_ax(ax, preds_above, c=(0, 0, 1), s=1)
         add_bboxes_to_img_ax(ax, preds_below, c=(0, 0, 1), s=1, linestyle="dotted")
 
-    if targets is not None and df_gt_bbox is not None:
+    if targets is not None and df_gt_bbox is not None and preds is not None:
         # Check the matched bboxes
         df_gt_bbox_frame = df_gt_bbox.loc[frame_id]
         df_gt_bbox_frame = df_gt_bbox_frame[df_gt_bbox_frame["threshold"] == threshold].reset_index()
@@ -351,6 +390,19 @@ def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=No
         add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_matched], c=(0, 1, 0), s=2)
         add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_missed], c=(1, 0, 0), s=2)
         add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_ignored], c=(1, 1, 0), s=2)
+    elif targets is not None and df_gt_bbox is not None and preds is None:
+        # Check the matched bboxes
+        df_gt_bbox_frame = df_gt_bbox.loc[frame_id]
+        df_gt_bbox_frame = df_gt_bbox_frame[df_gt_bbox_frame["threshold"] == threshold].reset_index()
+        idx_matched = (df_gt_bbox_frame[df_gt_bbox_frame["matched"] == 1]).index
+        idx_ignored = (df_gt_bbox_frame[df_gt_bbox_frame["matched"] == -1]).index
+        idx_missed = (df_gt_bbox_frame[df_gt_bbox_frame["matched"] == 0]).index
+        add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_matched], c=(0, 1, 0), s=2)
+        add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_missed], c=(0, 1, 0), s=2)
+        add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"][idx_ignored], c=(1, 1, 0), s=2)
+
+    elif targets is not None:
+        add_bboxes_to_img_ax(ax, targets[(frame_id)][0]["boxes"], c=(0, 1, 0), s=2)
 
     if targets is not None:
         for i, bbox in enumerate(targets[(frame_id)][0]["boxes"]):
@@ -358,7 +410,7 @@ def plot_results_img(img_path, frame_id, preds=None, targets=None, df_gt_bbox=No
 
     if title is not None:
         ax.set_title(title)
-    if ax is None:
+    if not had_ax:
         plt.axis('off')
         plt.tight_layout()
         plt.show()

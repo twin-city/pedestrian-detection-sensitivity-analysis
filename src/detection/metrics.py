@@ -6,14 +6,18 @@ import torchvision
 import torch
 from .detector import Detector
 from configs_path import ROOT_DIR
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
-def compute_model_metrics_on_dataset(model_name, dataset, gtbbox_filtering, device="cuda"):
+from .detector_factory import DetectorFactory
+
+def compute_model_metrics_on_dataset(task, model_name, dataset, gtbbox_filtering, device="cuda"):
 
     # dataset info
     dataset_name = dataset.dataset_name
     root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset.get_dataset_as_tuple()
 
-    detector = Detector(model_name, device=device)
+    detector = DetectorFactory.get_detector(model_name, device=device, task=task)
+    #detector = Detector(model_name, device=device)
     preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
 
     metric = detection_metric(gtbbox_filtering)
@@ -30,20 +34,22 @@ def get_df_matched_gtbbox(results, frame_id, threshold, gtbbox_ids):
     # 2 --> mached
     # 3 (other) --> missed
 
-    df_matched_gtbbox = 1 * pd.DataFrame([i in results[threshold][2] for i in range(results[threshold][5])])
+    df_matched_gtbbox = 1 * pd.DataFrame([i in results[threshold]["true_positives"] for i in range(results[threshold]["num_ground_truth"])])
     df_matched_gtbbox["frame_id"] = frame_id
     df_matched_gtbbox["threshold"] = threshold
     df_matched_gtbbox["id"] = gtbbox_ids
     df_matched_gtbbox = df_matched_gtbbox.rename(columns={0: 'matched'})
 
-    df_matched_gtbbox.iloc[results[threshold][6], 0] = -1
-
+    df_matched_gtbbox.iloc[results[threshold]['ignore_regions'], 0] = -1
 
 
     return df_matched_gtbbox
 
+"""
+def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=None):
 
-def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
+    if excluded_gt is None:
+        excluded_gt = []
 
     num_gtbbox = len(target_bbox[0]["boxes"])
 
@@ -69,6 +75,7 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[])
 
     # For each pred bbox in decreasing probability score order
     for i in score_sorted:
+        print(pred_bbox[0]["scores"][i])
 
         if len(possible_target_bboxs) == 0 or pred_bbox[0]["scores"][i] < threshold:
             break
@@ -113,8 +120,14 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[])
     miss_ratio_image = fn_image / (num_gtbbox - len(excluded_gt))
 
     return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox, excluded_gt
+"""
 
-def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
+
+def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5, excluded_gt=None):
+
+    if excluded_gt is None:
+        excluded_gt = []
+
     num_gtbbox = len(target_bbox[0]["boxes"])
     score_sorted = np.argsort(pred_bbox[0]["scores"].numpy())[::-1]
     gt_bboxes = target_bbox[0]["boxes"]
@@ -158,6 +171,9 @@ def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
         # All matches are to excluded bboxes --> nothing happens, ignore region
         elif np.all([x in excluded_gt for x in IoUs_index]):
             pass
+        # If matched target bbox are already matched
+        elif np.all([x in set_matched_target_bboxs_ids for x in IoUs_index]):
+            num_fp += 1
         # Else there exist at least an overlap with an included bounding box
         else:
             # Sort the IoUs
@@ -181,7 +197,20 @@ def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5, excluded_gt=[]):
     target_bbox_missed = list(set_unmatched_target_bboxs_ids-set_excl_target_bboxs_ids)
     unmatched_preds = None #ballec
 
-    return num_fp, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox, excluded_gt
+
+    res = {
+        "num_ground_truth": num_gtbbox,
+        "num_false_positives": num_fp,
+        "false_positives": unmatched_preds,
+        "false_negatives": target_bbox_missed,
+        "true_positives": matched_target_bbox_list,
+        "ignore_regions": excluded_gt,
+        "missing_rate": miss_ratio_image,
+    }
+
+    #return num_fp, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox, excluded_gt
+    return res
+
 
 """
 legacy
@@ -218,11 +247,12 @@ class detection_metric:
         df_mr_fppi, df_matched_gtbbox = self.compute_ffpi_against_fp(dataset_name, model_name, preds, targets,
                                                                  df_gtbbox_metadata, gtbbox_filtering)
 
+
         return df_mr_fppi, df_matched_gtbbox
 
 
 
-    def compute_ffpi_against_fp(self, dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering={}, max_frames=1e6):
+    def compute_ffpi_against_fp(self, dataset_name, model_name, preds, targets, df_gtbbox_metadata, gtbbox_filtering=None, max_frames=1e6):
         """
         On preds keys.
         :param preds:
@@ -230,15 +260,18 @@ class detection_metric:
         :return:
         """
 
+        if gtbbox_filtering is None:
+            gtbbox_filtering = {}
+
         # thresholds = list(np.arange(0, 1, 0.1))+[0.99]#+list(np.arange(0.9, 1, 0.3))
 
         thresholds = [0, 0.5, 0.9, 0.99, 0.999, 0.9999]
 
 
-        df_root = f"{ROOT_DIR}/data/preds/{dataset_name}_{model_name}"
+        df_root = f"{ROOT_DIR}/cache/metrics/{dataset_name}/{model_name}"
         os.makedirs(df_root, exist_ok=True)
-        df_file = f"{df_root}/metrics-{json.dumps(gtbbox_filtering)}.json"
-        df_matched_file = f"{df_root}/matched-{json.dumps(gtbbox_filtering)}.json"
+        df_file = f"{df_root}/metrics_{json.dumps(gtbbox_filtering)}.json"
+        df_matched_file = f"{df_root}/matched_{json.dumps(gtbbox_filtering)}.json"
 
         # If exist load it
         if os.path.isfile(df_file):
@@ -276,10 +309,7 @@ class detection_metric:
             """ Legacy
             excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
             """
-            from src.utils import subset_dataframe, filter_gt_bboxes
-
-
-
+            from src.utils import filter_gt_bboxes
             excluded_gt = filter_gt_bboxes(df_gtbbox_metadata_frame, gtbbox_filtering)
 
 
@@ -315,11 +345,12 @@ class detection_metric:
 
                     # df = matched_gtbbox = pd.DataFrame({key:val[3] for key,val in results.items()})
 
-                    df_results_threshold = pd.DataFrame({key:val[:2] for key,val in results.items()}).T.rename(columns={0: "FPPI", 1: "MR"})
+                    df_results_threshold = pd.DataFrame({key:(val["num_false_positives"], val["missing_rate"]) for key,val in results.items()}).T.rename(columns={0: "FPPI", 1: "MR"})
                     df_results_threshold.index.name = "threshold"
                     df_results_threshold["frame_id"] = str(frame_id)
-                    df_mr_fppi_list.append(df_results_threshold.reset_index().set_index(["frame_id", "threshold"]))
 
+                    # Append to list
+                    df_mr_fppi_list.append(df_results_threshold.reset_index().set_index(["frame_id", "threshold"]))
                     df_matched_gtbbox_list.append(df_matched_gtbbox)
 
             # todo output here details for each image as a dataframe ? score threshold x image_id
@@ -353,7 +384,15 @@ class detection_metric:
         frame_id_intersect = set.intersection(set(set_df_bbox), set(frame_ids))
         frame_id_intersect = set.intersection(set(frame_id_intersect), set(set_df_matched))
 
-        return df_mr_fppi.loc[frame_id_intersect], df_matched_gtbbox.loc[frame_id_intersect]
+        #todo FIX : bug to handle in twincity (TOCHECK)
+        df_mr_fppi_res = df_mr_fppi.loc[frame_id_intersect].reset_index()
+        df_mr_fppi_res.drop_duplicates(inplace=True, subset=["frame_id", "threshold"])
+        df_mr_fppi_res.set_index(["frame_id", "threshold"], inplace=True)
+        df_matched_gtbbox = df_matched_gtbbox.loc[frame_id_intersect].reset_index()
+        df_matched_gtbbox.drop_duplicates(inplace=True, subset=["frame_id", "id", "threshold"])
+        df_matched_gtbbox.set_index(["frame_id", "id"], inplace=True)
+
+        return df_mr_fppi_res, df_matched_gtbbox
 
 
 

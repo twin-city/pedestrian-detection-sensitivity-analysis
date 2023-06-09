@@ -1,17 +1,10 @@
-import cv2
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
-from src.detection.metrics import compute_fp_missratio2
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.inspection import permutation_importance
 from sklearn.linear_model import RidgeCV
-import matplotlib.patches as patches
-import os.path as osp
 from src.detection.metrics import compute_model_metrics_on_dataset
 
 
@@ -85,7 +78,7 @@ def subset_dataframe(df, conditions):
 
         if column not in df.columns:
             print(f"Warning, column {column} was not found in dataframe to subset, disgarding.")
-            new_mask = df.iloc[:,0] == df.iloc[:,0] #todo ugly hack
+            new_mask = df.iloc[:,0] == df.iloc[:,0] #todo
         else:
             if isinstance(values, dict):
                 if 'between' in values: #todo might do it better ?
@@ -102,8 +95,10 @@ def subset_dataframe(df, conditions):
                     new_mask = df[column].isin(values['set_values'])
             elif isinstance(values, (list, set, np.ndarray)):
                 new_mask = df[column].isin(values)
-            elif isinstance(values, (int, float, str)):
+            elif isinstance(values, (int, str)):
                 new_mask = df[column] == values
+            elif isinstance(values, (float)):
+                new_mask = (df[column] - values).abs() < 1e-5 #todo because of pitch in twincity
             else:
                 raise NotImplementedError(f"The subset condition {values} was not set according to subset_dataframe inputs.")
 
@@ -159,7 +154,7 @@ import matplotlib.patches as patches
 
 
 
-def compute_models_metrics_from_gtbbox_criteria(dataset, gtbbox_filtering_cats, model_names):
+def compute_models_metrics_from_gtbbox_criteria(task, dataset, gtbbox_filtering_cats, model_names):
 
     len_overall = len(subset_dataframe(dataset.df_gtbbox_metadata, gtbbox_filtering_cats["Overall"]))
     df_frame_metadata = dataset.df_frame_metadata
@@ -172,8 +167,14 @@ def compute_models_metrics_from_gtbbox_criteria(dataset, gtbbox_filtering_cats, 
         #todo not do if filtering is same as Overall
         len_key = len(subset_dataframe(dataset.df_gtbbox_metadata, gtbbox_filtering_cats[key]))
         if len_key != len_overall or key == "Overall":
+
+            # todo because params other than occlusion may change, for twincity
+            if ("occlusion" in key and "occlusion_rate" not in gt_bbox_columns):
+                print("Warning, occlusion_rate not in gt_bbox_columns, skipping")
+                continue
+
             df_results_aspectratio = pd.concat(
-                [compute_model_metrics_on_dataset(model_name, dataset, gtbbox_filtering, device="cuda")[0] for
+                [compute_model_metrics_on_dataset(task, model_name, dataset, gtbbox_filtering, device="cuda")[0] for
                  model_name in model_names])
             df_results_aspectratio["gtbbox_filtering_cat"] = key
             df_metrics_criteria_list.append(df_results_aspectratio)

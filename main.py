@@ -1,4 +1,4 @@
-from src.demos.demo_benchmark_analysis import run_demo_pedestrian_detection
+from src.demos.demo_benchmark_analysis import run_demo_detection
 import argparse
 
 def main():
@@ -47,7 +47,7 @@ def main():
     if coco_json_path:
         print(f'Input coco file path: {coco_json_path}')
 
-    run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names, coco_json_path=coco_json_path,
+    run_demo_detection(root, dataset_name, max_samples, model_names, coco_json_path=coco_json_path,
                                   gtbbox_analysis=gtbbox_analysis, frame_analysis=frame_analysis, output_dir=output, show=show,
                                   plot_image=plot_image)
 
