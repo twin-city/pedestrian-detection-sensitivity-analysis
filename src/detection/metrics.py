@@ -10,13 +10,13 @@ from torchmetrics.detection.mean_ap import MeanAveragePrecision
 
 from .detector_factory import DetectorFactory
 
-def compute_model_metrics_on_dataset(model_name, dataset, gtbbox_filtering, device="cuda"):
+def compute_model_metrics_on_dataset(task, model_name, dataset, gtbbox_filtering, device="cuda"):
 
     # dataset info
     dataset_name = dataset.dataset_name
     root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset.get_dataset_as_tuple()
 
-    detector = DetectorFactory.get_detector(model_name, device=device)
+    detector = DetectorFactory.get_detector(model_name, device=device, task=task)
     #detector = Detector(model_name, device=device)
     preds = detector.get_preds_from_files(dataset_name, root, df_frame_metadata)
 
@@ -45,7 +45,7 @@ def get_df_matched_gtbbox(results, frame_id, threshold, gtbbox_ids):
 
     return df_matched_gtbbox
 
-
+"""
 def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=None):
 
     if excluded_gt is None:
@@ -75,6 +75,7 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=Non
 
     # For each pred bbox in decreasing probability score order
     for i in score_sorted:
+        print(pred_bbox[0]["scores"][i])
 
         if len(possible_target_bboxs) == 0 or pred_bbox[0]["scores"][i] < threshold:
             break
@@ -119,6 +120,8 @@ def compute_fp_missratio2(pred_bbox, target_bbox, threshold=0.5, excluded_gt=Non
     miss_ratio_image = fn_image / (num_gtbbox - len(excluded_gt))
 
     return fp_image, miss_ratio_image, matched_target_bbox_list, target_bbox_missed, unmatched_preds, num_gtbbox, excluded_gt
+"""
+
 
 def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5, excluded_gt=None):
 
@@ -168,6 +171,9 @@ def compute_fp_missratio(pred_bbox, target_bbox, threshold=0.5, excluded_gt=None
         # All matches are to excluded bboxes --> nothing happens, ignore region
         elif np.all([x in excluded_gt for x in IoUs_index]):
             pass
+        # If matched target bbox are already matched
+        elif np.all([x in set_matched_target_bboxs_ids for x in IoUs_index]):
+            num_fp += 1
         # Else there exist at least an overlap with an included bounding box
         else:
             # Sort the IoUs

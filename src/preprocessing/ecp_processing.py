@@ -10,10 +10,12 @@ class ECPProcessing(DatasetProcessing):
     Class that handles the preprocessing of (extracted) ECP Dataset in order to get a standardized dataset format.
     """
 
-    def __init__(self, root, max_samples_per_sequence=10):
+    def __init__(self, root, max_samples_per_sequence=10, task="pedestrian_detection"):
         self.dataset_name = "ecp"
-        super().__init__(root, max_samples_per_sequence)
+        super().__init__(root, max_samples_per_sequence, task)
         os.makedirs(self.saves_dir, exist_ok=True)
+
+        assert task in ["pedestrian_detection"]
 
     def preprocess_sequence(self, sequence_id, img_sequence_dir, annot_sequence_dir, force_recompute=False):
 

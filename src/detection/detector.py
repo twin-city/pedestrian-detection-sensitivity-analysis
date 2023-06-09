@@ -106,14 +106,24 @@ class Detector:
                         0.25,
                         score_threshold=0.25)
 
-                pred = [
-                    dict(
-                        boxes=torch.tensor(bboxes_person[:, :4]),
-                        scores=torch.tensor(bboxes_person[:, 4]),
-                        labels=torch.tensor([0] * len(bboxes_person)),
-                        img_path=img_path
-                    )
-                ]
+                if len(bboxes_person) == 0:
+                    pred = [
+                        dict(
+                            boxes=torch.tensor([]),
+                            scores=torch.tensor([]),
+                            labels=torch.tensor([]),
+                            img_path=img_path
+                        )
+                    ]
+                else:
+                    pred = [
+                        dict(
+                            boxes=torch.tensor(bboxes_person[:, :4]),
+                            scores=torch.tensor(bboxes_person[:, 4]),
+                            labels=torch.tensor([0] * len(bboxes_person)),
+                            img_path=img_path
+                        )
+                    ]
                 preds[str(frame_id)] = pred
             except:
                 print(f"Could not infer {frame_id} {img_path}")

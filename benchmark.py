@@ -1,6 +1,6 @@
 import json
 import os
-from src.demos.demo_benchmark_analysis import run_demo_pedestrian_detection
+from src.demos.demo_benchmark_analysis import run_demo_detection
 import os.path as osp
 import logging
 from configs_path import DATASET_DIR
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     """
 
     ## DIRS
-    OUTPUT_DIR = "results/benchv13"
+    OUTPUT_DIR = "results/benchv14_final?"
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     ## LOGGER
@@ -88,7 +88,7 @@ if __name__ == "__main__":
         dataset_name, max_samples = param.values()
         root = osp.join(DATASET_DIR, dataset_name)
         logger.info(f'Running the demo for {dataset_name}.')
-        run_demo_pedestrian_detection(root, dataset_name, max_samples, model_names,
+        run_demo_detection(root, dataset_name, max_samples, model_names,
                                   dataset_analysis=do_dataset_analysis, frame_analysis=do_frame_analysis,
                                   gtbbox_analysis=do_gtbbox_analysis,
                                   plot_image=do_plot_image, output_dir=OUTPUT_DIR, show=do_show)

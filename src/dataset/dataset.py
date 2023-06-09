@@ -5,10 +5,8 @@ from src.utils import compute_correlations
 from src.plot_utils import plot_correlations
 from src.plot_utils import plot_dataset_statistics
 
-
 def print_mean_std(df, col, decimal=0):
     return f"{df[col].mean():.{decimal}f} +- ({df[col].std():.{decimal}f})"
-
 
 def print_stat(df_stat):
     stat_day = 0 in df_stat.keys()
@@ -35,8 +33,6 @@ class Dataset():
         self.df_frame_metadata = df_frame_metadata
         self.df_sequence_metadata = df_sequence_metadata
         self.max_sample = max_sample
-
-        #todo assert the max_samples ?
 
         # Create dir if needed
         self.results_dir = osp.join("../../", "results", dataset_name, f"{dataset_name}{max_sample}")

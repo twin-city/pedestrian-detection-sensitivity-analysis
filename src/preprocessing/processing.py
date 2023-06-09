@@ -24,13 +24,13 @@ def df_index_int2str(df):
     return df
 
 class DatasetProcessing:
-    def __init__(self, root, max_samples_per_sequence):
+    def __init__(self, root, max_samples_per_sequence, task):
         self.root = root
         self.max_samples_per_sequence = max_samples_per_sequence
         np.random.seed(0)
-
         self.saves_dir = f"{ROOT_DIR}/cache/preprocessing/{self.dataset_name}"
         os.makedirs(self.saves_dir, exist_ok=True)
+        self.task = task
 
     def __str__(self):
         return self.dataset_name

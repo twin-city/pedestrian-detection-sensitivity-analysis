@@ -215,9 +215,9 @@ def plot_gtbbox_matched_correlations(model_names, dataset, features_bbox, thresh
 
 
 
-def plot_image_with_detections(dataset, dataset_name, model_name, plot_thresholds, gtbbox_filtering, frame_idx=0, results_dir=None, show=False):
+def plot_image_with_detections(task, dataset, dataset_name, model_name, plot_thresholds, gtbbox_filtering, frame_idx=0, results_dir=None, show=False):
 
-    frame_idx = 80
+    frame_idx = 0
 
     # Load Dataset
     root, targets, df_gtbbox_metadata, df_frame_metadata, df_sequence_metadata = dataset

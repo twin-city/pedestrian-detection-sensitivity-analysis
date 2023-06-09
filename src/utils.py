@@ -154,7 +154,7 @@ import matplotlib.patches as patches
 
 
 
-def compute_models_metrics_from_gtbbox_criteria(dataset, gtbbox_filtering_cats, model_names):
+def compute_models_metrics_from_gtbbox_criteria(task, dataset, gtbbox_filtering_cats, model_names):
 
     len_overall = len(subset_dataframe(dataset.df_gtbbox_metadata, gtbbox_filtering_cats["Overall"]))
     df_frame_metadata = dataset.df_frame_metadata
@@ -174,7 +174,7 @@ def compute_models_metrics_from_gtbbox_criteria(dataset, gtbbox_filtering_cats, 
                 continue
 
             df_results_aspectratio = pd.concat(
-                [compute_model_metrics_on_dataset(model_name, dataset, gtbbox_filtering, device="cuda")[0] for
+                [compute_model_metrics_on_dataset(task, model_name, dataset, gtbbox_filtering, device="cuda")[0] for
                  model_name in model_names])
             df_results_aspectratio["gtbbox_filtering_cat"] = key
             df_metrics_criteria_list.append(df_results_aspectratio)

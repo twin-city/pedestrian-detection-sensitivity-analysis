@@ -25,7 +25,7 @@ class COCOProcessing(DatasetProcessing):
     Class that handles the preprocessing of (extracted) ECP Dataset in order to get a standardized dataset format.
     """
 
-    def __init__(self, root, dataset_name, max_samples_per_sequence=100): #todo max_samples here is different than from MoTSynth
+    def __init__(self, root, dataset_name, max_samples_per_sequence=100, task="pedestrian_detection"): #todo max_samples here is different than from MoTSynth
 
         self.dataset_name = dataset_name
         super().__init__(root, max_samples_per_sequence)
@@ -34,6 +34,7 @@ class COCOProcessing(DatasetProcessing):
 
         self.coco_json_path = osp.join(self.root, "coco.json")
 
+        assert task in ["pedestrian_detection"]
 
     def get_dataset(self, force_recompute=False):
 

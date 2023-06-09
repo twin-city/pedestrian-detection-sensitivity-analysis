@@ -11,10 +11,10 @@ class MotsynthProcessing(DatasetProcessing):
     Here sequence are annotated (vs img annotation for ECP)
     """
 
-    def __init__(self, root, max_samples_per_sequence=10):
+    def __init__(self, root, max_samples_per_sequence=10, task="pedestrian_detection"):
 
         self.dataset_name = "motsynth"
-        super().__init__(root, max_samples_per_sequence)
+        super().__init__(root, max_samples_per_sequence, task)
 
         self.delay = 3
         self.frames_dir = f"{root}/frames"
@@ -35,6 +35,8 @@ class MotsynthProcessing(DatasetProcessing):
         # Additional info
         self.RESOLUTION = (1920, 1080)
         self.NUM_KEYPOINTS = 22
+
+        assert task in ["pedestrian_detection"]
 
     # To load from multiple sequences
 

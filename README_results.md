@@ -12,6 +12,17 @@
 
 
 
+|  |                | Real Data                                        | Synthetic Data                                         |
+|-----------|--------------------------|--------------------------------------------------|--------------------------------------------------------|
+| Aquisition| Low cost                 | N (aquisition cost + 0.1$ per bbox)              | Y                                                      |
+|           | Rare real-life scenarios | N (or very few and costly to aquire)             | Y                                                      |
+| Law       |       No legal issue     | N                                                | Y                                                      |
+|    Utility       | Flexible                 | N                                                | Y                                                      |
+|    | No biases                | N (very hard to have a totally unbiased dataset) | N (due to synthetic-reality gap), but to what extent ? |
+
+
+
+
 ### I.1 Context
 
 This work is part of the Entrepreneur d'Interet General (EIG) program, at the SDITN of 
@@ -88,6 +99,7 @@ We then look at what parameter influence the most the performance, in what cases
 | Bird's eye view                                                         | ![0_Clear Sky_-70.0_GT.png](results%2Fplots_twincity%2F0_Clear%20Sky_-70.0_GT.png) | ![1_Clear Sky_-70.0_GT.png](results%2Fplots_twincity%2F1_Clear%20Sky_-70.0_GT.png) |
 
 > Example of randomization of a given scenario (luminosity, camera angle).
+> Each pedestrian is described by a bounding box (x1,y1,x2,y2), shown in green in each plot.
 
 
 ### I.3 The Task of Pedestrian Detection
@@ -97,7 +109,7 @@ We then look at what parameter influence the most the performance, in what cases
 
 The task of Pedestrian Detection (PD) is a specific case of Object Detection (OD) where the object of interest is a pedestrian.
 
-From an image or a video (e.g. 1920x1080), the goal is to detect all pedestrians, and localize each pedestrian $i$ with a bounding box $B_i=(x0, y0, x1, y1)$.
+From an image or a video (e.g. 1920x1080), the goal is to detect all pedestrians, and localize each pedestrian $i$ with a bounding box $B_i=(x1, y1, x2, y2)$.
 
 Model typically output a score $p_i$ (between 0 and 1) for each bounding box $B_i$ that is a measure of confidence that the bounding box $B_i$ contains a pedestrian.
 
@@ -111,7 +123,9 @@ Therefore, from a model output, we can define a threshold $t$ (between 0 and 1) 
 | CCTV view                        |![0_Clear Sky_-30.0_Preds.png](results%2Fplots_twincity%2F0_Clear%20Sky_-30.0_Preds.png) | ![1_Clear Sky_-30.0_Preds.png](results%2Fplots_twincity%2F1_Clear%20Sky_-30.0_Preds.png)   |
 | Bird's eye view                  | ![0_Clear Sky_-70.0_Preds.png](results%2Fplots_twincity%2F0_Clear%20Sky_-70.0_Preds.png) | ![1_Clear Sky_-70.0_Preds.png](results%2Fplots_twincity%2F1_Clear%20Sky_-70.0_Preds.png)                                                                                           |
 
-> Prediction for a given pedestrian detection model on the generated synthetic data. We can see that in Bird's eye view the model misses most of the pedestrians.
+> Prediction for a given pedestrian detection model on the generated synthetic data. 
+> Predictions for each pedestrian are bounding boxes, shown in blue. Each bounding box has an associated score of confidence between 0 and 1.
+> We can see that in Bird's eye view the model misses most of the pedestrians.
 
 
 
@@ -121,7 +135,13 @@ Therefore, from a model output, we can define a threshold $t$ (between 0 and 1) 
 Matching the Bounding Boxes
 - **IoU** : Intersection over Union, is a measure of the overlap between two bounding boxes (typically, a threshold of 0.5 is used to consider a prediction as a true positive).
 
-TODO plot of IoU
+
+| IoU                                                                                                      | 
+|----------------------------------------------------------------------------------------------------------|
+| ![IoU.png](tuto%2FIoU.png)                                                                               | 
+| Union =  (Red+Blue-Green)  <br/> Intersection = Green <br/> IoU = Intersection/Union = 2/(9+6-2) ~ 0.154 |
+> Typically a threshold of 0.5 is chosen to match a predicted bounding box (blue) with a groud truth bounding box (here in red).
+
 
 
 Computing Metrics over matched Bounding Boxes
@@ -147,7 +167,10 @@ _(TODO : an image to describe the computation of MR and FPPI)_
 |----------------------------------|--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | CCTV view                        | ![0_Clear Sky_-30.0_Preds+GT.png](results%2Fplots_twincity%2F0_Clear%20Sky_-30.0_Preds%2BGT.png) | ![1_Clear Sky_-30.0_Preds+GT.png](results%2Fplots_twincity%2F1_Clear%20Sky_-30.0_Preds%2BGT.png) |
 | Bird's eye view                  | ![0_Clear Sky_-70.0_Preds+GT.png](results%2Fplots_twincity%2F0_Clear%20Sky_-70.0_Preds%2BGT.png)                                                                                                 | ![1_Clear Sky_-70.0_Preds+GT.png](results%2Fplots_twincity%2F1_Clear%20Sky_-70.0_Preds%2BGT.png)                                                                                      |
-
+> Predictions shown versus ground truth bounding boxes. The blue bounding boxes are model prediction.
+> Ground truth bounding boxes are either green to indicate true positive (matched to a model prediction),
+> red to indicate a false negative (pedestrian that have not been matched) or yellow to indicate
+> cases that are ignored (considered too hard, or not interesting, such as an strong occlusion).
 
 
 
@@ -202,17 +225,16 @@ to real data via the EurocityPerson dataset.
 Small version of dataset named as : ($name_small_$max samples) indicate a subsampling of the full dataset for faster prototyping, but shall 
 eventually be replaced by the full dataset.
 
-| characteristics       | ecp_small_30   | motsynth_small_30                                                      | PennFudanPed_200   | Twincity-Unreal-v8bis_20   |
-|:----------------------|:---------------|:-----------------------------------------------------------------------|:-------------------|:------------------------|
-| sequences (day/night) | 31/7           | 24/10                                                                  | 1/                 | 2/2                     |
-| images (day/night)    | 285/53         | 237/100                                                                | 170/               | 50/60                   |
-| person (day/night)    | 1963/359       | 6966/3138                                                              | 423/               | 1084/1156               |
-| weather               | dry, rainy     | thunder, clear, smog, extrasunny, foggy, clouds, snow, rainy, overcast | dry                | clouds, snow            |
-| height                | 96 +- (57)     | 146 +- (91)                                                            | 273 +- (35)        | 146 +- (20)             |
-| occlusion rate        | 0.14 +- (0.15) | 0.46 +- (0.21)                                                         | 0.00 +- (0.00)     | 0.00 +- (0.00)          |
-| aspect ratio          | 0.38 +- (0.07) | 0.45 +- (0.14)                                                         | 0.40 +- (0.08)     | inf +- (nan)            |
-
-(TODO : add resolution, architectures ?)
+| characteristics       | Twincity-Unreal-v9_20           | ecp_small_30   | motsynth_small_30                                                |
+|:----------------------|:--------------------------------|:---------------|:-----------------------------------------------------------------|
+| sequences (day/night) | 9/9                             | 31/7           | 24/10                                                            |
+| images (day/night)    | 180/180                         | 285/53         | 237/100                                                          |
+| person (day/night)    | 3735/4286                       | 1963/359       | 6966/3138                                                        |
+| weather               | clear, snow, rain               | clear, rain    | thunder, clear, smog, sunny, foggy, clouds, snow, rain, overcast |
+| weather categories    | clear, reduced visibility, rain | clear, rain    | rain, clear, reduced visibility                                  |
+| height                | 113 +- (56)                     | 96 +- (57)     | 146 +- (91)                                                      |
+| occlusion rate        | 0.00 +- (0.00)                  | 0.14 +- (0.15) | 0.46 +- (0.21)                                                   |
+| aspect ratio          | inf +- (nan)                    | 0.38 +- (0.07) | 0.45 +- (0.14)                                                   |
 
 
 ### II.2 Experimental protocol
@@ -231,16 +253,18 @@ We compare different scenarios, and for each compute the MR (Miss Rate) vs FPPI 
 
 
 
+TODO : parametes of filtering for the study !! e;g. occlusion ...
+
 
 
 
 ### II.3 Results
 
 
-|                                                                                                                             | **Twincity (Ours, Synthetic)**                                                                                                                                                                             | MoTSynth (Synthetic)                                                                        | EuroCityPerson (Real)                                                                              |
-|-----------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| Boundig Box parameter sensitivity : MR vs FPPI for bbox aspect ratio (line 1), height (line 2) and occlusion rate (line 3). | ![gtbbox_cofactor_fppi_mr.png](data/results%2FTwincity-Unreal-v8bis_20%2Fgtbbox_cofactor_fppi_mr.png)                                                                                                               | ![gtbbox_cofactor_fppi_mr.png](data/results%2Fmotsynth_small_30%2Fgtbbox_cofactor_fppi_mr.png) | ![gtbbox_cofactor_fppi_mr.png](data/results%2Fecp_small_30%2Fgtbbox_cofactor_fppi_mr.png) |
-| Frame parameter sensitivity :  MR vs FPPI for Day vs Night (line 2) and Camera Angle (line 3).                              | ![Image 1](data/data/results/Twincity-Unreal-v8bis_20/frame_cofactor_fppi_mr.png)                                                                                                                             | ![frame_cofactor_fppi_mr.png](data/results%2Fmotsynth_small_30%2Fframe_cofactor_fppi_mr.png) | ![frame_cofactor_fppi_mr.png](data/results%2Fecp_small_30%2Fframe_cofactor_fppi_mr.png)   |
+|                                                                                                                             | **Twincity (Ours, Synthetic)**                                                                                                                                                                            | MoTSynth (Synthetic)                                                                        | EuroCityPerson (Real)                                                                              |
+|-----------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| Boundig Box parameter sensitivity : MR vs FPPI for bbox aspect ratio (line 1), height (line 2) and occlusion rate (line 3). | ![gtbbox_cofactor_fppi_mr.png](data/results%2FTwincity-Unreal-v9_20%2Fgtbbox_cofactor_fppi_mr.png)                                                                                                              | ![gtbbox_cofactor_fppi_mr.png](data/results%2Fmotsynth_small_30%2Fgtbbox_cofactor_fppi_mr.png) | ![gtbbox_cofactor_fppi_mr.png](data/results%2Fecp_small_30%2Fgtbbox_cofactor_fppi_mr.png) |
+| Frame parameter sensitivity :  MR vs FPPI for Day vs Night (line 2) and Camera Angle (line 3).                              | ![Image 1](data/results/Twincity-Unreal-v9_20/frame_cofactor_fppi_mr.png)                                                                                                                             | ![frame_cofactor_fppi_mr.png](data/results%2Fmotsynth_small_30%2Fframe_cofactor_fppi_mr.png) | ![frame_cofactor_fppi_mr.png](data/results%2Fecp_small_30%2Fframe_cofactor_fppi_mr.png)   |
 
 
 
@@ -265,16 +289,19 @@ First focusing on MoTSynth vs EurocityPerson :
 - Performance appear consistent between the 2 datasets for Bounding Box parameters (Aspect ratio, height, occlusion rate).
 - Night is harder than Day for the faster-RCNN trained on Cityscapes in both datasets.
 - Night and Day are similar for the Mask-RCNN trained on COCO in both datasets. 
-- On MoTSynth, pitch angle affects the performance of the Faster-RCNN trained on Cityscapes, but not on Mask-RCNN. 
+- On MoTSynth, pitch angle affects the performance of the Faster-RCNN and Mask-RCNN. Performances are best for higher pitch,
+probably due to occlusions at the ground level.
 
 And looking at our custom Twincity Dataset : 
 
 - Night is harder than Day
-- Camera Angle ??? (TODO)
+- Camera Angle impact results : bird's eye view miss most of the pedestrian, while frontal view suffer from occlusions.
+The more classical CCTV angle show the best performances.
 
 > Note that the annotation in Twincity is for now different than those of other datasets. The available
 > bounding boxes are extracted from an instance segmentation of the image, and therefore do not capture the
-> occlusion information, which explains the lower performance overall.
+> occlusion information, which explains the lower performance overall. (On other datasets, a threshold on occlusion is typically set
+> at e.g. 50% to study the other factors).
 
 
 
@@ -286,7 +313,7 @@ are consistent between Synthetic and Real datasets (provided datasets are simila
 modulo their synthetic or real nature, which seems to be the case for MOTSynth and EuroCityPerson). While the effect of weather is less clear, this is especially the case for 
    - Bounding Box parameters
    - Night and Day
-   - Camera Angle ???
+   - Camera Angle
  - There are still significative performance difference between Twincity and the 2 other datasets. We explain
 this difference via the yet different annotations, and hope to adapt it in the future to make it more consistent.
 Modulo this difference in performance, the behaviours of methods in Twincity seem consistent to those 
@@ -320,6 +347,7 @@ effects due to the model and effects due to the dataset.
  - The most interesting direction would be to add more use-cases tailored for the need of the
 Ministry of Interior : (e.g. fall detection, weapon detection, pedestrian flux estimation, etc.)
 
+  - Adress image perturbations using https://mmdetection.readthedocs.io/en/latest/user_guides/robustness_benchmarking.html
 
 #### Take Home Message
 
@@ -345,3 +373,7 @@ Ministry of Interior : (e.g. fall detection, weapon detection, pedestrian flux e
   Thus there are non-negligeable biases between real datasets themselves.
   In addition, for specific use-cases, real datasets are often not available at all (e.g. in urban environment : fall detection, 
   drowning detection, weapon detection, pedestrian flux estimation, etc.).
+
+- Q : Why not leverage generative models ?  
+  A : This is due to time constraints. Generative models are also viable ways to generate synthetic data ad/or alterate real data in order to simulate scenarios (e.g. sunny to rainy).
+      
