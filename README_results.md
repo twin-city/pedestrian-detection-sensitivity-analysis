@@ -7,8 +7,8 @@
 
 | Real Data                                                                                                                                              | Synthetic Data (Twincity)                                                                                                                                                | 
 |--------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| ![Parc in Paris](data/paris_wikipedia_images/Cascade_du_parc_de_Bercy,_Paris_2017_001.jpeg)                                                            | ![Twincity Scene](..%2F..%2Fdatasets%2FPedestrianDetectionSensitivityDatasets%2FTwincity-Unreal-v8%2Fday_sun_50_plongee%2Fpng%2FSnapshot-2023-06-01_094123-34011800.png) |
-| Bercy parc in Paris. Photo from [Wikipedia](https://fr.wikipedia.org/wiki/Parc_de_Bercy#/media/Fichier:Cascade_du_parc_de_Bercy,_Paris_2017_001.jpg).  | A synthetic scene of a Parc in Twincity. Unreal Engine 5 offer a photorealistic rendering of urban sceene, allowing to explore the use of AI detection algorithms.
+| ![Parc in Paris](data/paris_wikipedia_images/Cascade_du_parc_de_Bercy,_Paris_2017_001.jpeg)                                                            | ![Snapshot-2023-06-01_094139-29494254.png](data%2Fimage_examples%2FSnapshot-2023-06-01_094139-29494254.png) |
+| Bercy parc in Paris. Photo from [Wikipedia](https://fr.wikipedia.org/wiki/Parc_de_Bercy#/media/Fichier:Cascade_du_parc_de_Bercy,_Paris_2017_001.jpg).  | A synthetic scene of a Parc in Twincity. Unreal Engine 5 offer a photorealistic rendering of urban sceene, allowing to explore the use of AI detection algorithms. |
 
 
 
@@ -155,7 +155,7 @@ This is especially important as there would always be agents monitoring AI solut
 
 > For various thresholds, of predicted box confidence, we can compute the number of false positives,
 > as well as the missing rate (number of missed boundig boxes divided by the number of ground truth bounding boxes).
-
+> ((TODO explain it more))
 
 
 
@@ -261,8 +261,8 @@ TODO : give parameters of filtering for the study !! e;g. occlusion ...
 
 |                                                                                                                             | **Twincity (Ours, Synthetic)**                                                                                                                                                                            | MoTSynth (Synthetic)                                                                        | EuroCityPerson (Real)                                                                              |
 |-----------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| Boundig Box parameter sensitivity : MR vs FPPI for bbox aspect ratio (line 1), height (line 2) and occlusion rate (line 3). | ![gtbbox_cofactor_fppi_mr.png](data/results%2FTwincity-Unreal-v9_20%2Fgtbbox_cofactor_fppi_mr.png)                                                                                                              | ![gtbbox_cofactor_fppi_mr.png](data/results%2Fmotsynth_small_30%2Fgtbbox_cofactor_fppi_mr.png) | ![gtbbox_cofactor_fppi_mr.png](data/results%2Fecp_small_30%2Fgtbbox_cofactor_fppi_mr.png) |
-| Frame parameter sensitivity :  MR vs FPPI for Day vs Night (line 2) and Camera Angle (line 3).                              | ![Image 1](data/results/Twincity-Unreal-v9_20/frame_cofactor_fppi_mr.png)                                                                                                                             | ![frame_cofactor_fppi_mr.png](data/results%2Fmotsynth_small_30%2Fframe_cofactor_fppi_mr.png) | ![frame_cofactor_fppi_mr.png](data/results%2Fecp_small_30%2Fframe_cofactor_fppi_mr.png)   |
+| Boundig Box parameter sensitivity : MR vs FPPI for bbox aspect ratio (line 1), height (line 2) and occlusion rate (line 3). | ![gtbbox_cofactor_fppi_mr.png](data/benchmark_results%2FTwincity-Unreal-v9_20%2Fgtbbox_cofactor_fppi_mr.png)                                                                                                              | ![gtbbox_cofactor_fppi_mr.png](data/benchmark_results%2Fmotsynth_small_30%2Fgtbbox_cofactor_fppi_mr.png) | ![gtbbox_cofactor_fppi_mr.png](data/benchmark_results%2Fecp_small_30%2Fgtbbox_cofactor_fppi_mr.png) |
+| Frame parameter sensitivity :  MR vs FPPI for Day vs Night (line 2) and Camera Angle (line 3).                              | ![Image 1](data/benchmark_results/Twincity-Unreal-v9_20/frame_cofactor_fppi_mr.png)                                                                                                                             | ![frame_cofactor_fppi_mr.png](data/benchmark_results%2Fmotsynth_small_30%2Fframe_cofactor_fppi_mr.png) | ![frame_cofactor_fppi_mr.png](data/benchmark_results%2Fecp_small_30%2Fframe_cofactor_fppi_mr.png)   |
 
 
 

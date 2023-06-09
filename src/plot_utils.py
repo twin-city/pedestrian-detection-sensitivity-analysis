@@ -1,7 +1,7 @@
 import cv2
 import torch
 import numpy as np
-from src.detection.metrics import compute_fp_missratio2
+from src.detection.metrics import compute_fp_missratio
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt

@@ -1,11 +1,10 @@
 exps/
 *.csv
 *.json
-
 .idea/
 out/
-results/
-data_legacy/
 
+data_legacy/
 legacy/
 cache/
+results/
