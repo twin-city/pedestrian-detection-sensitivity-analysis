@@ -95,8 +95,8 @@ We then look at what parameter influence the most the performance, in what cases
 
 |  | Day    | Night  |
 |-------------------------------------------------------------------------|--------|--------|
-| CCTV view                                                               | ![0_Clear Sky_-30.0_GT.png](data%2Fplots_twincity%2F0_Clear%20Sky_-30.0_GT.png) | ![1_Clear Sky_-30.0_GT.png](data%2Fplots_twincity%2F1_Clear%20Sky_-30.0_GT.png) |
-| Bird's eye view                                                         | ![0_Clear Sky_-70.0_GT.png](data%2Fplots_twincity%2F0_Clear%20Sky_-70.0_GT.png) | ![1_Clear Sky_-70.0_GT.png](data%2Fplots_twincity%2F1_Clear%20Sky_-70.0_GT.png) |
+| CCTV view                                                               | ![0_Clear Sky_-30.0_GT.png](data%2Fplots_twincity%2F0_clear_-30.0_GT.png) | ![1_Clear Sky_-30.0_GT.png](data%2Fplots_twincity%2F1_clear_-30.0_GT.png) |
+| Bird's eye view                                                         | ![0_Clear Sky_-70.0_GT.png](data%2Fplots_twincity%2F0_clear_-70.0_GT.png) | ![1_Clear Sky_-70.0_GT.png](data%2Fplots_twincity%2F1_clear_-70.0_GT.png) |
 
 > Example of randomization of a given scenario (luminosity, camera angle).
 > Each pedestrian is described by a bounding box (x1,y1,x2,y2), shown in green in each plot.
@@ -120,8 +120,8 @@ Therefore, from a model output, we can define a threshold $t$ (between 0 and 1) 
 
 | Pedestrian detection in Twincity | Day   | Night                                                                                                                                                                              |
 |----------------------------------|-------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| CCTV view                        |![0_Clear Sky_-30.0_Preds.png](data%2Fplots_twincity%2F0_Clear%20Sky_-30.0_Preds.png) | ![1_Clear Sky_-30.0_Preds.png](data%2Fplots_twincity%2F1_Clear%20Sky_-30.0_Preds.png)   |
-| Bird's eye view                  | ![0_Clear Sky_-70.0_Preds.png](data%2Fplots_twincity%2F0_Clear%20Sky_-70.0_Preds.png) | ![1_Clear Sky_-70.0_Preds.png](data%2Fplots_twincity%2F1_Clear%20Sky_-70.0_Preds.png)                                                                                           |
+| CCTV view                        |![0_Clear Sky_-30.0_Preds.png](data%2Fplots_twincity%2F0_clear_-30.0_Preds.png) | ![1_Clear Sky_-30.0_Preds.png](data%2Fplots_twincity%2F1_clear_-30.0_Preds.png)   |
+| Bird's eye view                  | ![0_Clear Sky_-70.0_Preds.png](data%2Fplots_twincity%2F0_clear_-70.0_Preds.png) | ![1_Clear Sky_-70.0_Preds.png](data%2Fplots_twincity%2F1_clear_-70.0_Preds.png)                                                                                           |
 
 > Prediction for a given pedestrian detection model on the generated synthetic data. 
 > Predictions for each pedestrian are bounding boxes, shown in blue. Each bounding box has an associated score of confidence between 0 and 1.
@@ -163,8 +163,8 @@ This is especially important as there would always be agents monitoring AI solut
 
 | Metrics of detection in Twincity | Day                                                                                              | Night                                                                                                                                                                             |
 |----------------------------------|--------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| CCTV view                        | ![0_Clear Sky_-30.0_Preds+GT.png](data%2Fplots_twincity%2F0_Clear%20Sky_-30.0_Preds%2BGT.png) | ![1_Clear Sky_-30.0_Preds+GT.png](data%2Fplots_twincity%2F1_Clear%20Sky_-30.0_Preds%2BGT.png) |
-| Bird's eye view                  | ![0_Clear Sky_-70.0_Preds+GT.png](data%2Fplots_twincity%2F0_Clear%20Sky_-70.0_Preds%2BGT.png)                                                                                                 | ![1_Clear Sky_-70.0_Preds+GT.png](data%2Fplots_twincity%2F1_Clear%20Sky_-70.0_Preds%2BGT.png)                                                                                      |
+| CCTV view                        | ![0_Clear Sky_-30.0_Preds+GT.png](data%2Fplots_twincity%2F0_clear_-30.0_Preds%2BGT.png) | ![1_Clear Sky_-30.0_Preds+GT.png](data%2Fplots_twincity%2F1_clear_-30.0_Preds%2BGT.png) |
+| Bird's eye view                  | ![0_Clear Sky_-70.0_Preds+GT.png](data%2Fplots_twincity%2F0_clear_-70.0_Preds%2BGT.png)                                                                                                 | ![1_Clear Sky_-70.0_Preds+GT.png](data%2Fplots_twincity%2F1_clear_-70.0_Preds%2BGT.png)                                                                                      |
 > Predictions shown versus ground truth bounding boxes. The blue bounding boxes are model prediction.
 > Ground truth bounding boxes are either green to indicate true positive (matched to a model prediction),
 > red to indicate a false negative (pedestrian that have not been matched) or yellow to indicate
