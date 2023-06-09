@@ -155,8 +155,14 @@ This is especially important as there would always be agents monitoring AI solut
 
 > For various thresholds, of predicted box confidence, we can compute the number of false positives,
 > as well as the missing rate (number of missed boundig boxes divided by the number of ground truth bounding boxes).
-> ((TODO explain it more))
-
+> On the top left, the threshold is set at 0.9, meaning that only the box with a score equal or above 0.9
+> are considered. The central box is matched to a prediction with a score of 0.99. However, a prediction with score 0.9 does not
+> match any ground truth on the bottom right. Other predicted boxes are not considered. Overall, we have 
+> 1 false positive (bounding box on the right) and a missing rate of 2/3, as the 2 other ground truths bounding boxes on the left are not matched.
+> On the bottom left, the threshold is set at 0.8, and the bottom left bounding box is matched as well. The missing rate (MR) is 1/3 and the 
+> FPPI is 1.
+> On the bottom right, the threshold is 0.5, and we have one additional false positive on the bottom left, overlapping 
+> a matched bounding box.
 
 
 
@@ -207,7 +213,7 @@ Detection at night is a challenging task because of the low light conditions and
 
 - https://github.com/aasharma90/NightTime_Datasets : list of datasets for night time detection.
 
-- CARLA : TODO
+- CARLA (2017):  is "an open-source simulator for autonomous driving research. CARLA has been developed from the ground up to support development, training, and validation of autonomous urban driving systems".
 
 
 ## II. Benchmark
